@@ -31,9 +31,9 @@ describe('用户提供的校验值', () => {
     expect(rebirthCables({ totalEU: '1e40', maxTier: 13, rebirthCount: 0 }).toString()).toBe('214');
   });
 
-  it('超频 3 档 → 速度 8 倍、耗电 64 倍', () => {
-    expect(overclockSpeedMultiplier(3).toString()).toBe('8');
-    expect(overclockEnergyMultiplier(3).toString()).toBe('64');
+  it('超频 3 档 → 倍率 2.8、能耗 8', () => {
+    expect(overclockSpeedMultiplier(3).toString()).toBe('2.8');
+    expect(overclockEnergyMultiplier(3).toString()).toBe('8');
   });
 
   it('1e1000 量级的数值能正常运算与格式化', () => {

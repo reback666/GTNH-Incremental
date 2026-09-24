@@ -10,8 +10,8 @@ describe('产出与能耗', () => {
 
   it('产出速率 = 基础值 × 4^(tier-1) × 超频倍率', () => {
     expect(machineOutput({ baseOutput: '10', tier: 3 }).toString()).toBe('160');
-    expect(machineOutput({ baseOutput: '10', tier: 3, overclockLevel: 2 }).toString()).toBe('640');
-    expect(machineOutput({ baseOutput: '10', tier: 5, overclockLevel: 3 }).toString()).toBe('20480');
+    expect(machineOutput({ baseOutput: '10', tier: 3, overclockLevel: 2 }).toString()).toBe('352');
+    expect(machineOutput({ baseOutput: '10', tier: 5, overclockLevel: 3 }).toString()).toBe('7168');
   });
 
   it('产出与配方等级无关，能不能跑由 canRunRecipe 判定', () => {
@@ -21,7 +21,7 @@ describe('产出与能耗', () => {
 
   it('能耗 = 基础能耗 × 4^(tier-1) × 4^超频档位', () => {
     expect(machineEnergy({ baseEnergy: '32', tier: 3 }).toString()).toBe('512');
-    expect(machineEnergy({ baseEnergy: '32', tier: 3, overclockLevel: 3 }).toString()).toBe('32768');
+    expect(machineEnergy({ baseEnergy: '32', tier: 3, overclockLevel: 3 }).toString()).toBe('4096');
     expect(machineEnergy({ baseEnergy: '32', tier: 5 }).toString()).toBe('8192');
   });
 
@@ -33,7 +33,7 @@ describe('产出与能耗', () => {
       ],
       [3, 2],
     );
-    expect(total.toString()).toBe('190');
+    expect(total.toString()).toBe('158');
   });
 
   it('1e900 量级的产出照常计算并格式化', () => {

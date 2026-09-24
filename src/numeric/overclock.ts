@@ -1,12 +1,12 @@
-import { Decimal, pow } from './decimal';
+import { Decimal, ONE, dec, decInt, pow } from './decimal';
 
 // 计划书第二章 / 第六章：超频分 4 个档位，0-3 档。
 export const MIN_OVERCLOCK_LEVEL = 0;
 export const MAX_OVERCLOCK_LEVEL = 3;
 
-// 每提升一档：耗电 ×4、速度 ×2。
-export const OVERCLOCK_SPEED_FACTOR = 2;
-export const OVERCLOCK_ENERGY_FACTOR = 4;
+// 每提升一档：速度 +60%，耗电翻倍。
+export const OVERCLOCK_SPEED_PER_LEVEL = '0.6';
+export const OVERCLOCK_ENERGY_FACTOR = 2;
 
 export function isValidOverclockLevel(level: number): boolean {
   return Number.isInteger(level) && level >= MIN_OVERCLOCK_LEVEL && level <= MAX_OVERCLOCK_LEVEL;
@@ -20,20 +20,19 @@ export function assertOverclockLevel(level: number): void {
   }
 }
 
-// 超频倍率 = 2^档位：0-3 档对应速度 1 / 2 / 4 / 8 倍。
+// 超频倍率 = 1 + 0.6 × 档位：0-3 档对应 100% / 160% / 220% / 280%。
 export function overclockSpeedMultiplier(level: number): Decimal {
   assertOverclockLevel(level);
-  return pow(String(OVERCLOCK_SPEED_FACTOR), level);
+  return ONE.plus(dec(OVERCLOCK_SPEED_PER_LEVEL).times(decInt(level, '超频档位')));
 }
 
-// 能耗倍率 = 4^档位：0-3 档对应耗电 1 / 4 / 16 / 64 倍。
+// 能耗倍率 = 2^档位：0-3 档对应耗电 1 / 2 / 4 / 8 倍。
 export function overclockEnergyMultiplier(level: number): Decimal {
   assertOverclockLevel(level);
   return pow(String(OVERCLOCK_ENERGY_FACTOR), level);
 }
 
 // 该档位下每单位产出的相对能耗，便于比较「加速是否划算」。
-// 4^档位 ÷ 2^档位 = 2^档位，即每提一档，单位产出的电力成本翻倍。
 export function overclockEnergyPerOutput(level: number): Decimal {
   return overclockEnergyMultiplier(level).div(overclockSpeedMultiplier(level));
 }
