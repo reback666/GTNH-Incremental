@@ -19,10 +19,20 @@ export const GENERATOR_FUEL_EFFICIENCY: Record<number, string> = {
 
 export const DEFAULT_FUEL_EFFICIENCY = '0.65';
 
+// 单枚矿石的能量值。作者定：1 枚 ULV 矿石 = 128 EU。
+// 高等级矿石按与电压相同的 4 倍递增，因此每级的「枚/秒」消耗速率保持一致。
+export const ULV_ORE_ENERGY = '128';
+
 // 发电机输出功率（EU/t）。
 export function generatorOutputEU(tier: number): Decimal {
   assertTier(tier);
   return dec(ULV_OUTPUT_EU_PER_TICK).times(pow(String(VOLTAGE_STEP_FOR_OUTPUT), tier - 1));
+}
+
+// 该等级矿石的能量值（EU/枚）。
+export function oreEnergyValue(tier: number): Decimal {
+  assertTier(tier);
+  return dec(ULV_ORE_ENERGY).times(pow(String(VOLTAGE_STEP_FOR_OUTPUT), tier - 1));
 }
 
 // 该等级发电机的燃料效率，取值 0-1。
@@ -32,7 +42,8 @@ export function generatorFuelEfficiency(tier: number): Decimal {
 }
 
 // 燃料消耗速率（枚矿石/秒）。
-// oreEnergyValue 是单枚本级矿石折算出的 EU，尚未定值（见计划书第二十一章）。
-export function generatorFuelRate(tier: number, oreEnergyValue: DecimalInput): Decimal {
-  return generatorOutputEU(tier).div(dec(oreEnergyValue).times(generatorFuelEfficiency(tier)));
+// 不传 oreEnergy 时按本级矿石的默认能量值计算。
+export function generatorFuelRate(tier: number, oreEnergy?: DecimalInput): Decimal {
+  const energy = oreEnergy === undefined ? oreEnergyValue(tier) : dec(oreEnergy);
+  return generatorOutputEU(tier).div(energy.times(generatorFuelEfficiency(tier)));
 }
