@@ -9,8 +9,9 @@ import { minerOrePerSecond } from '../src/numeric/miner';
 import { VOLTAGE_TIERS, MAX_TIER } from '../src/numeric/voltage';
 
 // ── 模型参数（计划书未定义的量，集中在这里，方便对照） ──────────────────
-const BASE_COST = '1000'; // tier-1 机器第 1 台的成本，单位 tier-1 币
+const BASE_COST = '5000'; // tier-1 机器第 1 台的成本，单位 tier-1 币（作者定）
 const BASE_OUTPUT = '10'; // tier-1 机器每秒产出的 tier-1 币
+// 成本/产出比 = 500，单机回本 = 500 ÷ 4 = 125 秒。作者定的节奏杠杆。
 const BASE_ENERGY = '8'; // tier-1 制造机的耗电，EU/t（1A × ULV）
 const COIN_FACTOR = 4; // 币值 4 合 1
 const MACHINES_PER_TIER = 50; // 作者定：每级买满 50 台再进下一级
@@ -144,8 +145,9 @@ lines.push('### 1.2 假设的量（计划书未定义）');
 lines.push('');
 lines.push('| 参数 | 取值 | 说明 |');
 lines.push('| --- | --- | --- |');
-lines.push(`| tier-1 机器第 1 台成本 | ${BASE_COST} 枚 tier-1 币 | 沿用上一版分析的取值 |`);
-lines.push(`| tier-1 机器产出 | ${BASE_OUTPUT} 枚 tier-1 币/秒 | 同上 |`);
+lines.push(`| tier-1 机器第 1 台成本 | ${BASE_COST} 枚 tier-1 币 | 作者定 |`);
+lines.push(`| tier-1 机器产出 | ${BASE_OUTPUT} 枚 tier-1 币/秒 | 作者定 |`);
+lines.push(`| 成本/产出比 | ${dec(BASE_COST).div(BASE_OUTPUT)} | 回本时间 = 比值 ÷ 4 = ${dec(BASE_COST).div(BASE_OUTPUT).div(4)} 秒 |`);
 lines.push(`| tier-1 制造机耗电 | ${BASE_ENERGY} EU/t | 按「本级 1A」取 |`);
 lines.push('| 推进策略 | 每级买满 K 台，再进下一级 | 简化策略，便于对照 |');
 lines.push('| 开局 | 直接给 1 台 tier-1 机器 | 手动挖矿阶段不计入模型 |');
