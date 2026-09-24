@@ -43,6 +43,11 @@ html = html.replace(
 
 writeFileSync(indexPath, html, 'utf8');
 
+// 另外存一份带名字的副本：发给别人时文件名一眼能看懂。
+// 两份内容完全一致 —— index.html 是托管平台要的默认入口，副本是给人看的。
+const friendlyPath = join(distDir, 'GTNH增量.html');
+writeFileSync(friendlyPath, html, 'utf8');
+
 // 资源已经内联，清掉不再被引用的 assets 目录，保持产物干净
 // 资源已经内联，清掉不再被引用的 assets 目录。
 // 逐文件删 + rmdir，不用递归删除：某些环境会静默忽略 rmSync 的 recursive。
@@ -58,7 +63,8 @@ if (existsSync(assetsDir)) {
 
 const sizeKb = (Buffer.byteLength(html, 'utf8') / 1024).toFixed(0);
 console.log('');
-console.log(`构建完成，可玩文件就这一个（${sizeKb} KB）：`);
-console.log(`  ${indexPath}`);
-console.log('双击即可打开，也可以直接发送给别人。');
+console.log(`构建完成（${sizeKb} KB）：`);
+console.log(`  ${friendlyPath}   ← 发给别人用这个`);
+console.log(`  ${indexPath}   ← 托管到服务器时用这个（默认入口）`);
+console.log('两份内容完全一致，双击即可打开。');
 console.log('注意：项目根目录的 index.html 是开发入口，双击打不开，只能用 npm run dev。');
