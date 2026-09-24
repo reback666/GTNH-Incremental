@@ -29,21 +29,28 @@ export const PALETTE: Record<string, string> = {
 // [x, y, 宽, 高, 颜色]，坐标以 16×16 网格为单位
 export type SpriteRect = [number, number, number, number, string];
 
-// 矿脉：一堆岩石，嵌着发光的矿石
+// 矿脉：碎石堆上立着五块大矿石，像裸露的矿脉（形状与密度由 scripts/vein-options.ts 选定）
 const VEIN: SpriteRect[] = [
   [2, 13, 12, 1, 'shadow'],
-  [3, 9, 10, 4, 'stoneDark'],
-  [2, 10, 2, 3, 'stoneDark'],
-  [12, 10, 2, 3, 'stoneDark'],
-  [4, 7, 8, 3, 'stone'],
-  [5, 6, 3, 1, 'stoneLight'],
-  [7, 4, 2, 2, 'stoneLight'],
-  [6, 3, 1, 1, 'stone'],
-  [6, 8, 2, 2, 'ore'],
-  [10, 9, 2, 2, 'ore'],
-  [4, 11, 2, 2, 'oreDark'],
-  [9, 6, 1, 1, 'ore'],
-  [12, 11, 1, 1, 'oreDark'],
+  [1, 11, 14, 2, 'stoneDark'],
+  [1, 9, 14, 2, 'stone'],
+  [1, 9, 14, 1, 'stoneLight'],
+  [1, 8, 1, 1, 'stoneDark'],
+  [14, 8, 1, 1, 'stoneDark'],
+  [2, 3, 3, 1, 'accent'],
+  [2, 4, 3, 5, 'ore'],
+  [5, 5, 2, 4, 'ore'],
+  [7, 2, 4, 1, 'accent'],
+  [7, 3, 4, 6, 'ore'],
+  [11, 3, 3, 1, 'accent'],
+  [11, 4, 3, 5, 'ore'],
+  [1, 10, 1, 1, 'oreDark'],
+  [14, 10, 1, 1, 'oreDark'],
+  [4, 10, 1, 1, 'oreDark'],
+  [9, 10, 1, 1, 'oreDark'],
+  [2, 12, 3, 1, 'oreDark'],
+  [8, 12, 3, 1, 'oreDark'],
+  [6, 8, 2, 1, 'oreDark'],
 ];
 
 // 采矿机：底座 + 立柱 + 钻头
