@@ -1,5 +1,4 @@
 import { Decimal, ZERO, dec, type DecimalInput } from './decimal';
-import { autoOverclockEnergyMultiplier, autoOverclockSpeedMultiplier } from './autoOverclock';
 import { overclockEnergyMultiplier, overclockSpeedMultiplier } from './overclock';
 import { assertTier, voltageMultiplier } from './voltage';
 
@@ -10,23 +9,19 @@ export interface MachineOutputInput {
   tier: number;
   // 超频档位 0-3，默认 0。
   overclockLevel?: number;
-  // 加工配方的等级，默认与机器电压同级（此时自动超频倍率为 1）。
-  recipeTier?: number;
 }
 
 // 基础产出 = 基础值 × 4^(tier-1)。
-// 注意：这一项与自动超频（速度 2^电压差）在含义上重叠，是否保留待作者决定（见计划书第二十一章）。
 export function baseOutputAtTier(baseOutput: DecimalInput, tier: number): Decimal {
   assertTier(tier);
   return dec(baseOutput).times(voltageMultiplier(tier));
 }
 
-// 产出速率 = 基础值 × 4^(tier-1) × 手动超频倍率 × 自动超频倍率（计划书第八章）。
+// 产出速率 = 基础值 × 4^(tier-1) × 超频倍率（计划书第八章）。
+// 配方等级只决定「跑不跑得起来」（见 recipe.ts），不影响产出与能耗。
 export function machineOutput(input: MachineOutputInput): Decimal {
-  const recipeTier = input.recipeTier ?? input.tier;
   return baseOutputAtTier(input.baseOutput, input.tier)
-    .times(overclockSpeedMultiplier(input.overclockLevel ?? 0))
-    .times(autoOverclockSpeedMultiplier(input.tier, recipeTier));
+    .times(overclockSpeedMultiplier(input.overclockLevel ?? 0));
 }
 
 export interface MachineEnergyInput {
@@ -35,15 +30,12 @@ export interface MachineEnergyInput {
   tier: number;
   // 超频档位 0-3，默认 0。
   overclockLevel?: number;
-  recipeTier?: number;
 }
 
-// 机器能耗 = 基础能耗 × 4^(tier-1) × 自动超频能耗倍率 × 4^超频档位。
+// 机器能耗 = 基础能耗 × 4^(tier-1) × 4^超频档位。
 export function machineEnergy(input: MachineEnergyInput): Decimal {
-  const recipeTier = input.recipeTier ?? input.tier;
   return dec(input.baseEnergy)
     .times(voltageMultiplier(input.tier))
-    .times(autoOverclockEnergyMultiplier(input.tier, recipeTier))
     .times(overclockEnergyMultiplier(input.overclockLevel ?? 0));
 }
 

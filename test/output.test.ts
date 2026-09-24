@@ -8,22 +8,21 @@ describe('产出与能耗', () => {
     expect(baseOutputAtTier('10', 3).toString()).toBe('160');
   });
 
-  it('产出速率 = 基础值 × 4^(tier-1) × 超频倍率 × 自动超频倍率', () => {
+  it('产出速率 = 基础值 × 4^(tier-1) × 超频倍率', () => {
     expect(machineOutput({ baseOutput: '10', tier: 3 }).toString()).toBe('160');
     expect(machineOutput({ baseOutput: '10', tier: 3, overclockLevel: 2 }).toString()).toBe('640');
-    expect(
-      machineOutput({ baseOutput: '10', tier: 5, recipeTier: 1, overclockLevel: 3 }).toString(),
-    ).toBe('327680');
+    expect(machineOutput({ baseOutput: '10', tier: 5, overclockLevel: 3 }).toString()).toBe('20480');
   });
 
-  it('配方等级高于机器电压时自动超频不生效，需由调用方先用 canRunRecipe 拦截', () => {
-    expect(machineOutput({ baseOutput: '10', tier: 2, recipeTier: 5 }).toString()).toBe('40');
+  it('产出与配方等级无关，能不能跑由 canRunRecipe 判定', () => {
+    expect(machineOutput({ baseOutput: '10', tier: 2 }).toString()).toBe('40');
+    expect(machineOutput({ baseOutput: '10', tier: 14 }).toString()).toBe('671088640');
   });
 
-  it('能耗 = 基础能耗 × 4^(tier-1) × 自动超频能耗倍率 × 4^超频档位', () => {
+  it('能耗 = 基础能耗 × 4^(tier-1) × 4^超频档位', () => {
     expect(machineEnergy({ baseEnergy: '32', tier: 3 }).toString()).toBe('512');
     expect(machineEnergy({ baseEnergy: '32', tier: 3, overclockLevel: 3 }).toString()).toBe('32768');
-    expect(machineEnergy({ baseEnergy: '32', tier: 5, recipeTier: 1 }).toString()).toBe('2097152');
+    expect(machineEnergy({ baseEnergy: '32', tier: 5 }).toString()).toBe('8192');
   });
 
   it('并联：多台机器同时跑同一配方，产能直接相加', () => {
