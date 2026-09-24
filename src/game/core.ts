@@ -152,23 +152,29 @@ export class GameCore {
     // 3) 电力充足率：发电不够就整体降载。全程用 Decimal，只在报告里转成 number 供界面显示。
     const ratioDec = demand.lte(0) ? ONE : Decimal.min(ONE, generated.div(demand));
 
-    // 4) 采矿机产矿：按矿脉等级把产量均分给它能产的矿种
-    let minerOutput = ZERO;
+    // 4) 采矿机产矿
+    //
+    // 一台等级 n 的采矿机开采的是对应等级的矿脉：ULV 采矿机 → T0 矿脉，LV 采矿机 → T1 矿脉。
+    // 所以没建 LV 采矿机时，T1 矿石一滴都不会涨。
+    // 每座矿脉把产量均分给它自己能产的全部矿种（T0..T该矿脉等级）——
+    // 「各矿种是均分还是按等级递减」仍是计划书第二十一章的待定项，这里先按均分实现。
+    const veinRates = new Map<number, Decimal>();
     for (let tier = 1; tier <= this.maxTier; tier += 1) {
-      minerOutput = minerOutput.plus(minerOrePerSecond(tier).times(this.miners[tier - 1]!));
+      const count = this.miners[tier - 1]!;
+      if (count === 0) continue;
+      const veinTier = tier - 1;
+      veinRates.set(veinTier, (veinRates.get(veinTier) ?? ZERO).plus(minerOrePerSecond(tier).times(count)));
     }
-    const oreGainedTotal = minerOutput.times(dtSeconds).times(ratioDec);
-    const veinKinds = new Set<number>();
-    for (const veinTier of this.unlockedVeins) {
-      for (let ore = 0; ore <= veinTier; ore += 1) veinKinds.add(ore);
-    }
-    if (oreGainedTotal.gt(0) && veinKinds.size > 0) {
-      const share = oreGainedTotal.div(veinKinds.size);
-      for (const oreTier of veinKinds) {
+    for (const [veinTier, ratePerSecond] of veinRates) {
+      const total = ratePerSecond.times(dtSeconds).times(ratioDec);
+      if (total.lte(0)) continue;
+      const kinds = veinTier + 1;
+      const share = total.div(kinds);
+      for (let oreTier = 0; oreTier <= veinTier; oreTier += 1) {
         this.ores[oreTier] = this.ores[oreTier]!.plus(share);
         report.oreGained[oreTier] = report.oreGained[oreTier]!.plus(share);
       }
-      this.totalOre = this.totalOre.plus(oreGainedTotal);
+      this.totalOre = this.totalOre.plus(total);
     }
 
     // 5) 制造机产币，同时吃矿

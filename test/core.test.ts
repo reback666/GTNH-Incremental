@@ -70,12 +70,40 @@ describe('游戏核心：ULV → LV 完整循环', () => {
     expect(core.unlockedVeins).toEqual([0, 1]);
     // 解锁花掉了那笔币
     expect(core.coins[0]!.toString()).toBe('0');
-    // 解锁之后 T1 矿石开始出现
+    // 解锁之后只开放矿脉，还没建 LV 采矿机 —— T1 矿石不该出现
     core.ores[0] = dec('100');
     core.miners[0] = 1;
     core.generators[0] = 2;
     core.tick(1);
+    expect(core.ores[1]!.toString()).toBe('0');
+  });
+
+  it('没有 LV 采矿机时 T1 矿石不会自己涨', () => {
+    const core = new GameCore();
+    core.ores[0] = dec('100');
+    core.maxTier = 2;
+    core.unlockedVeins = [0, 1];
+    core.generators[0] = 3;
+    core.miners[0] = 4; // 只有 ULV 采矿机，它采的是 T0 矿脉
+    core.tick(1);
+    // T0 矿脉只产 T0 矿：4 台 ULV 采矿机产 0.25 枚/秒，多于发电机的 0.147 枚/秒
+    expect(core.ores[0]!.gt('100')).toBe(true);
+    expect(core.ores[1]!.toString()).toBe('0');
+  });
+
+  it('建了 LV 采矿机之后 T1 矿石才开始增长', () => {
+    const core = new GameCore();
+    core.ores[0] = dec('100');
+    core.maxTier = 2;
+    core.unlockedVeins = [0, 1];
+    core.generators[0] = 3;
+    core.miners[0] = 1;
+    core.miners[1] = 1; // LV 采矿机 → T1 矿脉
+    core.tick(1);
+    // T1 矿脉产 T0..T1 两种矿，均分
     expect(core.ores[1]!.gt(0)).toBe(true);
+    // LV 采矿机 0.125 枚/秒，T1 矿脉产 T0..T1 两种矿，均分后每种 0.0625
+    expect(core.ores[1]!.toString()).toBe('0.0625');
   });
 
   it('没有矿石当燃料时，发电机发不出电，整个工厂停摆', () => {
