@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { Decimal, ZERO, dec } from '../numeric/decimal';
-import { MAX_TIER } from '../numeric/voltage';
+import { MAX_TIER, VOLTAGE_TIERS } from '../numeric/voltage';
 import { coinName, oreName } from '../numeric/credit';
 import { formatNumber } from '../numeric/format';
 import { machineEnergy, machineOutput } from '../numeric/output';
@@ -20,6 +20,12 @@ export interface ResourceRow {
 
 export interface MachineTierRow {
   tier: number;
+  // 显示用电压名（ULV / LV / MV …）。
+  // 计划书只给矿石和矿脉编了 T0-T13，机器没有编号，所以这里用电压名，
+  // 免得出现「T1 机器烧 T0 矿」这种同一行里两套编号的情况。
+  voltage: string;
+  // 这台机器吃哪一级矿石。ULV 机器烧 T0 矿。
+  oreLabel: string;
   unlocked: boolean;
   count: number;
   price: string;
@@ -190,6 +196,8 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
     count += owned;
     tiers.push({
       tier,
+      voltage: VOLTAGE_TIERS[tier - 1] ?? `T${tier}`,
+      oreLabel: oreName(tier - 1),
       unlocked: tier <= core.maxTier,
       count: owned,
       price: formatNumber(core.coinPriceOf(kind, tier)),

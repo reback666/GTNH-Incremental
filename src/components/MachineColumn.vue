@@ -63,11 +63,11 @@ function canBuy(row: { affordable: boolean; oreAffordable: boolean }): boolean {
     </div>
 
     <div v-for="row in unlockedTiers" :key="row.tier" class="row tier-row">
-      <span class="tier-name">T{{ row.tier }}</span>
+      <span class="tier-name">{{ row.voltage }}</span>
       <span class="count">×{{ row.count }}</span>
       <span class="price">
         <template v-if="payWith === 'coin'">{{ row.price }} {{ row.unit }}</template>
-        <template v-else>{{ row.orePrice }} T{{ row.tier - 1 }} 矿</template>
+        <template v-else>{{ row.orePrice }} {{ row.oreLabel }}</template>
       </span>
       <button :disabled="!canBuy(row)" @click="buy(row.tier, 1)">×1</button>
       <button :disabled="!canBuy(row)" @click="buy(row.tier, 10)">×10</button>
