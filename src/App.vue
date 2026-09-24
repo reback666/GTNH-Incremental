@@ -2,7 +2,7 @@
 import { onMounted } from 'vue';
 import { useGameStore } from './game/store';
 import ResourceBar from './components/ResourceBar.vue';
-import MachineColumn from './components/MachineColumn.vue';
+import MachinePanel from './components/MachinePanel.vue';
 import VeinPanel from './components/VeinPanel.vue';
 import TechTreePanel from './components/TechTreePanel.vue';
 
@@ -19,9 +19,7 @@ onMounted(() => {
 
   <VeinPanel />
 
-  <div class="machine-grid">
-    <MachineColumn v-for="column in store.snap.columns" :key="column.kind" :column="column" />
-  </div>
+  <MachinePanel :columns="store.snap.columns" />
 
   <TechTreePanel />
 

@@ -7,12 +7,22 @@ import { dec } from '../src/numeric/decimal';
 describe('游戏核心：ULV → LV 完整循环', () => {
   it('开局靠手动挖矿攒够第一台机器', () => {
     const core = new GameCore();
-    expect(core.orePriceOf('machine', 1).toString()).toBe('50'); // 5000 币 ÷ 100
-    for (let i = 0; i < 50; i += 1) core.manualMine();
-    expect(core.ores[0]!.toString()).toBe('50');
+    expect(core.coinPriceOf('machine', 1).toString()).toBe('500');
+    expect(core.orePriceOf('machine', 1).toString()).toBe('5'); // 500 币 ÷ 100
+    for (let i = 0; i < 5; i += 1) core.manualMine();
+    expect(core.ores[0]!.toString()).toBe('5');
     expect(core.buy('machine', 1, 1, 'ore')).toBe(1);
     expect(core.countOf('machine', 1)).toBe(1);
     expect(core.ores[0]!.toString()).toBe('0');
+  });
+
+  it('ULV 制造机每秒产出 1 枚币', () => {
+    const core = new GameCore();
+    core.ores[0] = dec('1000');
+    core.generators[0] = 1;
+    core.machines[0] = 1;
+    core.tick(1);
+    expect(core.coins[0]!.toString()).toBe('1');
   });
 
   it('机器建齐之后矿石与币都增长', () => {
@@ -27,8 +37,8 @@ describe('游戏核心：ULV → LV 完整循环', () => {
     // 3 台发电 24 EU，3 台采矿 + 1 台制造耗电 3×2 + 8 = 14 EU，供电充足
     expect(report.powerRatio).toBe(1);
     expect(report.euGenerated.toString()).toBe('24');
-    // 制造机每秒产 10 枚币（基础产出 10 × 4^0）
-    expect(core.coins[0]!.toString()).toBe('10');
+    // 制造机每秒产 1 枚币（基础产出 1 × 4^0）
+    expect(core.coins[0]!.toString()).toBe('1');
     // 采矿机 3 台 × 0.0625 枚/秒 = 0.1875 枚入账
     expect(report.oreGained[0]!.toString()).toBe('0.1875');
     expect(core.ores[0]!.lt(before)).toBe(true);
@@ -44,16 +54,16 @@ describe('游戏核心：ULV → LV 完整循环', () => {
     // 发电 8 EU，需求 3×2 + 8 = 14 EU
     expect(report.powerRatio).toBeLessThan(1);
     expect(report.powerRatio).toBeGreaterThan(0.5);
-    // 制造机按降载比例产出，明显少于满负荷的 10 枚
-    expect(core.coins[0]!.lt('10')).toBe(true);
-    expect(core.coins[0]!.gt('5')).toBe(true);
+    // 制造机按降载比例产出，明显少于满负荷的 1 枚
+    expect(Number(core.coins[0]!.toString())).toBeLessThan(1);
+    expect(Number(core.coins[0]!.toString())).toBeGreaterThan(0.5);
   });
 
   it('攒够币可以解锁 LV，并开放 T1 矿脉', () => {
     const core = new GameCore();
-    expect(core.unlockCostOf(2).toString()).toBe('200000'); // 5000 × 4 × 10
+    expect(core.unlockCostOf(2).toString()).toBe('20000'); // 500 × 4 × 10
     expect(core.canUnlock(2)).toBe(false);
-    core.coins[0] = core.coins[0]!.plus('200000');
+    core.coins[0] = core.coins[0]!.plus('20000');
     expect(core.canUnlock(2)).toBe(true);
     expect(core.unlock(2)).toBe(true);
     expect(core.maxTier).toBe(2);

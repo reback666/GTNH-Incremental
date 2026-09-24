@@ -26,6 +26,9 @@ export interface MachineTierRow {
   voltage: string;
   // 这台机器吃哪一级矿石。ULV 机器烧 T0 矿。
   oreLabel: string;
+  // 这一行画几个机器图标，以及超出上限的台数
+  icons: number;
+  overflow: number;
   unlocked: boolean;
   count: number;
   price: string;
@@ -40,8 +43,6 @@ export interface MachineColumn {
   title: string;
   hint: string;
   count: number;
-  icons: number; // 要画几个图标
-  overflow: number; // 超出上限的台数，用 +N 表示
   tiers: MachineTierRow[];
   stats: { label: string; value: string }[];
 }
@@ -74,9 +75,9 @@ export interface Snapshot {
   veins: number[];
 }
 
-// 每列最多画这么多个机器图标，再多就折叠成 +N。
-// 后期每级几十台，全画会把页面拖垮。
-export const ICON_LIMIT = 48;
+// 每一级最多画这么多个机器图标，再多就折叠成 +N。
+// 后期每级几十台，全画会把页面和手机拖垮。
+export const TIER_ICON_LIMIT = 30;
 
 const COLUMN_META: Record<MachineKind, { title: string; hint: string }> = {
   miner: { title: '采矿机', hint: '放在矿脉上自动产矿，是整条循环的入口。' },
@@ -198,6 +199,8 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
       tier,
       voltage: VOLTAGE_TIERS[tier - 1] ?? `T${tier}`,
       oreLabel: oreName(tier - 1),
+      icons: Math.min(owned, TIER_ICON_LIMIT),
+      overflow: Math.max(0, owned - TIER_ICON_LIMIT),
       unlocked: tier <= core.maxTier,
       count: owned,
       price: formatNumber(core.coinPriceOf(kind, tier)),
@@ -212,8 +215,6 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
     title: meta.title,
     hint: meta.hint,
     count,
-    icons: Math.min(count, ICON_LIMIT),
-    overflow: Math.max(0, count - ICON_LIMIT),
     tiers,
     stats: kindStats(core, kind),
   };

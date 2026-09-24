@@ -306,41 +306,83 @@ button.big {
   animation: ripple-out 0.55s ease-out forwards;
 }
 
-/* ── 三种机器并列 ────────────────────────────────────────── */
-.machine-grid {
+/* ── 三个机器大类：点谁展开谁 ─────────────────────────────── */
+.machine-tabs {
   display: grid;
-  gap: 12px;
-  grid-template-columns: 1fr;
-  margin-bottom: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
-@media (min-width: 720px) {
-  .machine-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.machine-col {
+.machine-tab {
   display: flex;
   flex-direction: column;
-  margin-bottom: 0;
-}
-
-.col-head {
-  display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 2px;
+  min-height: 88px;
+  padding: 10px 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transition:
+    border-color 0.24s ease,
+    background 0.24s ease,
+    transform 0.12s ease;
 }
 
-.col-title h2 {
-  margin: 0;
-  color: var(--text);
-  font-size: 15px;
+.machine-tab:active {
+  transform: scale(0.97);
 }
 
-.col-count {
-  font-size: 12px;
+.machine-tab.active {
+  border-color: var(--accent);
+  background: #1d2a2c;
+  box-shadow: 0 0 0 1px rgba(88, 196, 163, 0.25) inset;
+}
+
+.tab-name {
+  font-size: 13px;
+}
+
+.tab-count {
+  font-size: 11px;
   color: var(--muted);
+}
+
+.machine-tab.active .tab-count {
+  color: var(--accent);
+}
+
+/* 展开 / 挤压：用 grid-template-rows 的 0fr↔1fr 过渡，比 max-height 平滑 */
+.machine-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-bottom: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  transition:
+    grid-template-rows 0.34s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-bottom 0.34s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.34s ease,
+    opacity 0.26s ease;
+}
+
+.machine-body.collapsed {
+  grid-template-rows: 0fr;
+  margin-bottom: 0;
+  border-color: transparent;
+  opacity: 0;
+}
+
+.machine-body > .inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pad {
+  padding: 12px;
 }
 
 .stats {
@@ -366,19 +408,6 @@ button.big {
 .stat dd {
   margin: 0;
   font-variant-numeric: tabular-nums;
-}
-
-/* 机器图像墙：每建一台就多一格 */
-.icon-grid {
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 2px;
-  padding: 8px;
-  min-height: 40px;
-  background: #141920;
-  border: 1px solid var(--line);
-  border-radius: 8px;
 }
 
 @keyframes icon-pop {
@@ -416,25 +445,52 @@ button.big {
   font-size: 12px;
 }
 
-.tier-row {
-  gap: 6px;
+/* 每个等级一条横杠：等级名 → 机器图标横排 → 数量 → 单价 → 建造按钮 */
+.tier-bar {
+  display: flex;
+  align-items: center;
   flex-wrap: wrap;
+  gap: 6px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+
+.tier-bar:first-of-type {
+  border-top: 0;
 }
 
 .tier-name {
-  width: 38px;
+  width: 40px;
+  flex: none;
   color: var(--muted);
   font-size: 12px;
+  letter-spacing: 0.02em;
 }
 
-.tier-row .count {
-  width: 34px;
+.tier-icons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 200px;
+  min-width: 0;
+  min-height: 22px;
+  overflow: hidden;
+  padding: 0 4px;
+  background: #141920;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.tier-bar .count {
+  width: 38px;
+  flex: none;
+  text-align: right;
   font-size: 12px;
 }
 
-.tier-row .price {
-  flex: 1;
-  min-width: 0;
+.tier-bar .price {
+  min-width: 96px;
+  flex: none;
   text-align: right;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -443,8 +499,13 @@ button.big {
   white-space: nowrap;
 }
 
-.tier-row button {
+.tier-bar button {
   min-height: 28px;
+  flex: none;
   padding: 0 8px;
   font-size: 12px;
+}
+
+.hint {
+  margin: 0 0 8px;
 }

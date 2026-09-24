@@ -9,8 +9,8 @@ import { minerOrePerSecond } from '../src/numeric/miner';
 import { VOLTAGE_TIERS, MAX_TIER } from '../src/numeric/voltage';
 
 // ── 模型参数（计划书未定义的量，集中在这里，方便对照） ──────────────────
-const BASE_COST = '5000'; // tier-1 机器第 1 台的成本，单位 tier-1 币（作者定）
-const BASE_OUTPUT = '10'; // tier-1 机器每秒产出的 tier-1 币
+const BASE_COST = '500'; // tier-1 机器第 1 台的成本，单位 tier-1 币（作者定）
+const BASE_OUTPUT = '1'; // tier-1 机器每秒产出的 tier-1 币（作者定）
 // 成本/产出比 = 500，单机回本 = 500 ÷ 4 = 125 秒。作者定的节奏杠杆。
 const BASE_ENERGY = '8'; // tier-1 制造机的耗电，EU/t（1A × ULV）
 const COIN_FACTOR = 4; // 币值 4 合 1
