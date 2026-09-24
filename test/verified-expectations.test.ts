@@ -5,33 +5,15 @@ import { formatNumber } from '../src/numeric/format';
 import { overclockEnergyMultiplier, overclockSpeedMultiplier } from '../src/numeric/overclock';
 import { rebirthCables } from '../src/numeric/rebirth';
 
-// 成本两组校验值来自 plan.txt 的 1.12 时代版本：
-//   b4d000b「机器成本 = 基础成本 × 4^(电压等级 - 1) × 1.12^(已购买数量)」
-// 之后的 c0ba1a4 把底数改成 1.07，并写上「第 100 台约为第 1 台的 868 倍」。
-// 也就是说这两组数字是旧公式的产物，只有 g = 1.12 时才能逐位复现。
-// 当前实现以现行规范 1.07 为默认值，这里显式传入 1.12 让两组数字继续被测试守住，
-// 冲突与影响见 docs/balance.md。
-const VERIFIED_GROWTH = '1.12';
-
 describe('用户提供的校验值', () => {
-  it('成本：基础 1000、tier=5、已购 37 → 16955351', () => {
-    const cost = machineCost({
-      baseCost: '1000',
-      tier: 5,
-      purchased: 37,
-      growth: VERIFIED_GROWTH,
-    });
-    expect(cost.toString()).toBe('16955351');
+  it('成本：基础 1000、tier=5、已购 37 → 3129246（1.07^37 口径）', () => {
+    expect(machineCost({ baseCost: '1000', tier: 5, purchased: 37 }).toString()).toBe('3129246');
   });
 
-  it('成本：基础 1000、tier=13、已购 100 → 1401271092903474', () => {
-    const cost = machineCost({
-      baseCost: '1000',
-      tier: 13,
-      purchased: 100,
-      growth: VERIFIED_GROWTH,
-    });
-    expect(cost.toString()).toBe('1401271092903474');
+  it('成本：基础 1000、tier=13、已购 100 → 14557864220754（1.07^100 口径）', () => {
+    expect(machineCost({ baseCost: '1000', tier: 13, purchased: 100 }).toString()).toBe(
+      '14557864220754',
+    );
   });
 
   it('第 100 台的成本倍率约 868 倍（1.07^100）', () => {

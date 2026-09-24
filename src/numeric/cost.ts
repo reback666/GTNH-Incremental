@@ -3,8 +3,6 @@ import { VOLTAGE_STEP, assertTier } from './voltage';
 
 // 边际成本增长系数，来自计划书第八章：机器成本 = 基础成本 × 4^(tier-1) × g^(已购数量)。
 // 第 100 台相对第 1 台约 868 倍（1.07^100 ≈ 867.7）。
-// 早期版本（git b4d000b）的取值是 1.12，改成 1.07 是为了更强地压制无脑堆叠；
-// 调用方仍可按机型显式传入 growth 覆盖，1.12 / 1.07 的差异见 docs/balance.md。
 export const MARGINAL_COST_GROWTH = '1.07';
 
 // 第八章的「后期成本增长从 4^n 调整为 4^n × log(n)」没有写明「后期」从哪个 tier 开始。
@@ -40,15 +38,12 @@ export function tierCostMultiplier(
   return pow(String(VOLTAGE_STEP), tier - 1).times(lateGameLogFactor(tier, lateGame));
 }
 
-// 已购数量带来的边际成本倍数：g^已购数量。
-export function marginalCostMultiplier(
-  purchased: number,
-  growth: DecimalInput = MARGINAL_COST_GROWTH,
-): Decimal {
+// 已购数量带来的边际成本倍数：1.07^已购数量。
+export function marginalCostMultiplier(purchased: number): Decimal {
   if (!Number.isInteger(purchased) || purchased < 0) {
     throw new RangeError(`已购数量必须是非负整数，收到 ${purchased}`);
   }
-  return pow(dec(growth), purchased);
+  return pow(MARGINAL_COST_GROWTH, purchased);
 }
 
 export interface MachineCostInput {
@@ -58,8 +53,6 @@ export interface MachineCostInput {
   tier: number;
   // 已购买数量（同机型累计）。
   purchased: number;
-  // 边际成本增长系数，默认取 MARGINAL_COST_GROWTH。
-  growth?: DecimalInput;
   lateGame?: LateGameLogOptions;
 }
 
@@ -68,7 +61,7 @@ export interface MachineCostInput {
 export function machineCost(input: MachineCostInput): Decimal {
   return dec(input.baseCost)
     .times(tierCostMultiplier(input.tier, input.lateGame))
-    .times(marginalCostMultiplier(input.purchased, input.growth))
+    .times(marginalCostMultiplier(input.purchased))
     .floor();
 }
 

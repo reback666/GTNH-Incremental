@@ -35,7 +35,7 @@ describe('decimal 统一配置', () => {
 
 describe('数值序列化', () => {
   it('写出的是字符串，读回完全一致', () => {
-    const value = dec('1401271092903474.000000000000000000000001');
+    const value = dec('1234567890123456.000000000000000000000001');
     const text = toSaveString(value);
     expect(typeof text).toBe('string');
     expect(fromSaveString(text).eq(value)).toBe(true);

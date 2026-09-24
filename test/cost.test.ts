@@ -17,13 +17,6 @@ describe('成本公式', () => {
     expect(marginalCostMultiplier(100).toSignificantDigits(4).toString()).toBe('867.7');
   });
 
-  it('按默认 1.07 计算的两组数值', () => {
-    expect(machineCost({ baseCost: '1000', tier: 5, purchased: 37 }).toString()).toBe('3129246');
-    expect(machineCost({ baseCost: '1000', tier: 13, purchased: 100 }).toString()).toBe(
-      '14557864220754',
-    );
-  });
-
   it('单价向下取整，保证 GT 币余额永远是整数', () => {
     expect(machineCost({ baseCost: '1000', tier: 1, purchased: 1 }).toString()).toBe('1070');
     // 1000 × 1.07^2 = 1144.9 → 1144
