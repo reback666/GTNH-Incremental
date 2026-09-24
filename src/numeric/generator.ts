@@ -19,9 +19,12 @@ export const GENERATOR_FUEL_EFFICIENCY: Record<number, string> = {
 
 export const DEFAULT_FUEL_EFFICIENCY = '0.65';
 
-// 单枚矿石的能量值。作者定：1 枚 ULV 矿石 = 128 EU。
-// 高等级矿石按与电压相同的 4 倍递增，因此每级的「枚/秒」消耗速率保持一致。
+// 单枚矿石的能量值。作者定：1 枚 ULV 矿石 = 128 EU，高等级矿石每级 ×1.2。
+// 递增倍数与采矿机提速倍数共同决定「采矿机产矿」与「发电机烧矿」之比：
+//   比例 ∝ (采矿机提速倍数 × 矿石能量递增倍数 ÷ 4)^(tier-1)
+// 只有两者相乘等于 4 时比例才恒定。
 export const ULV_ORE_ENERGY = '128';
+export const ORE_ENERGY_FACTOR = '1.2';
 
 // 发电机输出功率（EU/t）。
 export function generatorOutputEU(tier: number): Decimal {
@@ -32,7 +35,7 @@ export function generatorOutputEU(tier: number): Decimal {
 // 该等级矿石的能量值（EU/枚）。
 export function oreEnergyValue(tier: number): Decimal {
   assertTier(tier);
-  return dec(ULV_ORE_ENERGY).times(pow(String(VOLTAGE_STEP_FOR_OUTPUT), tier - 1));
+  return dec(ULV_ORE_ENERGY).times(dec(ORE_ENERGY_FACTOR).pow(tier - 1));
 }
 
 // 该等级发电机的燃料效率，取值 0-1。

@@ -1,11 +1,11 @@
 // 数值平衡推算脚本。直接用 src/numeric 里的公式，避免分析和实现两边漂移。
 // 运行：npx tsx scripts/balance.ts
 import { writeFileSync } from 'node:fs';
-import { Decimal, ZERO, dec, pow } from '../src/numeric/decimal';
+import { Decimal, ONE, ZERO, dec, pow } from '../src/numeric/decimal';
 import { machineCost } from '../src/numeric/cost';
 import { machineEnergy, machineOutput } from '../src/numeric/output';
-import { generatorFuelRate, generatorOutputEU } from '../src/numeric/generator';
-import { minerEnergyEU, minerOrePerSecond } from '../src/numeric/miner';
+import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../src/numeric/generator';
+import { minerOrePerSecond } from '../src/numeric/miner';
 import { VOLTAGE_TIERS, MAX_TIER } from '../src/numeric/voltage';
 
 // ── 模型参数（计划书未定义的量，集中在这里，方便对照） ──────────────────
@@ -244,8 +244,31 @@ lines.push('（矿石能量值和发电机输出都按 4^(tier-1) 涨，互相�
 lines.push('矿石只在 ULV 附近真正紧张（一台采矿机还不够养一台发电机）。');
 lines.push('');
 lines.push('要让矿石在任何等级都是约束，不能只改采矿机的提速倍数——因为发电机那边的烧矿速率是恒定的。');
-lines.push('可行的做法是让**矿石能量值不随等级递增**（所有等级的矿都是 128 EU），这样烧矿速率会随等级 ×4，');
-lines.push('正好抵消采矿机的 ×4 提速，矿石∶发电机比例恒定。');
+lines.push('');
+lines.push('### 2.4 矿石供需之比取决于两个倍数的乘积');
+lines.push('');
+lines.push('设采矿机每级提速 s 倍、矿石能量值每级递增 k 倍，则');
+lines.push('');
+lines.push('```');
+lines.push('采矿机产矿 ÷ 发电机烧矿 ∝ (s × k ÷ 4)^(tier-1)');
+lines.push('```');
+lines.push('');
+lines.push('**只有 s × k = 4 时比例才恒定。** 当前的 s = 2、k = 1.2，乘积只有 2.4，所以矿石会逐级变紧：');
+lines.push('');
+lines.push('| 矿石能量递增 k | s×k | MAX 时一台采矿机能养几台发电机 | MAX 每台发电机需要几台采矿机 |');
+lines.push('| --- | --- | --- | --- |');
+for (const kStr of ['1.2', '1.5', '1.8', '2']) {
+  const k = dec(kStr);
+  const grow = dec('2').times(k).div(4);
+  const eff = generatorFuelEfficiency(MAX_TIER);
+  const ratio = eff.times(grow.pow(MAX_TIER - 1));
+  lines.push(
+    `| ${kStr} | ${fmt(dec('2').times(k))} | ${fmt(ratio)} | ${ratio.gt(0) ? fmt(ONE.div(ratio)) : '—'} |`,
+  );
+}
+lines.push('');
+lines.push('k = 2 是「恒定」的临界点：每台发电机永远需要约 1.5 台采矿机。k 取 1.2 时，');
+lines.push('MAX 阶段每台发电机需要上千台采矿机，矿石会从一个不存在的约束变成完全卡死。');
 lines.push('');
 lines.push('顺带一个电力比例：同级采矿机耗电只有同级发电机输出的 1/4，所以「1 台发电机 : 4 台采矿机」');
 lines.push('（若制造机按 1 台吃满 1 台发电机的电，则「1 发电机 : 1 制造机 : 4 采矿机」）。');
@@ -265,7 +288,7 @@ lines.push('## 四、待定');
 lines.push('');
 lines.push('| 问题 | 影响 |');
 lines.push('| --- | --- |');
-lines.push('| 高等级矿石的能量值是否继续 ×4 | 当前 ×4 会让烧矿速率恒定、矿石失去约束力；改成恒定 128 EU 才能让矿石始终紧张 |');
+lines.push('| 矿石能量值的递增倍数 k | 当前 k = 1.2 与采矿机提速 s = 2 的乘积只有 2.4，低于恒定临界值 4，矿石会逐级收紧到 MAX 每台发电机需上千台采矿机 |');
 lines.push(
   `| 每级台数 K 定多少 | 直接决定总时长：${solveK(20)} 台 ≈ 20 小时，${solveK(80)} 台 ≈ 80 小时，${solveK(200)} 台 ≈ 200 小时 |`,
 );
