@@ -13,6 +13,7 @@ const BASE_COST = '1000'; // tier-1 机器第 1 台的成本，单位 tier-1 币
 const BASE_OUTPUT = '10'; // tier-1 机器每秒产出的 tier-1 币
 const BASE_ENERGY = '8'; // tier-1 制造机的耗电，EU/t（1A × ULV）
 const COIN_FACTOR = 4; // 币值 4 合 1
+const MACHINES_PER_TIER = 50; // 作者定：每级买满 50 台再进下一级
 
 // 币值：1 枚 tier-n 币 = 4^(n-1) 枚 tier-1 币
 const coinValue = (tier: number): Decimal => pow(String(COIN_FACTOR), tier - 1);
@@ -116,9 +117,7 @@ const solveK = (goalHours: number): number => {
   }
   return best.machinesPerTier;
 };
-const target = scan.reduce((a, b) =>
-  a.totalHours.minus(80).abs().lt(b.totalHours.minus(80).abs()) ? a : b,
-);
+const target = run(MACHINES_PER_TIER);
 
 const lines: string[] = [];
 lines.push('# 数值平衡推算');
@@ -193,7 +192,8 @@ for (const r of rows) {
 lines.push('');
 lines.push('### 2.1 对照 80-100 小时目标');
 lines.push('');
-lines.push(`要让全通落在 80-100 小时，**每级需要买满约 ${target.machinesPerTier} 台机器**（当前模型下为 ${fmtH(target.totalSeconds)} 小时）。`);
+lines.push(`作者选定 **每级 ${MACHINES_PER_TIER} 台**，对应全通 **${fmtH(target.totalSeconds)} 小时**，`);
+lines.push('低于 80-100 小时的目标区间。各目标时长所需的台数：');
 lines.push('');
 lines.push('| 目标 | 对应每级台数 |');
 lines.push('| --- | --- |');
@@ -226,8 +226,8 @@ lines.push('| LV（基础采矿机） | 8 EU/t | 8 秒/方块 | I | 17×17 |');
 lines.push('| MV（优良采矿机） | 32 EU/t | 4 秒 | II | 33×33 |');
 lines.push('| HV（进阶采矿机） | 128 EU/t | 2 秒 | III | 49×49 |');
 lines.push('');
-lines.push('规律是**耗电 ×4、耗时 ÷2** —— 正是 GTNH 的超频规则。GTNH 只做到 HV，再往上没有官方数值。');
-lines.push('当前实现按同一规律外推到全部 14 级，外推是否合理需要作者确认。');
+lines.push('GTNH 的规律是**耗电 ×4、耗时 ÷2**。本作照搬了耗电，但把提速改成**每级 ÷4**（只保留 LV 的 8 秒锚点），');
+lines.push('所以 MV/HV 不再等于 wiki 上的 4 秒与 2 秒。GTNH 只做到 HV，再往上都是外推。');
 lines.push('');
 lines.push('按这个规律，各级采矿机的产矿速率与「一台采矿机够养几台同级发电机」：');
 lines.push('');
@@ -239,8 +239,13 @@ for (let tier = 1; tier <= MAX_TIER; tier += 1) {
   lines.push(`| ${VOLTAGE_TIERS[tier - 1]} | ${fmt(ore)} | ${fmt(burn)} | ${fmt(ore.div(burn))} |`);
 }
 lines.push('');
-lines.push('**关键结论：矿石不是瓶颈，而且越往后越宽松。** 采矿机每级快 2 倍，发电机烧矿速率却与等级无关，');
-lines.push('所以到 MAX 时一台采矿机够养上千台发电机。矿石只在 ULV 附近接近 1:1。');
+lines.push('**关键结论：矿石不是瓶颈，而且越往后越宽松。** 采矿机每级快 4 倍，发电机烧矿速率却与等级无关');
+lines.push('（矿石能量值和发电机输出都按 4^(tier-1) 涨，互相抵消），所以到 MAX 时一台采矿机够养两千万台发电机。');
+lines.push('矿石只在 ULV 附近真正紧张（一台采矿机还不够养一台发电机）。');
+lines.push('');
+lines.push('要让矿石在任何等级都是约束，不能只改采矿机的提速倍数——因为发电机那边的烧矿速率是恒定的。');
+lines.push('可行的做法是让**矿石能量值不随等级递增**（所有等级的矿都是 128 EU），这样烧矿速率会随等级 ×4，');
+lines.push('正好抵消采矿机的 ×4 提速，矿石∶发电机比例恒定。');
 lines.push('');
 lines.push('顺带一个电力比例：同级采矿机耗电只有同级发电机输出的 1/4，所以「1 台发电机 : 4 台采矿机」');
 lines.push('（若制造机按 1 台吃满 1 台发电机的电，则「1 发电机 : 1 制造机 : 4 采矿机」）。');
@@ -253,14 +258,14 @@ lines.push('2. **升级不加快回本。** 币值 4 合 1 与产出 4 倍递增
 lines.push('   这不算问题，但意味着「升级」的收益必须来自别处——目前看是省机器、省电力。');
 lines.push('3. **电力是等比放大的约束。** 同级制造机耗电与发电机输出同倍率，所以发电机∶制造机恒为 1∶1。');
 lines.push('   想让电力成为真正的资源，需要让发电机的倍数低于制造机，或让矿石供给卡住。');
-lines.push('4. **矿石反而越来越宽松，不是瓶颈。** 采矿机每级快 2 倍，而发电机烧矿速率与等级无关，');
-lines.push('   所以到 MAX 时一台采矿机够养上千台发电机。若希望矿石在中后期仍是约束，需要换一条采矿机提速规则。');
+lines.push('4. **矿石反而越来越宽松，不是瓶颈。** 采矿机每级快 4 倍，而发电机烧矿速率与等级无关，');
+lines.push('   所以到 MAX 时一台采矿机够养两千万台发电机。要修的话得改矿石能量值的递增规则，不是改采矿机。');
 lines.push('');
 lines.push('## 四、待定');
 lines.push('');
 lines.push('| 问题 | 影响 |');
 lines.push('| --- | --- |');
-lines.push('| 采矿机的提速规则是否照搬 GTNH（每级快 2 倍） | GTNH 只到 HV，外推到 MAX 会得到「一台采矿机 512 枚/秒」，等于取消矿石约束 |');
+lines.push('| 高等级矿石的能量值是否继续 ×4 | 当前 ×4 会让烧矿速率恒定、矿石失去约束力；改成恒定 128 EU 才能让矿石始终紧张 |');
 lines.push(
   `| 每级台数 K 定多少 | 直接决定总时长：${solveK(20)} 台 ≈ 20 小时，${solveK(80)} 台 ≈ 80 小时，${solveK(200)} 台 ≈ 200 小时 |`,
 );
