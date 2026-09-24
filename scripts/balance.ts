@@ -23,7 +23,7 @@ const coinValue = (tier: number): Decimal => pow(String(COIN_FACTOR), tier - 1);
 const marginalSum = (count: number): Decimal => {
   let sum = ZERO;
   for (let k = 0; k < count; k += 1) {
-    sum = sum.plus(machineCost({ baseCost: 1, tier: 1, purchased: k }));
+    sum = sum.plus(machineCost({ baseCost: '1', tier: 1, purchased: k }));
   }
   return sum;
 };
@@ -111,7 +111,7 @@ const rows = [5, 10, 20, 40, 60, 80, 90, 100, 120, 150, 200].map(run);
 const scan: RunResult[] = [];
 for (let k = 1; k <= 300; k += 1) scan.push(run(k));
 const solveK = (goalHours: number): number => {
-  const goal = dec(goalHours);
+  const goal = dec(String(goalHours));
   let best = scan[0]!;
   for (const r of scan) {
     if (r.totalHours.minus(goal).abs().lt(best.totalHours.minus(goal).abs())) best = r;
