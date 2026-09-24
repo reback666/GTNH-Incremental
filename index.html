@@ -10,5 +10,22 @@
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
+    <script>
+      // 这里是开发入口，只能在 dev server 下运行。
+      // 直接用文件管理器双击会白屏：浏览器不允许 file:// 页面加载 /src/main.ts。
+      // 与其白屏，不如给一句明确提示。
+      if (location.protocol === 'file:') {
+        document.getElementById('app').innerHTML =
+          '<div style="max-width:640px;margin:48px auto;padding:20px;border:1px solid #2f3946;' +
+          'border-radius:10px;background:#1b2129;color:#d7dee8;' +
+          "font:15px/1.8 system-ui,'Microsoft YaHei',sans-serif\">" +
+          '<h2 style="margin:0 0 12px;color:#e0a33e">这是开发入口，不能直接双击打开</h2>' +
+          '<p style="margin:0 0 8px">你打开的是<b>项目根目录</b>的 index.html，它只能在开发服务器里跑。</p>' +
+          '<p style="margin:0 0 8px">要玩的话，请打开 <b>dist/index.html</b>（首次需要先跑一次 ' +
+          '<code>npm run build</code>）。</p>' +
+          '<p style="margin:0">要在本机开发，运行 <code>npm run dev</code>，然后访问终端提示的地址。</p>' +
+          '</div>';
+      }
+    </script>
   </body>
 </html>

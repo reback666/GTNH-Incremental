@@ -57,4 +57,8 @@ if (existsSync(assetsDir)) {
 }
 
 const sizeKb = (Buffer.byteLength(html, 'utf8') / 1024).toFixed(0);
-console.log(`已内联成单文件：dist/index.html（${sizeKb} KB，可双击打开或直接发送）`);
+console.log('');
+console.log(`构建完成，可玩文件就这一个（${sizeKb} KB）：`);
+console.log(`  ${indexPath}`);
+console.log('双击即可打开，也可以直接发送给别人。');
+console.log('注意：项目根目录的 index.html 是开发入口，双击打不开，只能用 npm run dev。');
