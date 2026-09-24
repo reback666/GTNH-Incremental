@@ -149,8 +149,270 @@ button.big {
   grid-template-columns: 1fr;
 }
 
-@media (min-width: 680px) {
-  .cols {
-    grid-template-columns: 1fr 1fr;
+.mt {
+  margin-top: 12px;
+}
+
+.small {
+  font-size: 12px;
+}
+
+/* ── 数字涨跌动画 ────────────────────────────────────────── */
+@keyframes num-rise {
+  0% {
+    transform: translateY(4px) scale(1.08);
+    text-shadow: 0 0 10px currentColor;
   }
+  100% {
+    transform: none;
+    text-shadow: none;
+  }
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.num.up {
+  color: #6ee7a8;
+  animation: num-rise 0.45s ease-out;
+}
+
+.num.down {
+  color: #ff8a7a;
+  animation: num-rise 0.45s ease-out;
+}
+
+/* ── 矿脉与挖矿特效 ──────────────────────────────────────── */
+.vein-btn {
+  position: relative;
+  width: 100%;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 65%, #232b35 0%, #171c23 70%);
+  border-color: #3a4553;
+}
+
+.vein-btn:active {
+  transform: translateY(1px);
+}
+
+.vein-sprite {
+  display: block;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+}
+
+.vein-label {
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+}
+
+@keyframes vein-shake {
+  0%,
+  100% {
+    transform: none;
+  }
+  25% {
+    transform: translate(-3px, 2px) rotate(-1deg);
+  }
+  50% {
+    transform: translate(3px, -2px) rotate(1deg);
+  }
+  75% {
+    transform: translate(-2px, -2px) rotate(-0.5deg);
+  }
+}
+
+.vein-sprite.shake {
+  animation: vein-shake 0.26s ease-in-out;
+}
+
+@keyframes spark-up {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -60px) scale(1.25);
+  }
+}
+
+.spark {
+  position: absolute;
+  pointer-events: none;
+  font-weight: 700;
+  color: #6ee7a8;
+  text-shadow: 0 0 8px rgba(110, 231, 168, 0.7);
+  animation: spark-up 0.9s ease-out forwards;
+}
+
+@keyframes ripple-out {
+  0% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(0.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.6);
+  }
+}
+
+.ripple {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  pointer-events: none;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: ripple-out 0.55s ease-out forwards;
+}
+
+/* ── 三种机器并列 ────────────────────────────────────────── */
+.machine-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+  margin-bottom: 12px;
+}
+
+@media (min-width: 720px) {
+  .machine-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.machine-col {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.col-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.col-title h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.col-count {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 8px;
+}
+
+.stat {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.stat dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.stat dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 机器图像墙：每建一台就多一格 */
+.icon-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 2px;
+  padding: 8px;
+  min-height: 40px;
+  background: #141920;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+@keyframes icon-pop {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.icon-pop {
+  animation: icon-pop 0.3s ease-out;
+}
+
+.icon-overflow {
+  align-self: center;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 0 4px;
+}
+
+.pay-row {
+  gap: 6px;
+}
+
+.pay-row button {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.tier-row {
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tier-name {
+  width: 28px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tier-row .count {
+  width: 34px;
+  font-size: 12px;
+}
+
+.tier-row .price {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tier-row button {
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
 }
