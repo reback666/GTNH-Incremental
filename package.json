@@ -9,7 +9,7 @@
     "test:watch": "vitest",
     "balance": "tsx scripts/balance.ts",
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "vue-tsc --noEmit && vite build && tsx scripts/inline-dist.ts",
     "preview": "vite preview"
   },
   "dependencies": {
