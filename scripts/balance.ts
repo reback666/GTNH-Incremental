@@ -123,7 +123,7 @@ const target = run(MACHINES_PER_TIER);
 const lines: string[] = [];
 lines.push('# 数值平衡推算');
 lines.push('');
-lines.push('本文回答一个问题：**现有公式能不能撑住计划书第十七章的「游戏内 7 日 ≈ 80-100 小时等效游玩」节奏。**');
+lines.push('本文回答两件事：**在已定的参数下全通需要多久**，以及**每个参数各占多少权重**。');
 lines.push('');
 lines.push('所有数字都由 `scripts/balance.ts` 生成，直接调用 `src/numeric` 里的公式，可复现。');
 lines.push('');
@@ -192,10 +192,10 @@ for (const r of rows) {
   lines.push(`| ${r.machinesPerTier} | ${fmtDur(dec(r.bootstrap))} | ${fmtDur(dec(r.perTier))} | **${fmtH(r.totalSeconds)} 小时** | ${r.totalMachines} |`);
 }
 lines.push('');
-lines.push('### 2.1 对照 80-100 小时目标');
+lines.push('### 2.1 各目标时长所需的每级台数');
 lines.push('');
-lines.push(`作者选定 **每级 ${MACHINES_PER_TIER} 台**，对应全通 **${fmtH(target.totalSeconds)} 小时**，`);
-lines.push('低于 80-100 小时的目标区间。各目标时长所需的台数：');
+lines.push(`作者定下 **每级 ${MACHINES_PER_TIER} 台**与**成本/产出比 500**，两者共同决定全通 **${fmtH(target.totalSeconds)} 小时**。`);
+lines.push('这也是计划书第十七章「游戏内一周」所对应的等效游玩时长。各目标时长所需的台数：');
 lines.push('');
 lines.push('| 目标 | 对应每级台数 |');
 lines.push('| --- | --- |');
