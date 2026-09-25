@@ -68,8 +68,11 @@ const risk = computed(() => store.snap.risk);
         class="grid-mode"
         :class="{ active: risk.grid === mode.id, locked: !mode.unlocked }"
       >
-        <b>{{ mode.name }}</b>
-        <span class="muted small">{{ mode.summary }}</span>
+        <div class="grid-info">
+          <b>{{ mode.name }}</b>
+          <span class="muted small">{{ mode.summary }}</span>
+          <span v-if="!mode.unlocked" class="muted small">{{ mode.requirement }}</span>
+        </div>
         <span class="grid-actions">
           <template v-if="mode.unlocked">
             <button
@@ -77,11 +80,10 @@ const risk = computed(() => store.snap.risk);
               :disabled="risk.grid === mode.id"
               @click="store.setGrid(mode.id)"
             >
-              {{ risk.grid === mode.id ? '使用中' : '切到这一档' }}
+              {{ risk.grid === mode.id ? '使用中' : '切换' }}
             </button>
           </template>
           <template v-else>
-            <span class="muted small">{{ mode.requirement }}</span>
             <span class="price">{{ mode.cost }} {{ mode.unit }}</span>
             <button type="button" :disabled="!mode.unlockable" @click="store.unlockGrid(mode.id)">
               解锁
