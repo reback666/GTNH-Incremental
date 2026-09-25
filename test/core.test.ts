@@ -3,6 +3,7 @@ import { GameCore } from '../src/game/core';
 import { deserialize, serialize, type SaveData } from '../src/game/save';
 import { modelById, modelsOf } from '../src/game/models';
 import { dec } from '../src/numeric/decimal';
+import { MAX_TIER, MIN_TIER, VOLTAGE_TIERS } from '../src/numeric/voltage';
 
 const ULV_MINER = 'm-1';
 const ULV_GENERATOR = 'g-ulv';
@@ -20,6 +21,27 @@ describe('游戏核心：ULV → LV 完整循环', () => {
     const multiblocks = modelsOf('generator').filter((model) => model.block === 'multiblock');
     expect(multiblocks.length).toBeGreaterThan(0);
     expect(multiblocks[0]!.traits).toContain('不按需发电');
+  });
+
+  it('每一级电压都有发电机机型，且高档机型的出力倍率随等级不减', () => {
+    for (let tier = MIN_TIER; tier <= MAX_TIER; tier += 1) {
+      const models = modelsOf('generator').filter((model) => model.tier === tier);
+      expect(models.length, `${VOLTAGE_TIERS[tier - 1]} 没有发电机机型`).toBeGreaterThan(0);
+    }
+
+    const bestPerTier = Array.from({ length: MAX_TIER }, (_, index) => {
+      const tier = index + 1;
+      return Math.max(
+        ...modelsOf('generator')
+          .filter((model) => model.tier === tier)
+          .map((model) => Number(model.outputFactor)),
+      );
+    });
+    for (let index = 1; index < bestPerTier.length; index += 1) {
+      expect(bestPerTier[index], `${VOLTAGE_TIERS[index]} 的出力倍率低于上一级`).toBeGreaterThanOrEqual(
+        bestPerTier[index - 1]!,
+      );
+    }
   });
 
   it('开局靠手动挖矿攒够第一台机器', () => {

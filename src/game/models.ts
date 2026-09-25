@@ -70,7 +70,15 @@ const GENERATORS: MachineModel[] = [
   { id: 'g-luv-mb-gas', name: '特大燃气涡轮', category: 'generator', block: 'multiblock', tier: 7, fuelEfficiency: '0.90', outputFactor: '4.5', costFactor: '4.5', traits: ['不按需发电', '需要维护'] },
   { id: 'g-zpm-mb-plasma', name: '大型等离子涡轮', category: 'generator', block: 'multiblock', tier: 8, fuelEfficiency: '0.95', outputFactor: '5', costFactor: '5', traits: ['不按需发电', '需要维护'] },
   { id: 'g-uv-mb-plasma', name: '特大等离子涡轮', category: 'generator', block: 'multiblock', tier: 9, fuelEfficiency: '0.95', outputFactor: '5.5', costFactor: '5.5', traits: ['不按需发电', '需要维护'] },
-  { id: 'g-uiv-mb-dyson', name: '戴森云地面单元', category: 'generator', block: 'multiblock', tier: 12, fuelEfficiency: '0.99', outputFactor: '6', costFactor: '6', traits: ['不按需发电', '需要维护'] },
+
+  // GTNH 的单方块发电机只做到 UV，UHV 往后的电力全靠多方块。
+  // 这四台照 GTNH 后期的多方块机器取（硅岩反应堆来自 goodgenerator，
+  // 衰变 / 湮灭 / 黑洞发电机来自 tectech），数值延续上面的多方块阶梯往上走。
+  { id: 'g-uhv-mb-naquadah', name: '大型硅岩反应堆', category: 'generator', block: 'multiblock', tier: 10, fuelEfficiency: '0.96', outputFactor: '6.2', costFactor: '6.2', traits: ['不按需发电', '需要维护'] },
+  { id: 'g-uev-mb-decay', name: '衰变发电机', category: 'generator', block: 'multiblock', tier: 11, fuelEfficiency: '0.97', outputFactor: '6.5', costFactor: '6.5', traits: ['不按需发电', '需要维护'] },
+  { id: 'g-uiv-mb-dyson', name: '戴森云地面单元', category: 'generator', block: 'multiblock', tier: 12, fuelEfficiency: '0.99', outputFactor: '6.8', costFactor: '6.8', traits: ['不按需发电', '需要维护'] },
+  { id: 'g-uxv-mb-annihilation', name: '湮灭发电机', category: 'generator', block: 'multiblock', tier: 13, fuelEfficiency: '0.98', outputFactor: '7.4', costFactor: '7.4', traits: ['不按需发电', '需要维护'] },
+  { id: 'g-max-mb-blackhole', name: '黑洞发电机', category: 'generator', block: 'multiblock', tier: 14, fuelEfficiency: '0.99', outputFactor: '8', costFactor: '8', traits: ['不按需发电', '需要维护'] },
 ];
 
 // ── 采矿机 ──────────────────────────────────────────────────

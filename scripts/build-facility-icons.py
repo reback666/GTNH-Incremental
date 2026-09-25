@@ -1,4 +1,4 @@
-"""生成设施（存电装置、净化器、计算机、研究站）的图标。
+"""生成设施（存电装置、净化器、计算机、研究站）与后期多方块发电机的图标。
 
 和机器图标同一套做法：底层是 GT 的 MACHINE_<电压>_SIDE 机壳，上面叠一个自画的图案。
 图案是本项目自己画的像素画（GT 的储电箱、净化器贴图不在开发包里），
@@ -7,9 +7,12 @@
 计算机与研究站用的是 GT 自己的面片（EM_COMPUTER、OVERLAY_FRONT_RESEARCH_COMPLETER），
 只有一个型号所以直接取第一帧。
 
+UHV 及以后的四级发电机就是 GTNH 后期的多方块发电机（硅岩反应堆、衰变 / 湮灭 /
+黑洞发电机），面片同样取自开发包，多帧的取第一帧。
+
 用法：python scripts/build-facility-icons.py
 产物：src/assets/machines/b-<等级>.png（存电装置）、p-<等级>.png（净化器）、
-      x-<等级>.png（计算机）、r-<等级>.png（研究站）
+      x-<等级>.png（计算机）、r-<等级>.png（研究站）、以及四级后期发电机的图标
 """
 
 from __future__ import annotations
@@ -55,6 +58,14 @@ RESEARCH_FROM_TIER = 7
 # 这两张是 GT 自带的面片，直接贴在机壳上
 COMPUTER_FACE = "assets/gregtech/textures/blocks/iconsets/EM_COMPUTER.png"
 LAB_FACE = "assets/gregtech/textures/blocks/iconsets/OVERLAY_FRONT_RESEARCH_COMPLETER.png"
+
+# 后期多方块发电机：等级、机型 id、GT 面片
+LATE_GENERATORS = [
+    (10, "g-uhv-mb-naquadah", "assets/gregtech/textures/blocks/iconsets/NAQUADAH_REACTOR_SOLID_FRONT.png"),
+    (11, "g-uev-mb-decay", "assets/gregtech/textures/blocks/iconsets/EM_DECAY.png"),
+    (13, "g-uxv-mb-annihilation", "assets/gregtech/textures/blocks/iconsets/EM_ANNIHILATION.png"),
+    (14, "g-max-mb-blackhole", "assets/gregtech/textures/blocks/iconsets/OVERLAY_MULTI_BLACKHOLE.png"),
+]
 
 OUTLINE = (24, 27, 34, 255)
 BODY = (168, 176, 190, 255)
@@ -145,6 +156,22 @@ def main() -> None:
                     icon = icon.resize((32, 32), Image.NEAREST)
                     icon.save(OUT_DIR / f"{prefix}-{tier}.png")
                 print(f"{voltage}: x-{tier} 计算机 / r-{tier} 研究站 ← GT 面片 + 机壳")
+
+        # 后期多方块发电机：面片可能有多帧，取最上面一格
+        for tier, model_id, face_path in LATE_GENERATORS:
+            voltage = VOLTAGES[tier - 1]
+            casing = Image.open(
+                io.BytesIO(
+                    archive.read(f"assets/gregtech/textures/blocks/iconsets/MACHINE_{voltage}_SIDE.png")
+                )
+            ).convert("RGBA")
+            face = (
+                Image.open(io.BytesIO(archive.read(face_path))).convert("RGBA").crop((0, 0, 16, 16))
+            )
+            icon = casing.copy()
+            icon.alpha_composite(face)
+            icon.resize((32, 32), Image.NEAREST).save(OUT_DIR / f"{model_id}.png")
+            print(f"{voltage}: {model_id} ← {face_path.rsplit('/', 1)[-1]} + 机壳")
 
 
 if __name__ == "__main__":
