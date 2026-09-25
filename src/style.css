@@ -1117,28 +1117,6 @@ h1 .small {
   opacity: 0.95;
 }
 
-.rebirth-branch-title {
-  position: absolute;
-  top: 58px;
-  width: 108px;
-  transform: translateX(-50%);
-  color: #6d7a89;
-  font-size: 11px;
-  text-align: center;
-}
-
-.rebirth-branch-title.speed {
-  left: 110px;
-}
-
-.rebirth-branch-title.economy {
-  left: 330px;
-}
-
-.rebirth-branch-title.research {
-  left: 550px;
-}
-
 .rift-backdrop {
   position: fixed;
   inset: 0;

@@ -65,12 +65,6 @@ const links = computed<Link[]>(() => {
   return out;
 });
 
-const branches = [
-  { id: 'speed', title: '速度支线' },
-  { id: 'economy', title: '经济支线' },
-  { id: 'research', title: '研究支线' },
-];
-
 function nodeClass(node: RebirthNodeRow) {
   return { owned: node.owned, buyable: !node.owned && node.buyable };
 }
@@ -127,7 +121,6 @@ function nodeClass(node: RebirthNodeRow) {
     <h2 class="mt">平行宇宙</h2>
     <p class="muted small" style="margin: 0 0 8px">
       转生时可以带一个宇宙走，选过的永久叠加 —— 下一轮开始，核心规则就多一条。
-      选中之后会一直记着（切页面、刷新都不丢），<b>下次转生时才生效</b>；这次不选也行。
     </p>
     <p v-if="rebirth.pendingUniverseName" class="small" style="margin: 0 0 8px">
       本次转生将带上：<b>{{ rebirth.pendingUniverseName }}</b>
@@ -156,10 +149,6 @@ function nodeClass(node: RebirthNodeRow) {
     </div>
 
     <h2 class="mt">永久加成</h2>
-    <p class="muted small" style="margin: 0 0 8px">
-      时空线缆只能花在这里。节点是一次性买断，跨周目一直生效；外层要先买内层。
-      已买 {{ rebirth.treeOwned }} / {{ rebirth.nodes.length }} 格，买满需要 {{ rebirth.treeTotal }} 条。
-    </p>
 
     <div class="rebirth-tree">
       <svg class="rebirth-links" viewBox="0 0 660 330" aria-hidden="true">
@@ -190,14 +179,6 @@ function nodeClass(node: RebirthNodeRow) {
         <span>{{ node.effectText }}</span>
         <em>{{ node.owned ? '已点亮' : node.cost + ' 条' }}</em>
       </button>
-      <div
-        v-for="branch in branches"
-        :key="branch.id"
-        class="rebirth-branch-title"
-        :class="branch.id"
-      >
-        {{ branch.title }}
-      </div>
     </div>
 
     <h2 class="mt">已生效的加成</h2>

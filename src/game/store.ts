@@ -36,7 +36,7 @@ import {
 } from '../numeric/arcane';
 import { PURIFY_PER_TIER_PER_SECOND, purifierMachineCoverage } from '../numeric/pollution';
 import { pollutionDriveFactor, suppressionOfTier } from '../numeric/abyss';
-import { REBIRTH_NODES, REBIRTH_ROOT, treeTotalCost, type RebirthEffectKind } from './rebirth';
+import { REBIRTH_NODES, REBIRTH_ROOT, type RebirthEffectKind } from './rebirth';
 import {
   RESEARCH_FROM_TIER,
   RESEARCH_GATE_FROM_TIER,
@@ -267,8 +267,6 @@ export interface RebirthStats {
   nodes: RebirthNodeRow[];
   // 已经装上的加成汇总
   bonuses: { label: string; value: string }[];
-  treeTotal: string;
-  treeOwned: number;
 }
 
 // 成就：一行一条
@@ -1300,8 +1298,6 @@ function rebirthStats(core: GameCore): RebirthStats {
         value: `${kind === 'researchCost' ? '-' : '+'}${formatNumber(total.times(100))}%`,
       };
     }),
-    treeTotal: formatNumber(treeTotalCost()),
-    treeOwned: owned.length,
   };
 }
 
