@@ -190,6 +190,13 @@ button.big {
   font-variant-numeric: tabular-nums;
 }
 
+/* 明细表里的「机型图标 + 名字」 */
+.model-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .note {
   margin: 0 0 6px;
 }

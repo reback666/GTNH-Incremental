@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useGameStore } from '../game/store';
 import { VOLTAGE_TIERS } from '../numeric/voltage';
 import AnimatedNumber from './AnimatedNumber.vue';
+import MachineIcon from './MachineIcon.vue';
 
 const store = useGameStore();
 const snap = computed(() => store.snap);
@@ -73,7 +74,12 @@ function togglePower(key: PowerKey) {
               <tbody>
                 <tr v-for="row in activeStat.rows" :key="row.name + row.tier">
                   <td>{{ row.voltage }}</td>
-                  <td>{{ row.name }}</td>
+                  <td>
+                    <span class="model-cell">
+                      <MachineIcon :model-id="row.modelId" :kind="row.kind" :size="20" />
+                      <span>{{ row.name }}</span>
+                    </span>
+                  </td>
                   <td class="num-cell">×{{ row.count }}</td>
                   <td class="num-cell">{{ row.amount }}</td>
                 </tr>

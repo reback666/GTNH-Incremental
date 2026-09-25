@@ -23,6 +23,9 @@ export interface ResourceRow {
 export interface PowerDetailRow {
   tier: number;
   voltage: string;
+  // 机型 id 与类别，供界面显示机型图标
+  modelId: string;
+  kind: MachineKind;
   name: string;
   count: number;
   amount: string;
@@ -427,6 +430,8 @@ function powerStats(core: GameCore): PowerStats {
     list.push({
       tier: model.tier,
       voltage: VOLTAGE_TIERS[model.tier - 1] ?? `T${model.tier}`,
+      modelId: model.id,
+      kind: model.category,
       name: model.name,
       count,
       amount: `${formatNumber(amount)} EU/t`,
