@@ -43,6 +43,8 @@ describe('GT 币', () => {
   it('币名与矿名', () => {
     expect(coinName(1)).toBe('铜币');
     expect(coinName(8)).toBe('中子素币');
+    expect(coinName(9)).toBe('宇宙中子素币');
+    expect(coinName(14)).toBe('普朗克币');
     expect(oreName(0)).toBe('T0 矿石');
     expect(oreName(13)).toBe('T13 矿石');
   });
