@@ -612,6 +612,69 @@ h1 .small {
   animation: ripple-out 0.78s ease-out forwards;
 }
 
+/* 镐子的落点：一个很小的亮点加四条短星芒，只亮落点附近，不做整幅提亮 */
+.hit {
+  position: absolute;
+  pointer-events: none;
+}
+
+@keyframes hit-core {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.35);
+  }
+  35% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+}
+
+.hit-core {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(232, 255, 248, 0.9) 0%,
+    rgba(150, 226, 205, 0.4) 45%,
+    rgba(150, 226, 205, 0) 72%
+  );
+  filter: blur(1.5px);
+  animation: hit-core 0.24s ease-out forwards;
+}
+
+@keyframes hit-ray {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -100%) rotate(var(--angle)) scaleY(0.3);
+  }
+  35% {
+    opacity: 0.8;
+    transform: translate(-50%, -108%) rotate(var(--angle)) scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -140%) rotate(var(--angle)) scaleY(0.85);
+  }
+}
+
+.hit-ray {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  height: 13px;
+  border-radius: 1px;
+  background: linear-gradient(to top, rgba(210, 255, 240, 0.05), rgba(210, 255, 240, 0.8));
+  transform-origin: 50% 100%;
+  animation: hit-ray 0.28s ease-out forwards;
+}
+
 /* ── 三个机器大类：点谁展开谁 ─────────────────────────────── */
 .machine-tabs {
   display: grid;

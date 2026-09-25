@@ -81,6 +81,8 @@ const CHIP_COLORS = ['#5ad2c0', '#2f8f83', '#8a97a8', '#4a5563'];
 
 const sparks = ref<Burst[]>([]);
 const ripples = ref<Burst[]>([]);
+// 镐子落点：中心亮点 + 一圈短星芒
+const hits = ref<Burst[]>([]);
 const chips = ref<Chip[]>([]);
 const shaking = ref(false);
 let seq = 0;
@@ -95,6 +97,7 @@ function mine(event: MouseEvent) {
 
   sparks.value.push(point);
   ripples.value.push(point);
+  hits.value.push(point);
 
   // 开采碎屑：六片朝四周飞散
   const fresh: Chip[] = Array.from({ length: 6 }, (_, index) => {
@@ -120,6 +123,9 @@ function mine(event: MouseEvent) {
   setTimeout(() => {
     ripples.value = ripples.value.filter((s) => s.id !== point.id);
   }, 820);
+  setTimeout(() => {
+    hits.value = hits.value.filter((s) => s.id !== point.id);
+  }, 320);
   setTimeout(() => {
     chips.value = chips.value.filter((chip) => !chipIds.has(chip.id));
   }, 800);
@@ -194,6 +200,15 @@ function mine(event: MouseEvent) {
         class="ripple"
         :style="{ left: ripple.x + 'px', top: ripple.y + 'px' }"
       />
+      <span
+        v-for="hit in hits"
+        :key="'h' + hit.id"
+        class="hit"
+        :style="{ left: hit.x + 'px', top: hit.y + 'px' }"
+      >
+        <span v-for="ray in 4" :key="ray" class="hit-ray" :style="{ '--angle': ray * 90 - 45 + 'deg' }" />
+        <span class="hit-core" />
+      </span>
     </button>
   </section>
 </template>
