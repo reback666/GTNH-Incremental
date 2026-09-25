@@ -716,6 +716,12 @@ h1 .small {
   color: var(--warn);
 }
 
+/* GTNH 的原版像素贴图，放大时保持硬边 */
+.machine-icon {
+  image-rendering: pixelated;
+  flex: none;
+}
+
 .tier-bar .count {
   width: 38px;
   flex: none;

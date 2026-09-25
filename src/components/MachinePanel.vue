@@ -8,6 +8,7 @@ import {
 } from '../game/store';
 import type { MachineKind, PayWith } from '../game/core';
 import SpriteIcon from './SpriteIcon.vue';
+import MachineIcon from './MachineIcon.vue';
 
 const props = defineProps<{ columns: MachineColumn[] }>();
 const store = useGameStore();
@@ -100,9 +101,10 @@ function canBuy(model: MachineModelRow): boolean {
             </span>
 
             <div class="tier-icons">
-              <SpriteIcon
+              <MachineIcon
                 v-for="index in cells(bar.model.icons)"
                 :key="index"
+                :model-id="bar.model.id"
                 :kind="column.kind"
                 :size="20"
                 class="icon-pop"
