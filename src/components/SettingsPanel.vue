@@ -140,10 +140,13 @@ const unlockTier = ref(1);
         <button
           v-for="universe in snap.universes"
           :key="universe.id"
-          :disabled="universe.owned"
-          @click="store.devGrantUniverse(universe.id)"
+          @click="
+            universe.owned
+              ? store.devRevokeUniverse(universe.id)
+              : store.devGrantUniverse(universe.id)
+          "
         >
-          {{ universe.owned ? '已有' : '获得' }}{{ universe.name }}
+          {{ universe.owned ? '取消' : '获得' }}{{ universe.name }}
         </button>
       </div>
 

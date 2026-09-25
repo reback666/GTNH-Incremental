@@ -462,6 +462,13 @@ export const useGameStore = defineStore('game', {
       this.save();
       return ok;
     },
+    // 测试用：把某个宇宙撤掉
+    devRevokeUniverse(id: string): boolean {
+      const ok = getCore().devRevokeUniverse(id);
+      this.refresh();
+      this.save();
+      return ok;
+    },
     // 记住「下次转生带哪个宇宙」，跟着存档走
     setPendingUniverse(id: string | null): boolean {
       const ok = getCore().setPendingUniverse(id);

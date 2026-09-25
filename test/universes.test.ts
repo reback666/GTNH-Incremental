@@ -152,4 +152,29 @@ describe('平行宇宙', () => {
     expect(core.hasUniverse('arcane')).toBe(true);
     expect(core.devGrantUniverse('arcane')).toBe(false); // 不重复
   });
+
+  it('开发者模式：也能把宇宙撤掉，并清掉挂在它上面的待选', () => {
+    const core = new GameCore();
+    core.setDevMode(true);
+    core.devGrantUniverse('arcane');
+    core.setPendingUniverse('abyss');
+
+    // 撤掉没拥有的宇宙返回 false
+    expect(core.devRevokeUniverse('industry')).toBe(false);
+    expect(core.devRevokeUniverse('arcane')).toBe(true);
+    expect(core.hasUniverse('arcane')).toBe(false);
+    // 待选挂的不是被撤掉的那个，应该保留
+    expect(core.pendingUniverse).toBe('abyss');
+
+    core.devGrantUniverse('abyss');
+    core.setPendingUniverse('abyss');
+    core.devRevokeUniverse('abyss');
+    expect(core.pendingUniverse).toBe(null); // 撤掉时把待选一起清掉
+
+    // 关掉开发者模式之后不能再撤
+    core.devGrantUniverse('arcane');
+    core.setDevMode(false);
+    expect(core.devRevokeUniverse('arcane')).toBe(false);
+    expect(core.hasUniverse('arcane')).toBe(true);
+  });
 });

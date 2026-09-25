@@ -456,6 +456,18 @@ export class GameCore {
     return this.addUniverse(id);
   }
 
+  // 测试用：把某个宇宙撤掉。已经建好的灵气节点 / 抑制器留着不动，
+  // 只是失去宇宙之后它们不再生效（重新给回来就能继续用）
+  devRevokeUniverse(id: string): boolean {
+    if (!this.devMode) return false;
+    const universe = universeById(id);
+    if (!universe || !this.hasUniverse(universe.id)) return false;
+    this.universes = this.universes.filter((item) => item !== universe.id);
+    // 待选里如果正挂着它，一并清掉
+    if (this.pendingUniverse === universe.id) this.pendingUniverse = null;
+    return true;
+  }
+
   private totalBonus(kind: RebirthEffectKind): Decimal {
     return bonusMultiplier(this.rebirthNodes, kind);
   }
