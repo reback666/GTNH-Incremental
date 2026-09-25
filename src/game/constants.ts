@@ -32,7 +32,8 @@ export const UI_REFRESH_MS = 50;
 // v1：机器数量按电压等级存（miners/generators/machines 各 14 个）
 // v2：改按机型存（counts: 机型 id → 数量），因为同一个等级现在可以有多个机型
 // v3：加了超频档位、故障台数、存电存量（第二阶段：自动化与深度）
-export const SAVE_VERSION = 3;
+// v4：加了污染值与开关、电网模式、黑市窃取累计（第二阶段：风险杠杆）
+export const SAVE_VERSION = 4;
 export const SAVE_KEY = 'gtnh-incremental-save';
 
 export function unlockCost(machineTier: number): Decimal {

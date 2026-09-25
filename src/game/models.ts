@@ -9,7 +9,7 @@ import { MAX_TIER, VOLTAGE_TIERS } from '../numeric/voltage';
 // （基础蒸汽轮机 / 进阶蒸汽轮机 / 涡轮蒸汽轮机是三条独立条目），
 // 这样最直观，也方便逐条调数值。
 
-export type MachineCategory = 'miner' | 'generator' | 'machine' | 'storage';
+export type MachineCategory = 'miner' | 'generator' | 'machine' | 'storage' | 'purifier';
 export type BlockKind = 'single' | 'multiblock';
 
 export interface MachineModel {
@@ -122,7 +122,32 @@ const STORAGES: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => 
   };
 }).filter((model) => model.tier >= STORAGE_FROM_TIER);
 
-export const MACHINE_MODELS: MachineModel[] = [...GENERATORS, ...MINERS, ...MACHINES, ...STORAGES];
+// ── 净化器 ──────────────────────────────────────────────────
+// 计划书第六章：净化器能把污染压下来。和存电装置同期（MV）开放 ——
+// 前两级的机器规模还涨不出污染。
+export const PURIFIER_FROM_TIER = 3;
+
+const PURIFIERS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
+  const tier = index + 1;
+  return {
+    id: `p-${tier}`,
+    name: `${VOLTAGE_TIERS[index]} 净化器`,
+    category: 'purifier' as const,
+    block: 'single' as const,
+    tier,
+    outputFactor: '1',
+    costFactor: '1.2',
+    traits: ['降低污染'],
+  };
+}).filter((model) => model.tier >= PURIFIER_FROM_TIER);
+
+export const MACHINE_MODELS: MachineModel[] = [
+  ...GENERATORS,
+  ...MINERS,
+  ...MACHINES,
+  ...STORAGES,
+  ...PURIFIERS,
+];
 
 const BY_ID = new Map(MACHINE_MODELS.map((model) => [model.id, model]));
 

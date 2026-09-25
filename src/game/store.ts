@@ -9,6 +9,15 @@ import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
 import { overclockEnergyMultiplier, overclockSpeedMultiplier } from '../numeric/overclock';
 import { faultHint } from '../numeric/fault';
 import { batteryCapacityEU } from '../numeric/storage';
+import {
+  COLLAPSE_CHANCE_PER_10_MINUTES,
+  MUTATION_CHANCE_PER_MINUTE,
+  POLLUTION_HIGH,
+  POLLUTION_LOW,
+  pollutionBand,
+  pollutionBandName,
+} from '../numeric/pollution';
+import { GRID_MODES, gridMode, type GridMode } from '../numeric/grid';
 import { type GameCore, type MachineKind, type PayWith } from './core';
 import { canOverclock, modelsOf, type BlockKind, type MachineModel } from './models';
 import { getCore, resetCore, setCore } from './engine';
@@ -47,6 +56,27 @@ export interface PowerStats {
   consumed: PowerStat;
   ratio: string;
   ratioShort: boolean;
+}
+
+// 设置与风险面板：污染 + 电网
+export interface RiskStats {
+  pollution: string;
+  pollutionRaw: string;
+  band: string;
+  bandName: string;
+  enabled: boolean;
+  growth: string;
+  purify: string;
+  net: string;
+  netPositive: boolean;
+  mutationChance: string;
+  collapseChance: string;
+  grid: GridMode;
+  gridName: string;
+  gridSummary: string;
+  gridModes: { id: GridMode; name: string; summary: string }[];
+  outage: boolean;
+  siphoned: string;
 }
 
 export interface MachineModelRow {
@@ -112,6 +142,7 @@ export interface Snapshot {
   totalCoins: string;
   rate: ProductionRate;
   power: PowerStats;
+  risk: RiskStats;
   nextTier: number | null;
   unlockCost: string;
   canUnlock: boolean;
@@ -130,6 +161,10 @@ const COLUMN_META: Record<MachineKind, { title: string; hint: string }> = {
   storage: {
     title: '存电装置',
     hint: '富余电力存进电池；发电不够时先放存量，存量见底才降载停机。',
+  },
+  purifier: {
+    title: '净化器',
+    hint: '压污染。重度污染下产出 -40%，还会随机砸掉机器，靠它把污染拉回安全区。',
   },
 };
 
@@ -182,6 +217,17 @@ export const useGameStore = defineStore('game', {
       this.refresh();
       this.save();
       return fixed;
+    },
+    // 换电网 / 开关污染机制：都属于设置，改完立刻生效并存档
+    setGrid(mode: GridMode): void {
+      getCore().setGrid(mode);
+      this.refresh();
+      this.save();
+    },
+    setPollutionEnabled(enabled: boolean): void {
+      getCore().setPollutionEnabled(enabled);
+      this.refresh();
+      this.save();
     },
     step(dtSeconds: number) {
       getCore().tick(dtSeconds);
@@ -243,7 +289,7 @@ function buildSnapshot(core: GameCore): Snapshot {
       value: amount.toString(),
       detail: [{ label: '产出', value: `${formatNumber(coinRate[index]!)}/秒` }],
     })),
-    columns: (['miner', 'generator', 'machine', 'storage'] as MachineKind[]).map((kind) =>
+    columns: (['miner', 'generator', 'machine', 'storage', 'purifier'] as MachineKind[]).map((kind) =>
       machineColumn(core, kind),
     ),
     maxTier: core.maxTier,
@@ -263,6 +309,7 @@ function buildSnapshot(core: GameCore): Snapshot {
       fuelPerSecond: formatNumber(rate.fuel),
     },
     power: powerStats(core),
+    risk: riskStats(core),
     nextTier,
     unlockCost: nextTier === null ? '—' : formatNumber(core.unlockCostOf(nextTier)),
     canUnlock: nextTier !== null && core.canUnlock(nextTier),
@@ -276,6 +323,39 @@ function currentVein(core: GameCore): Snapshot['currentVein'] {
     ? Math.max(...core.unlockedVeins)
     : 0;
   return { tier: oreTier, name: oreName(oreTier) };
+}
+
+// 设置与风险：污染值 + 增长/净化速率 + 电网模式
+function riskStats(core: GameCore): RiskStats {
+  const growth = core.pollutionPerSecond();
+  const purify = core.purifyPerSecond();
+  const net = core.pollutionDeltaPerSecond();
+  const mode = gridMode(core.grid);
+  return {
+    pollution: `${formatNumber(core.pollution, { significantDigits: 4 })}%`,
+    pollutionRaw: core.pollution.toString(),
+    band: pollutionBand(core.pollution),
+    bandName: core.pollutionEnabled
+      ? pollutionBandName(core.pollution)
+      : '污染机制已关闭：不增长，也不产生任何影响',
+    enabled: core.pollutionEnabled,
+    growth: `${formatNumber(growth, { significantDigits: 3 })}%/秒`,
+    purify: `${formatNumber(purify, { significantDigits: 3 })}%/秒`,
+    net: `${net.gte(0) ? '+' : ''}${formatNumber(net, { significantDigits: 3 })}%/秒`,
+    netPositive: net.gt(0),
+    mutationChance: `${formatNumber(dec(String(MUTATION_CHANCE_PER_MINUTE * 100)))}% / 分钟`,
+    collapseChance: `${formatNumber(dec(String(COLLAPSE_CHANCE_PER_10_MINUTES * 100)))}% / 10 分钟`,
+    grid: core.grid,
+    gridName: mode.name,
+    gridSummary: mode.summary,
+    gridModes: GRID_MODES.map((item) => ({
+      id: item.id,
+      name: item.name,
+      summary: item.summary,
+    })),
+    outage: core.outageSeconds > 0,
+    siphoned: formatNumber(core.siphoned),
+  };
 }
 
 function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
@@ -389,6 +469,8 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
       coins = coins.plus(output);
       eu = eu.plus(core.machineEnergyDrain(model));
       ore = ore.plus(output.div(C.COINS_PER_ORE));
+    } else if (kind === 'purifier') {
+      eu = eu.plus(core.purifierEnergyDrain(model));
     }
   }
   if (kind === 'miner') {
@@ -407,6 +489,15 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
     return [
       { label: '总容量', value: `${formatNumber(core.batteryCapacity())} EU` },
       { label: '当前存电', value: `${formatNumber(core.storedEU)} EU` },
+    ];
+  }
+  if (kind === 'purifier') {
+    return [
+      {
+        label: '净化',
+        value: `${formatNumber(core.purifyPerSecond(), { significantDigits: 3 })}%/秒`,
+      },
+      { label: '耗电', value: `${formatNumber(eu)} EU/t` },
     ];
   }
   return [
@@ -500,6 +591,11 @@ function powerStats(core: GameCore): PowerStats {
     const n = core.countOf(model.id);
     if (n === 0) continue;
     demand = push(consumed, model, n, core.machineEnergyDrain(model), demand);
+  }
+  for (const model of core.unlockedModels('purifier')) {
+    const n = core.countOf(model.id);
+    if (n === 0) continue;
+    demand = push(consumed, model, n, core.purifierEnergyDrain(model), demand);
   }
 
   // 存电装置：每台容量 × 台数，合起来是一个池子

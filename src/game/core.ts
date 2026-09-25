@@ -9,6 +9,26 @@ import { isValidOverclockLevel, overclockEnergyMultiplier, overclockSpeedMultipl
 import { expectedFaults, sampleFaults } from '../numeric/fault';
 import { batteryCapacityEU, settleStorage } from '../numeric/storage';
 import {
+  COLLAPSE_CHANCE_PER_10_MINUTES,
+  MUTATION_CHANCE_PER_MINUTE,
+  MUTATION_REWARD_SECONDS,
+  clampPollution,
+  pollutionBand,
+  pollutionOutputMultiplier,
+  pollutionPerSecond,
+  purifyPerSecond,
+} from '../numeric/pollution';
+import {
+  DEFAULT_GRID,
+  OUTAGE_CHANCE,
+  OUTAGE_CHECK_SECONDS,
+  OUTAGE_SECONDS,
+  SIPHON_CHECK_SECONDS,
+  SIPHON_RATIO,
+  gridEnergyMultiplier,
+  type GridMode,
+} from '../numeric/grid';
+import {
   MACHINE_MODELS,
   canOverclock,
   modelsOf,
@@ -41,6 +61,13 @@ export interface TickReport {
   euGenerated: Decimal;
   euConsumed: Decimal;
   powerRatio: number;
+  // 污染：本拍净变化与产出倍率（关掉污染机制时倍率恒为 1）
+  pollutionDelta: Decimal;
+  outputMultiplier: Decimal;
+  // 波动电网断电、变异奖励、工厂崩溃、黑市窃取
+  outage: boolean;
+  mutations: number;
+  collapses: number;
   // 本拍的存电结算：充进去多少、放出来多少
   euCharged: Decimal;
   euDischarged: Decimal;
@@ -62,6 +89,19 @@ export class GameCore {
   faults: Record<string, number> = {};
   // 存电装置的存量（EU），所有电池共用一个池子
   storedEU = ZERO;
+  // 污染值 0-100。设置里关掉污染机制后它不涨、也不产生任何影响
+  pollution = ZERO;
+  pollutionEnabled = true;
+  // 累计被黑市电网薅走的 GT 币（按币值折算）
+  siphoned = ZERO;
+  // 电网模式（计划书第六章）
+  grid: GridMode = DEFAULT_GRID;
+  // 波动电网：还要断多久、距离下次判定过了多久
+  outageSeconds = 0;
+  outageTimer = 0;
+  siphonTimer = 0;
+  mutationTimer = 0;
+  collapseTimer = 0;
   maxTier = 1;
   unlockedVeins: number[] = [0];
   playSeconds = 0;
@@ -166,6 +206,139 @@ export class GameCore {
     return fuelRateOf(model).times(this.countOf(model.id));
   }
 
+  // 净化器不跑配方，和发电机一样不参与超频
+  purifierEnergyDrain(model: MachineModel): Decimal {
+    return machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }).times(
+      this.workingCountOf(model.id),
+    );
+  }
+
+  // ── 污染与电网 ─────────────────────────────────────────────
+
+  setGrid(mode: GridMode): void {
+    this.grid = mode;
+    // 换电网等于重新接线：断电立刻结束，计时从头开始
+    this.outageSeconds = 0;
+    this.outageTimer = 0;
+    this.siphonTimer = 0;
+  }
+
+  setPollutionEnabled(enabled: boolean): void {
+    this.pollutionEnabled = enabled;
+  }
+
+  // 正在跑的机器（按电压等级汇总），污染与净化都按它算
+  private runningTiers(category: MachineCategory): { tier: number; count: number }[] {
+    return modelsOf(category)
+      .filter((model) => model.tier <= this.maxTier)
+      .map((model) => ({ tier: model.tier, count: this.workingCountOf(model.id) }));
+  }
+
+  // 每秒产生的污染（百分点/秒）
+  pollutionPerSecond(): Decimal {
+    const machinery: { tier: number; count: number }[] = [
+      ...this.runningTiers('miner'),
+      ...this.runningTiers('generator'),
+      ...this.runningTiers('machine'),
+    ];
+    return pollutionPerSecond(machinery);
+  }
+
+  // 每秒净化掉的污染（百分点/秒）
+  purifyPerSecond(): Decimal {
+    return purifyPerSecond(this.runningTiers('purifier'));
+  }
+
+  // 本拍的污染净变化（正数 = 在涨）
+  pollutionDeltaPerSecond(): Decimal {
+    return this.pollutionPerSecond().minus(this.purifyPerSecond());
+  }
+
+  // 污染对产出的惩罚倍率。关掉污染机制时恒为 1
+  outputMultiplier(): Decimal {
+    return this.pollutionEnabled ? pollutionOutputMultiplier(this.pollution) : ONE;
+  }
+
+  // 污染带来的两个事件（计划书第六章）：
+  //   30-70%：每分钟 20% 概率"变异"——按当前每秒产币给 30 秒的量
+  //   >70%：每 10 分钟 10% 概率"工厂崩溃"——随机摧毁一台机器
+  private handlePollutionEvents(dtSeconds: number, report: TickReport): void {
+    const band = pollutionBand(this.pollution);
+    if (band === 'mutating') {
+      this.mutationTimer += dtSeconds;
+      this.collapseTimer = 0;
+      if (this.mutationTimer >= 60) {
+        this.mutationTimer -= 60;
+        if (this.random() < MUTATION_CHANCE_PER_MINUTE) {
+          const reward = this.mutationReward();
+          if (reward.gt(0)) {
+            const tier = this.bestMachineTier();
+            this.coins[tier - 1] = this.coins[tier - 1]!.plus(reward);
+            this.totalCoins = this.totalCoins.plus(reward);
+            report.coinsGained[tier - 1] = report.coinsGained[tier - 1]!.plus(reward);
+            report.mutations += 1;
+          }
+        }
+      }
+      return;
+    }
+    this.mutationTimer = 0;
+    if (band !== 'critical') {
+      this.collapseTimer = 0;
+      return;
+    }
+    this.collapseTimer += dtSeconds;
+    if (this.collapseTimer >= 600) {
+      this.collapseTimer -= 600;
+      if (this.random() < COLLAPSE_CHANCE_PER_10_MINUTES && this.destroyOneMachine()) {
+        report.collapses += 1;
+      }
+    }
+  }
+
+  // 最高等级、且真的在运转的制造机等级（变异奖励发这一级的币）
+  private bestMachineTier(): number {
+    let tier = 1;
+    for (const model of modelsOf('machine')) {
+      if (model.tier <= this.maxTier && this.workingCountOf(model.id) > 0) {
+        tier = Math.max(tier, model.tier);
+      }
+    }
+    return tier;
+  }
+
+  // 变异奖励：当前每秒产币 × MUTATION_REWARD_SECONDS
+  private mutationReward(): Decimal {
+    let perSecond = ZERO;
+    for (const model of modelsOf('machine')) {
+      if (model.tier <= this.maxTier) perSecond = perSecond.plus(this.machineOutputPerSecond(model));
+    }
+    return perSecond.times(MUTATION_REWARD_SECONDS);
+  }
+
+  // 工厂崩溃：从所有已建机器里随机挑一台摧毁，返回是否真的毁掉了东西
+  private destroyOneMachine(): boolean {
+    const owned = MACHINE_MODELS.filter((model) => this.countOf(model.id) > 0);
+    if (owned.length === 0) return false;
+    const victim = owned[Math.floor(this.random() * owned.length)]!;
+    const left = this.countOf(victim.id) - 1;
+    if (left > 0) this.counts[victim.id] = left;
+    else delete this.counts[victim.id];
+    if (this.faultyCountOf(victim.id) > left) this.faults[victim.id] = Math.max(0, left);
+    return true;
+  }
+
+  // 黑市电网：随机薅走一种 GT 币的 1%
+  private siphonCoins(): void {
+    const held = this.coins
+      .map((amount, index) => ({ amount, index }))
+      .filter((item) => item.amount.gt(0));
+    if (held.length === 0) return;
+    const target = held[Math.floor(this.random() * held.length)]!;
+    this.coins[target.index] = target.amount.times(dec('1').minus(SIPHON_RATIO));
+    this.siphoned = this.siphoned.plus(target.amount.times(SIPHON_RATIO));
+  }
+
   // 在给定电压等级上能造的机型
   modelsAt(category: MachineCategory, tier: number): MachineModel[] {
     return modelsOf(category).filter((model) => model.tier === tier);
@@ -262,8 +435,12 @@ export class GameCore {
         demand = demand.plus(this.minerEnergyDrain(model));
       } else if (model.category === 'machine') {
         demand = demand.plus(this.machineEnergyDrain(model));
+      } else if (model.category === 'purifier') {
+        demand = demand.plus(this.purifierEnergyDrain(model));
       }
     }
+    // 电网模式直接改耗电：稳定 +20%、波动 -30%、黑市 -50%
+    demand = demand.times(gridEnergyMultiplier(this.grid));
 
     // 2) 发电机按库存矿石实际烧掉多少 —— 烧不到就发不满
     let generated = ZERO;
@@ -282,20 +459,48 @@ export class GameCore {
       generated = generated.plus(this.generatorOutputRated(model).times(dtSeconds).times(ratio));
     }
 
-    // 3) 先过存电装置：富余电力存起来，发电不够先放存量，放完还不够才降载
+    // 3) 电网事件：波动电网可能断电，断电期间机器全停（不产也不耗）
+    if (this.outageSeconds > 0) {
+      this.outageSeconds = Math.max(0, this.outageSeconds - dtSeconds);
+      report.outage = true;
+    } else if (this.grid === 'volatile') {
+      this.outageTimer += dtSeconds;
+      if (this.outageTimer >= OUTAGE_CHECK_SECONDS) {
+        this.outageTimer -= OUTAGE_CHECK_SECONDS;
+        if (this.random() < OUTAGE_CHANCE) {
+          this.outageSeconds = OUTAGE_SECONDS;
+          report.outage = true;
+        }
+      }
+    }
+    const effectiveDemand = report.outage ? ZERO : demand;
+
+    // 4) 再过存电装置：富余电力存起来，发电不够先放存量，放完还不够才降载
     const settlement = settleStorage({
       stored: this.storedEU,
       capacity: this.batteryCapacity(),
-      net: generated.minus(demand),
+      net: generated.minus(effectiveDemand),
       dtSeconds,
     });
     this.storedEU = settlement.stored;
-    const needEU = demand.times(dtSeconds);
-    const ratioDec = needEU.lte(0)
-      ? ONE
-      : Decimal.max(0, Decimal.min(ONE, needEU.minus(settlement.shortfall).div(needEU)));
+    const needEU = effectiveDemand.times(dtSeconds);
+    const ratioDec = report.outage
+      ? ZERO
+      : needEU.lte(0)
+        ? ONE
+        : Decimal.max(0, Decimal.min(ONE, needEU.minus(settlement.shortfall).div(needEU)));
     report.euCharged = settlement.charged;
     report.euDischarged = settlement.discharged;
+
+    // 污染：边污染边被净化器压，产出按污染档位打折
+    const pollutionDelta = this.pollutionDeltaPerSecond();
+    if (this.pollutionEnabled) {
+      this.pollution = clampPollution(this.pollution.plus(pollutionDelta.times(dtSeconds)));
+    }
+    const pollutionMul = this.outputMultiplier();
+    report.pollutionDelta = pollutionDelta;
+    report.outputMultiplier = pollutionMul;
+    const productive = ratioDec.times(pollutionMul);
 
     // 4) 采矿机产矿。超频提速，坏了的机器不算数
     //
@@ -311,7 +516,7 @@ export class GameCore {
       veinRates.set(veinTier, (veinRates.get(veinTier) ?? ZERO).plus(rate));
     }
     for (const [veinTier, ratePerSecond] of veinRates) {
-      const total = ratePerSecond.times(dtSeconds).times(ratioDec);
+      const total = ratePerSecond.times(dtSeconds).times(productive);
       if (total.lte(0)) continue;
       const kinds = veinTier + 1;
       const share = total.div(kinds);
@@ -325,7 +530,7 @@ export class GameCore {
     // 5) 制造机产币，同时吃矿。超频提速，吃矿与耗电同步上涨
     for (const model of active) {
       if (model.category !== 'machine') continue;
-      const produce = this.machineOutputPerSecond(model).times(dtSeconds).times(ratioDec);
+      const produce = this.machineOutputPerSecond(model).times(dtSeconds).times(productive);
       const wantOre = produce.div(C.COINS_PER_ORE);
       const oreTier = model.tier - 1;
       const available = this.ores[oreTier]!;
@@ -356,9 +561,22 @@ export class GameCore {
       }
     }
 
+    // 7) 污染事件：中度污染偶尔"变异"给一笔奖励，重度污染可能工厂崩溃
+    if (this.pollutionEnabled) {
+      this.handlePollutionEvents(dtSeconds, report);
+    }
+    // 8) 黑市电网：每分钟随机薅走一种 GT 币的 1%
+    if (this.grid === 'black') {
+      this.siphonTimer += dtSeconds;
+      if (this.siphonTimer >= SIPHON_CHECK_SECONDS) {
+        this.siphonTimer -= SIPHON_CHECK_SECONDS;
+        this.siphonCoins();
+      }
+    }
+
     this.playSeconds += dtSeconds;
     report.euGenerated = generated;
-    report.euConsumed = demand.times(dtSeconds).times(ratioDec);
+    report.euConsumed = effectiveDemand.times(dtSeconds).times(ratioDec);
     report.powerRatio = ratioDec.toNumber();
     this.lastReport = report;
     return report;
@@ -370,6 +588,11 @@ function emptyReport(): TickReport {
     euGenerated: ZERO,
     euConsumed: ZERO,
     powerRatio: 1,
+    pollutionDelta: ZERO,
+    outputMultiplier: ONE,
+    outage: false,
+    mutations: 0,
+    collapses: 0,
     euCharged: ZERO,
     euDischarged: ZERO,
     faultsGained: 0,

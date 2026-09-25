@@ -16,6 +16,11 @@ export interface SaveData {
   overclock?: Record<string, number>;
   faults?: Record<string, number>;
   storedEU?: string;
+  // v4：污染值、污染开关、电网模式、被黑市薅走的累计
+  pollution?: string;
+  pollutionEnabled?: boolean;
+  grid?: string;
+  siphoned?: string;
   // v1 遗留字段：按电压等级存的数量，读到旧存档时用来迁移
   miners?: number[];
   generators?: number[];
@@ -37,6 +42,10 @@ export function serialize(core: GameCore): SaveData {
     overclock: { ...core.overclock },
     faults: { ...core.faults },
     storedEU: toSaveString(core.storedEU),
+    pollution: toSaveString(core.pollution),
+    pollutionEnabled: core.pollutionEnabled,
+    grid: core.grid,
+    siphoned: toSaveString(core.siphoned),
     maxTier: core.maxTier,
     unlockedVeins: [...core.unlockedVeins],
     playSeconds: core.playSeconds,
@@ -54,6 +63,10 @@ export function deserialize(data: SaveData): GameCore {
   core.overclock = { ...(data.overclock ?? {}) };
   core.faults = { ...(data.faults ?? {}) };
   core.storedEU = fromSaveString(data.storedEU ?? '0');
+  core.pollution = fromSaveString(data.pollution ?? '0');
+  core.pollutionEnabled = data.pollutionEnabled ?? true;
+  core.grid = (data.grid as GameCore['grid']) ?? 'stable';
+  core.siphoned = fromSaveString(data.siphoned ?? '0');
   core.maxTier = data.maxTier;
   core.unlockedVeins = [...data.unlockedVeins];
   core.playSeconds = data.playSeconds;
@@ -94,7 +107,7 @@ export function loadFromStorage(): GameCore | null {
   if (!raw) return null;
   try {
     const data = JSON.parse(raw) as SaveData;
-    if (![1, 2, SAVE_VERSION].includes(data.version)) {
+    if (![1, 2, 3, SAVE_VERSION].includes(data.version)) {
       throw new Error(`存档版本 ${data.version} 无法识别`);
     }
     return deserialize(data);

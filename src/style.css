@@ -560,6 +560,84 @@ h1 .small {
   font-size: 12px;
 }
 
+/* 设置与风险：污染条与电网选择 */
+.pollution {
+  margin-top: 10px;
+}
+
+.pollution-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pollution-head b {
+  font-size: 18px;
+  color: var(--text);
+}
+
+.pollution-track {
+  position: relative;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 5px;
+  background: #1b2129;
+  border: 1px solid #333c48;
+  overflow: hidden;
+}
+
+.pollution-track.off {
+  opacity: 0.4;
+}
+
+.pollution-fill {
+  display: block;
+  height: 100%;
+  transition: width 0.3s ease-out;
+}
+
+.pollution-fill.clean {
+  background: linear-gradient(90deg, #3f9d6a, #58c48f);
+}
+
+.pollution-fill.mutating {
+  background: linear-gradient(90deg, #b08a2a, #e0a33e);
+}
+
+.pollution-fill.critical {
+  background: linear-gradient(90deg, #a83c39, #d9524f);
+}
+
+.pollution-mark {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 0;
+}
+
+.grid-modes {
+  display: grid;
+  gap: 8px;
+}
+
+.grid-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  padding: 8px 10px;
+}
+
+.grid-mode.active {
+  border-color: var(--accent);
+  background: rgba(88, 196, 163, 0.12);
+}
+
 /* 镐子敲上去：矿脉轻轻往下一沉再回弹，不做整体提亮（原来那版闪一下太扎眼） */
 @keyframes vein-settle {
   0%,

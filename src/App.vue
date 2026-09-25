@@ -5,6 +5,7 @@ import ResourceBar from './components/ResourceBar.vue';
 import MachinePanel from './components/MachinePanel.vue';
 import VeinPanel from './components/VeinPanel.vue';
 import TechTreePanel from './components/TechTreePanel.vue';
+import RiskPanel from './components/RiskPanel.vue';
 
 const store = useGameStore();
 
@@ -22,6 +23,8 @@ onMounted(() => {
   <MachinePanel :columns="store.snap.columns" />
 
   <TechTreePanel />
+
+  <RiskPanel />
 
   <section class="panel">
     <h2>存档</h2>
