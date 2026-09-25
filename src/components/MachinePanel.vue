@@ -8,7 +8,6 @@ import {
 } from '../game/store';
 import type { MachineKind, PayWith } from '../game/core';
 import { MAX_OVERCLOCK_LEVEL as MAX_OC } from '../numeric/overclock';
-import SpriteIcon from './SpriteIcon.vue';
 import MachineIcon from './MachineIcon.vue';
 
 const props = defineProps<{ columns: MachineColumn[] }>();
@@ -72,6 +71,20 @@ const bars = computed<Bar[]>(() => {
 
 const activeColumn = computed(() => props.columns.find((item) => item.kind === active.value) ?? null);
 
+// 类别标签上放一台该类的代表机型图标（用 GT 贴图，和面板里的机器图标一致）
+const TAB_ICON: Record<MachineKind, string> = {
+  miner: 'm-2',
+  generator: 'g-lv-steam',
+  machine: 'c-2',
+  storage: 'b-3',
+  purifier: 'p-3',
+  research: 'x-7',
+};
+
+function tabIconId(kind: MachineKind): string {
+  return TAB_ICON[kind] ?? '';
+}
+
 function cells(count: number): number[] {
   return Array.from({ length: count }, (_, index) => index);
 }
@@ -93,7 +106,7 @@ function canBuy(model: MachineModelRow): boolean {
         :class="{ active: active === column.kind }"
         @click="active = column.kind"
       >
-        <SpriteIcon :kind="column.kind" :size="30" />
+        <MachineIcon :model-id="tabIconId(column.kind)" :kind="column.kind" :size="30" />
         <span class="tab-name">{{ column.title }}</span>
         <span class="tab-count">已建 {{ column.count }} 台</span>
       </button>
