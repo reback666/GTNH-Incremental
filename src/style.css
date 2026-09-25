@@ -688,10 +688,63 @@ h1 .small {
 .model-name {
   flex: 1 1 132px;
   min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  cursor: help;
+  outline: none;
+}
+
+.model-label {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.model-name:hover,
+.model-name:focus {
+  color: var(--accent);
+}
+
+/* 机器名的悬停提示：单台消耗与产出 */
+.model-tip {
+  position: fixed;
+  z-index: 100;
+  width: 178px;
+  padding: 8px 10px;
+  background: #0f141a;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
   font-size: 12px;
+}
+
+.tip-name {
+  margin-bottom: 5px;
+  color: var(--accent);
+}
+
+.tip-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tip-row span {
+  color: var(--muted);
+}
+
+.tip-row b {
+  font-variant-numeric: tabular-nums;
+}
+
+.tip-traits {
+  margin-top: 5px;
+  color: var(--warn);
+  font-size: 11px;
 }
 
 .badge {

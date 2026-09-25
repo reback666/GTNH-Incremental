@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { Decimal, ZERO } from '../numeric/decimal';
+import { Decimal, ZERO, dec } from '../numeric/decimal';
 import { MAX_TIER, VOLTAGE_TIERS } from '../numeric/voltage';
 import { coinName, oreName } from '../numeric/credit';
 import { formatNumber } from '../numeric/format';
@@ -48,6 +48,8 @@ export interface MachineModelRow {
   name: string;
   block: BlockKind;
   traits: string[];
+  // 单台的消耗与产出，鼠标移到机器名上时显示
+  single: { label: string; value: string }[];
   count: number;
   icons: number;
   overflow: number;
@@ -256,6 +258,7 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
           name: model.name,
           block: model.block,
           traits: model.traits ?? [],
+          single: singleStats(model),
           count,
           icons: Math.min(count, TIER_ICON_LIMIT),
           overflow: Math.max(0, count - TIER_ICON_LIMIT),
@@ -280,6 +283,39 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
 function paymentUnit(tier: number): string {
   const paying = Math.max(1, tier - 1);
   return paying === 1 ? '铜币' : coinName(paying);
+}
+
+// 单台机器的消耗与产出。发电机看「出力 / 烧矿 / 效率」，
+// 采矿机看「产矿 / 耗电」，制造机看「产币 / 耗电 / 吃矿」。
+function singleStats(model: MachineModel): { label: string; value: string }[] {
+  if (model.category === 'generator') {
+    const efficiency = model.fuelEfficiency ?? generatorFuelEfficiency(model.tier).toString();
+    return [
+      {
+        label: '出力',
+        value: `${formatNumber(generatorOutputEU(model.tier, model.outputFactor))} EU/t`,
+      },
+      { label: '烧矿', value: `${formatNumber(fuelRateOf(model))}/秒` },
+      { label: '燃料效率', value: `${formatNumber(dec(efficiency).times(100))}%` },
+    ];
+  }
+  if (model.category === 'miner') {
+    return [
+      { label: '产矿', value: `${formatNumber(minerOrePerSecond(model.tier))}/秒` },
+      { label: '耗电', value: `${formatNumber(minerEnergyEU(model.tier))} EU/t` },
+    ];
+  }
+  const output = machineOutput({ baseOutput: C.BASE_MACHINE_OUTPUT, tier: model.tier }).times(
+    model.outputFactor,
+  );
+  return [
+    { label: '产币', value: `${formatNumber(output)}/秒` },
+    {
+      label: '耗电',
+      value: `${formatNumber(machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }))} EU/t`,
+    },
+    { label: '吃矿', value: `${formatNumber(output.div(C.COINS_PER_ORE))}/秒` },
+  ];
 }
 
 // 某一类机器的合计产能。
