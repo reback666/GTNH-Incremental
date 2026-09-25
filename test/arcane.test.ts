@@ -3,6 +3,7 @@ import { GameCore } from '../src/game/core';
 import { deserialize, serialize } from '../src/game/save';
 import { modelById } from '../src/game/models';
 import {
+  arcanePollutionFactor,
   essentiaFromPurify,
   nodeEssentiaDemand,
   nodeOutputFactor,
@@ -27,6 +28,36 @@ describe('奥术宇宙', () => {
     expect(nodeOutputFactor('0', '0').toString()).toBe('1');
   });
 
+  it('灵气机器吃污染：30% 中性，每 1 点污染 ±1%', () => {
+    expect(arcanePollutionFactor('30').toString()).toBe('1');
+    expect(arcanePollutionFactor('0').toString()).toBe('0.7');
+    expect(arcanePollutionFactor('70').toString()).toBe('1.4');
+    expect(arcanePollutionFactor('100').toString()).toBe('1.7');
+  });
+
+  it('污染越高灵气机器产量越高，且不吃普通那套 -20% / -40% 惩罚', () => {
+    const clean = new GameCore();
+    clean.universes = ['arcane'];
+    clean.ores[0] = dec('1000');
+    clean.counts['c-1'] = 1;
+    clean.counts['n-1'] = 1;
+    clean.essentia = dec('100');
+    clean.pollution = dec('30');
+    clean.tick(1);
+    // 减半后 0.5，污染刚好在中性点；这一拍机器自己也会涨一点污染，所以留一点误差
+    expect(Number(clean.coins[0]!.toString())).toBeCloseTo(0.5, 4);
+
+    const dirty = new GameCore();
+    dirty.universes = ['arcane'];
+    dirty.ores[0] = dec('1000');
+    dirty.counts['c-1'] = 1;
+    dirty.counts['n-1'] = 1;
+    dirty.essentia = dec('100');
+    dirty.pollution = dec('70'); // 普通宇宙这里会 -20%，奥术宇宙这里 +40%
+    dirty.tick(1);
+    expect(Number(dirty.coins[0]!.toString())).toBeCloseTo(0.7, 4);
+  });
+
   it('灵气节点是奥术宇宙专属：没有宇宙时买不到', () => {
     const core = new GameCore();
     core.coins[0] = dec('1e9');
@@ -41,6 +72,7 @@ describe('奥术宇宙', () => {
   it('没有节点时机器停摆；有节点时机器吃灵气、产量减半', () => {
     const core = new GameCore();
     core.universes = ['arcane'];
+    core.pollutionEnabled = false; // 这条只测灵气结算，先把污染倍率关掉
     core.ores[0] = dec('1000');
     core.counts['c-1'] = 1;
 

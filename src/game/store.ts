@@ -22,6 +22,7 @@ import { ACHIEVEMENTS } from './achievements';
 import { UNIVERSES, universeById } from './universes';
 import { essentiaFromPurify } from '../numeric/arcane';
 import {
+  arcanePollutionFactor,
   NODE_ESSENTIA_PER_SECOND,
   nodeEssentiaDemand,
   nodeVisPerSecond,
@@ -256,6 +257,9 @@ export interface ArcaneStats {
   essentiaNet: string;
   essentiaPositive: boolean;
   nodes: number;
+  // 污染对灵气机器产出的倍率（30% 是中性点）
+  pollutionFactor: string;
+  pollutionFactorPositive: boolean;
   note: string;
 }
 
@@ -852,6 +856,8 @@ function arcaneStats(core: GameCore): ArcaneStats {
     essentiaNet: `${essentiaNet.gte(0) ? '+' : ''}${formatNumber(essentiaNet, { significantDigits: 3 })}/秒`,
     essentiaPositive: essentiaNet.gte(0),
     nodes,
+    pollutionFactor: `×${formatNumber(arcanePollutionFactor(core.pollution), { significantDigits: 3 })}`,
+    pollutionFactorPositive: arcanePollutionFactor(core.pollution).gte(1),
     note,
   };
 }
@@ -1142,9 +1148,13 @@ function powerStats(core: GameCore): PowerStats {
         : {}),
     },
     consumed: {
-      value: `${formatNumber(demand)} EU/t`,
+      // 奥术宇宙里机器吃的是灵气，耗电这一栏不计；明细仍是各机型的额定值，供参考
+      value: core.hasUniverse('arcane') ? '0 EU/t' : `${formatNumber(demand)} EU/t`,
       rows: consumed,
       emptyText: '还没建耗电机器',
+      ...(core.hasUniverse('arcane')
+        ? { note: '奥术宇宙：机器吃灵气不耗电，下面只是各机型的额定耗电；实际供电看灵气一栏' }
+        : {}),
     },
     ratio: `${(ratio * 100).toFixed(0)}%`,
     ratioShort: ratio < 1,

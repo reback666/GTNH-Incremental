@@ -133,7 +133,10 @@ function togglePower(key: PowerKey) {
     </div>
 
     <p v-if="snap.powerShort" class="danger small" style="margin: 10px 0 0">
-      电力不足，所有机器都在降载运行。加发电机，或先停掉一些机器。
+      <template v-if="snap.arcane.active">
+        灵气不足，所有机器都在降载运行。加灵气节点，或先把源质喂满。
+      </template>
+      <template v-else>电力不足，所有机器都在降载运行。加发电机，或先停掉一些机器。</template>
     </p>
 
     <!-- ── 奥术宇宙：灵气与源质 ─────────────────────────────── -->
@@ -155,6 +158,12 @@ function togglePower(key: PowerKey) {
         <div class="stat">
           <dt>源质净变化</dt>
           <dd :class="{ danger: !snap.arcane.essentiaPositive }">{{ snap.arcane.essentiaNet }}</dd>
+        </div>
+        <div class="stat">
+          <dt>污染对功率</dt>
+          <dd :class="{ danger: !snap.arcane.pollutionFactorPositive }">
+            {{ snap.arcane.pollutionFactor }}（30% 是中性）
+          </dd>
         </div>
       </dl>
       <p class="muted small" style="margin: 6px 0 0">{{ snap.arcane.note }}</p>

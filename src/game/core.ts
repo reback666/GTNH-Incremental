@@ -8,6 +8,7 @@ import { coinValueInTier1, convertCoins, paymentTier } from '../numeric/credit';
 import { type UniverseId, universeById } from './universes';
 import {
   ARCANE_OUTPUT_FACTOR,
+  arcanePollutionFactor,
   essentiaFromPurify,
   nodeEssentiaDemand,
   nodeOutputFactor,
@@ -100,6 +101,8 @@ export interface TickReport {
   visUsed: Decimal;
   essentiaProduced: Decimal;
   essentiaUsed: Decimal;
+  // 奥术宇宙：污染对灵气机器产出的倍率
+  arcanePollutionFactor: Decimal;
   // 污染：本拍净变化与产出倍率（关掉污染机制时倍率恒为 1）
   pollutionDelta: Decimal;
   outputMultiplier: Decimal;
@@ -1049,10 +1052,15 @@ export class GameCore {
     }
     const pollutionMul = this.outputMultiplier();
     report.pollutionDelta = pollutionDelta;
-    report.outputMultiplier = pollutionMul;
+    // 奥术宇宙里污染不是惩罚而是「燃料」：污染越高灵气机器功率越高，
+    // 所以这一档直接换成灵气倍率（正常宇宙才走 -20% / -40% 那套）
+    // 污染机制被关掉时这条也不生效（和普通宇宙的惩罚一个道理）
+    const arcaneMul = this.pollutionEnabled ? arcanePollutionFactor(this.pollution) : ONE;
+    report.arcanePollutionFactor = arcaneMul;
+    report.outputMultiplier = arcane ? arcaneMul : pollutionMul;
     this.maxPollution = Decimal.max(this.maxPollution, this.pollution);
     const productive = ratioDec
-      .times(pollutionMul)
+      .times(arcane ? arcaneMul : pollutionMul)
       .times(arcane ? dec(ARCANE_OUTPUT_FACTOR) : ONE);
 
     // 4) 采矿机产矿。超频提速，坏了的机器不算数
@@ -1182,6 +1190,7 @@ function emptyReport(): TickReport {
     visUsed: ZERO,
     essentiaProduced: ZERO,
     essentiaUsed: ZERO,
+    arcanePollutionFactor: ONE,
     pollutionDelta: ZERO,
     outputMultiplier: ONE,
     outage: false,
