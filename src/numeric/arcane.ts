@@ -26,22 +26,6 @@ export const ESSENTIA_PER_PURIFY_PERCENT = '1000';
 // 没有源质时节点仍有 50% 出力，剩下的 50% 靠源质喂满
 export const NODE_OUTPUT_WITHOUT_ESSENTIA = '0.5';
 
-// 灵气机器吃污染：污染 30%（正好是「清洁 / 中度污染」的分界）时既不增产也不减产，
-// 每低 1 点减 1% 功率，每高 1 点加 1% 功率。
-// 于是 0% → 0.7 倍、70% → 1.4 倍、100% → 1.7 倍。
-export const ARCANE_POLLUTION_NEUTRAL = '30';
-export const ARCANE_POLLUTION_PER_POINT = '0.01';
-
-// 污染对灵气机器产出的倍率（只对奥术宇宙生效；它替代普通的污染产出惩罚）
-export function arcanePollutionFactor(pollution: DecimalInput): Decimal {
-  const factor = ONE.plus(
-    dec(pollution)
-      .minus(ARCANE_POLLUTION_NEUTRAL)
-      .times(ARCANE_POLLUTION_PER_POINT),
-  );
-  return Decimal.max(dec('0.01'), factor);
-}
-
 // 灵气节点产量（灵气/秒）
 export function nodeVisPerSecond(tier: number): Decimal {
   assertTier(tier);

@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { GameCore } from '../src/game/core';
 import { modelById } from '../src/game/models';
-import { corrosionPerSecond, suppressionOfTier, suppressionPoints } from '../src/numeric/abyss';
+import {
+  corrosionPerSecond,
+  pollutionDriveFactor,
+  suppressionOfTier,
+  suppressionPoints,
+} from '../src/numeric/abyss';
 import { dec } from '../src/numeric/decimal';
 
 // 深渊宇宙：污染把产出往上推，代价是腐蚀机器；腐蚀抑制器按等级抵消污染点数。
@@ -15,6 +20,13 @@ describe('深渊宇宙', () => {
     expect(corrosionPerSecond('55', '30').toString()).toBe('0');
     // 没超过中性点也不腐蚀
     expect(corrosionPerSecond('30', '0').toString()).toBe('0');
+  });
+
+  it('污染驱动产出：30% 中性，每 1 点污染 ±1%（只属于深渊）', () => {
+    expect(pollutionDriveFactor('30').toString()).toBe('1');
+    expect(pollutionDriveFactor('0').toString()).toBe('0.7');
+    expect(pollutionDriveFactor('70').toString()).toBe('1.4');
+    expect(pollutionDriveFactor('100').toString()).toBe('1.7');
   });
 
   it('抑制器按等级抵消污染点数', () => {
@@ -96,16 +108,27 @@ describe('深渊宇宙', () => {
     expect(report.outputMultiplier.toString()).toBe('1');
   });
 
-  it('奥术与深渊都拥有时，污染倍率只算一次', () => {
+  it('只拥有奥术时不吃污染驱动，同时拥有时才由深渊这一条生效', () => {
+    const arcaneOnly = new GameCore();
+    arcaneOnly.universes = ['arcane'];
+    arcaneOnly.ores[0] = dec('1e6');
+    arcaneOnly.counts['c-1'] = 1;
+    arcaneOnly.counts['n-1'] = 1;
+    arcaneOnly.essentia = dec('100');
+    arcaneOnly.pollution = dec('70');
+    arcaneOnly.tick(1);
+    // 只有奥术：0.5（减半）× 0.6（重度污染惩罚）= 0.3
+    expect(Number(arcaneOnly.coins[0]!.toString())).toBeCloseTo(0.3, 3);
+
     const both = new GameCore();
     both.universes = ['arcane', 'abyss'];
     both.ores[0] = dec('1e6');
     both.counts['c-1'] = 1;
     both.counts['n-1'] = 1;
     both.essentia = dec('100');
-    both.pollution = dec('30');
+    both.pollution = dec('70');
     both.tick(1);
-    // 0.5（奥术减半）× 1（污染中性）= 0.5，没有被算两遍
-    expect(Number(both.coins[0]!.toString())).toBeCloseTo(0.5, 4);
+    // 两个宇宙都有：0.5（减半）× 1.4（深渊的污染驱动）= 0.7，只算一次
+    expect(Number(both.coins[0]!.toString())).toBeCloseTo(0.7, 3);
   });
 });

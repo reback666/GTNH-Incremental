@@ -1,13 +1,29 @@
-import { Decimal, ZERO, dec, decInt, type DecimalInput } from './decimal';
-import { assertTier } from './voltage';
-
 // 深渊宇宙：污染即燃料（计划书第五章）。
 //
 // 规则：
-//   污染把产出**往上**推 —— 和奥术宇宙共用同一条倍率（30% 中性，每 1 点污染 ±1%），
-//     两个宇宙同时拥有时只算一次，不叠加；
+//   污染把**全厂产出往上推** —— 30% 中性，每低 1 点 -1%、每高 1 点 +1%
+//     （0% → 0.7 倍、70% → 1.4 倍、100% → 1.7 倍）。这条是深渊宇宙独有的，
+//     奥术宇宙里污染仍然按普通规则惩罚产出；
 //   代价是污染会腐蚀机器：污染越高，机器越容易坏（停机、要手动维护）；
 //   「腐蚀抑制器」按等级抵消一部分污染点数，把损坏速率压回去。
+
+import { Decimal, ONE, ZERO, dec, decInt, type DecimalInput } from './decimal';
+import { assertTier } from './voltage';
+
+// 污染的中性点：正好是「清洁 / 中度污染」的分界
+export const POLLUTION_DRIVE_NEUTRAL = '30';
+// 每偏离中性点 1 点，产出 ±1%
+export const POLLUTION_DRIVE_PER_POINT = '0.01';
+
+// 污染对全厂产出的倍率（只在深渊宇宙生效，替代普通宇宙那套 -20% / -40% 惩罚）
+export function pollutionDriveFactor(pollution: DecimalInput): Decimal {
+  const factor = ONE.plus(
+    dec(pollution)
+      .minus(POLLUTION_DRIVE_NEUTRAL)
+      .times(POLLUTION_DRIVE_PER_POINT),
+  );
+  return Decimal.max(dec('0.01'), factor);
+}
 
 // 每台机器每秒因为「超出的污染点数」坏掉的概率
 export const DAMAGE_PER_POINT_PER_SECOND = '0.000005';

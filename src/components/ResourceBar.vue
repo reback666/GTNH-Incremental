@@ -159,12 +159,6 @@ function togglePower(key: PowerKey) {
           <dt>源质净变化</dt>
           <dd :class="{ danger: !snap.arcane.essentiaPositive }">{{ snap.arcane.essentiaNet }}</dd>
         </div>
-        <div class="stat">
-          <dt>污染对功率</dt>
-          <dd :class="{ danger: !snap.arcane.pollutionFactorPositive }">
-            {{ snap.arcane.pollutionFactor }}（30% 是中性）
-          </dd>
-        </div>
       </dl>
       <p class="muted small" style="margin: 6px 0 0">{{ snap.arcane.note }}</p>
     </template>

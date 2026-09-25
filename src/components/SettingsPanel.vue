@@ -78,7 +78,7 @@ const unlockTier = ref(1);
         <dl class="stats">
           <div class="stat">
             <dt>污染对产出</dt>
-            <dd>{{ snap.arcane.pollutionFactor }}</dd>
+            <dd>{{ snap.abyss.pollutionFactor }}</dd>
           </div>
           <div class="stat">
             <dt>抑制器抵消</dt>

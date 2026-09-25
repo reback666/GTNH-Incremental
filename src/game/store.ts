@@ -22,13 +22,12 @@ import { ACHIEVEMENTS } from './achievements';
 import { UNIVERSES, universeById } from './universes';
 import { essentiaFromPurify } from '../numeric/arcane';
 import {
-  arcanePollutionFactor,
   NODE_ESSENTIA_PER_SECOND,
   nodeEssentiaDemand,
   nodeVisPerSecond,
 } from '../numeric/arcane';
 import { PURIFY_PER_TIER_PER_SECOND, purifierMachineCoverage } from '../numeric/pollution';
-import { suppressionOfTier } from '../numeric/abyss';
+import { pollutionDriveFactor, suppressionOfTier } from '../numeric/abyss';
 import { REBIRTH_NODES, REBIRTH_ROOT, treeTotalCost, type RebirthEffectKind } from './rebirth';
 import {
   RESEARCH_FROM_TIER,
@@ -260,15 +259,15 @@ export interface ArcaneStats {
   essentiaNet: string;
   essentiaPositive: boolean;
   nodes: number;
-  // 污染对灵气机器产出的倍率（30% 是中性点）
-  pollutionFactor: string;
-  pollutionFactorPositive: boolean;
   note: string;
 }
 
 // 深渊宇宙的读数：腐蚀速率与抑制器抵消的污染点数
 export interface AbyssStats {
   active: boolean;
+  // 污染对全厂产出的倍率（30% 是中性点）
+  pollutionFactor: string;
+  pollutionFactorPositive: boolean;
   // 每台机器每分钟的损坏概率
   corrosionPerMinute: string;
   // 抑制器抵消掉的污染点数
@@ -602,9 +601,9 @@ function riskStats(core: GameCore): RiskStats {
   const purify = core.purifyPerSecond();
   const net = core.pollutionDeltaPerSecond();
   const mode = gridMode(core.grid);
-  // 奥术与深渊宇宙把污染从惩罚变成燃料，污染条上的说明也要跟着变
-  const boosted = core.hasUniverse('abyss') || core.hasUniverse('arcane');
-  const drivePercent = arcanePollutionFactor(core.pollution).minus(1).times(100);
+  // 深渊宇宙把污染从惩罚变成燃料，污染条上的说明也要跟着变
+  const boosted = core.hasUniverse('abyss');
+  const drivePercent = pollutionDriveFactor(core.pollution).minus(1).times(100);
   const driveText = `${drivePercent.gte(0) ? '+' : ''}${formatNumber(drivePercent)}%`;
   const bandName = !core.pollutionEnabled
     ? '污染机制已关闭：不增长，也不产生任何影响'
@@ -891,8 +890,6 @@ function arcaneStats(core: GameCore): ArcaneStats {
     essentiaNet: `${essentiaNet.gte(0) ? '+' : ''}${formatNumber(essentiaNet, { significantDigits: 3 })}/秒`,
     essentiaPositive: essentiaNet.gte(0),
     nodes,
-    pollutionFactor: `×${formatNumber(arcanePollutionFactor(core.pollution), { significantDigits: 3 })}`,
-    pollutionFactorPositive: arcanePollutionFactor(core.pollution).gte(1),
     note,
   };
 }
@@ -921,6 +918,8 @@ function abyssStats(core: GameCore): AbyssStats {
 
   return {
     active,
+    pollutionFactor: `×${formatNumber(pollutionDriveFactor(core.pollution), { significantDigits: 3 })}`,
+    pollutionFactorPositive: pollutionDriveFactor(core.pollution).gte(1),
     corrosionPerMinute: `${perMinute}%/分钟`,
     suppression: formatNumber(suppression, { significantDigits: 3 }),
     effective: formatNumber(effective, { significantDigits: 3 }),

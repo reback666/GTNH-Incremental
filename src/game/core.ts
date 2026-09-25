@@ -8,13 +8,16 @@ import { coinValueInTier1, convertCoins, paymentTier } from '../numeric/credit';
 import { type UniverseId, universeById } from './universes';
 import {
   ARCANE_OUTPUT_FACTOR,
-  arcanePollutionFactor,
   essentiaFromPurify,
   nodeEssentiaDemand,
   nodeOutputFactor,
   nodeVisPerSecond,
 } from '../numeric/arcane';
-import { corrosionPerSecond, suppressionPoints } from '../numeric/abyss';
+import {
+  corrosionPerSecond,
+  pollutionDriveFactor,
+  suppressionPoints,
+} from '../numeric/abyss';
 import { isValidOverclockLevel, overclockEnergyMultiplier, overclockSpeedMultiplier } from '../numeric/overclock';
 import { expectedFaults, sampleFaults } from '../numeric/fault';
 import { batteryCapacityEU, settleStorage } from '../numeric/storage';
@@ -1076,15 +1079,15 @@ export class GameCore {
     // 奥术宇宙里污染不是惩罚而是「燃料」：污染越高灵气机器功率越高，
     // 所以这一档直接换成灵气倍率（正常宇宙才走 -20% / -40% 那套）
     // 污染机制被关掉时这条也不生效（和普通宇宙的惩罚一个道理）
-    // 奥术与深渊都让污染「往上推」产出，倍率共用一条；两个宇宙都拥有时只算一次
-    const drive = arcane || abyss;
-    const arcaneMul =
-      drive && this.pollutionEnabled ? arcanePollutionFactor(this.pollution) : ONE;
-    report.arcanePollutionFactor = arcaneMul;
-    report.outputMultiplier = drive ? arcaneMul : pollutionMul;
+    // 深渊宇宙里污染是燃料：把产出往上推（替代普通的 -20% / -40% 惩罚）。
+    // 奥术宇宙不参与这一条 —— 那边的污染仍然按普通规则惩罚产出。
+    const driveMul =
+      abyss && this.pollutionEnabled ? pollutionDriveFactor(this.pollution) : ONE;
+    report.arcanePollutionFactor = driveMul;
+    report.outputMultiplier = abyss ? driveMul : pollutionMul;
     this.maxPollution = Decimal.max(this.maxPollution, this.pollution);
     const productive = ratioDec
-      .times(drive ? arcaneMul : pollutionMul)
+      .times(abyss ? driveMul : pollutionMul)
       .times(arcane ? dec(ARCANE_OUTPUT_FACTOR) : ONE);
 
     // 4) 采矿机产矿。超频提速，坏了的机器不算数
