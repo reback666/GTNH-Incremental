@@ -562,6 +562,22 @@ h1 .small {
 
 /* 设置与风险：污染条与电网选择 */
 /* 转生：永久加成树 */
+.rebirth-page {
+  max-width: 760px;
+}
+
+.rebirth-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.rebirth-head h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
 .rebirth-tree {
   position: relative;
   width: 660px;
