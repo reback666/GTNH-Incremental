@@ -26,9 +26,9 @@ export const VEIN_META: VeinTierMeta[] = [
   { tier: 8, frames: 1, frameDurationsMs: [0], source: '静态' },
   { tier: 9, frames: 3, frameDurationsMs: [150, 150, 150], source: 'CUSTOM/cosmicneutronium/ore_OVERLAY.png' },
   { tier: 10, frames: 31, frameDurationsMs: [150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150], source: 'CUSTOM/infinity/block1.png' },
-  { tier: 11, frames: 1, frameDurationsMs: [0], source: '静态' },
-  { tier: 12, frames: 1, frameDurationsMs: [0], source: '静态' },
-  { tier: 13, frames: 18, frameDurationsMs: [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200], source: 'CUSTOM/draconium/ore_OVERLAY.png' },
+  { tier: 11, frames: 18, frameDurationsMs: [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200], source: 'CUSTOM/draconium/ore_OVERLAY.png' },
+  { tier: 12, frames: 1, frameDurationsMs: [0], source: '材料色 #dc784b' },
+  { tier: 13, frames: 113, frameDurationsMs: [150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150], source: 'CUSTOM/spacetime/block1.png' },
 ];
 
 export const VEIN_FX_META: Record<string, VeinFxMeta> = {

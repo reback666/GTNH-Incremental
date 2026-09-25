@@ -71,7 +71,12 @@ GT 的机器不是一张整图，而是「**机壳 + 功能面片**」两层叠�
 |---|---|---|---|
 | T9 | 宇宙中子素 | `CUSTOM/cosmicneutronium/ore_OVERLAY.png` | 3 帧 × 3 tick |
 | T10 | 无尽 | `CUSTOM/infinity/block1.png` | 31 帧 × 3 tick |
-| T13 | 龙芯 | `CUSTOM/draconium/ore_OVERLAY.png`（10 帧来回播成 18 帧） | 18 帧 × 4 tick |
+| T11 | 龙芯 | `CUSTOM/draconium/ore_OVERLAY.png`（10 帧来回播成 18 帧） | 18 帧 × 4 tick |
+| T13 | 时空 | `CUSTOM/spacetime/block1.png` | 113 帧 × 3 tick |
+
+T12 海珀珍没有原版贴图可用（它的材质定义在 GT++，颜色取自
+`gtPlusPlus.core.material.MaterialsElements$STANDALONE` 里的 `HYPOGEN`：RGBA {220, 120, 75, 2}），
+所以按材料色重绘斑点，保留原有明暗。
 
 `src/assets/veins/fx/` 是原版特殊渲染用的光晕贴图，界面用 CSS mask 上色：
 无尽用 `HALO.png`（图标外扩 10/16 的方形暗光晕 + 60% 透明度的脉动重影），

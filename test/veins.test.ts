@@ -4,12 +4,11 @@ import { VEIN_FX_META } from '../src/game/vein-meta';
 
 // 贴图条带、帧长、材料表是分开维护的，最容易出的错是对不上号（帧数与帧长列表不等长、等级缺项）。
 describe('矿脉贴图与特殊渲染', () => {
-  it('14 个等级都有贴图信息、材料名和有效颜色', () => {
+  it('14 个等级都有贴图信息和材料名', () => {
     expect(VEIN_TIERS).toHaveLength(14);
     VEIN_TIERS.forEach((info, tier) => {
       expect(info.tier, `第 ${tier} 级`).toBe(tier);
       expect(info.material.length, `第 ${tier} 级材料名`).toBeGreaterThan(0);
-      expect(info.color, `第 ${tier} 级颜色`).toMatch(/^#[0-9a-f]{6}$/i);
     });
   });
 
@@ -19,12 +18,13 @@ describe('矿脉贴图与特殊渲染', () => {
       expect(info.frameDurationsMs, `T${info.tier} 帧长数量`).toHaveLength(info.frames);
     }
     const animated = VEIN_TIERS.filter((info) => info.frames > 1).map((info) => info.tier);
-    expect(animated).toEqual([9, 10, 13]);
+    expect(animated).toEqual([9, 10, 11, 13]);
   });
 
   it('动画时长与原版贴图的 frametime 一致', () => {
     expect(veinLoopMs(veinTierInfo(10)!)).toBe(31 * 150);
-    expect(veinLoopMs(veinTierInfo(13)!)).toBe(18 * 200);
+    expect(veinLoopMs(veinTierInfo(11)!)).toBe(18 * 200);
+    expect(veinLoopMs(veinTierInfo(13)!)).toBe(113 * 150);
     expect(VEIN_FX_META.haloFuzzy?.frames).toBe(8);
     expect(VEIN_FX_META.haloFuzzy?.frameDurationsMs).toHaveLength(8);
   });

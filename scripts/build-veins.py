@@ -45,7 +45,14 @@ JAR_GLOB = str(
 ANIMATED = {
     9: "assets/gregtech/textures/blocks/materialicons/CUSTOM/cosmicneutronium/ore_OVERLAY.png",
     10: "assets/gregtech/textures/blocks/materialicons/CUSTOM/infinity/block1.png",
-    13: "assets/gregtech/textures/blocks/materialicons/CUSTOM/draconium/ore_OVERLAY.png",
+    11: "assets/gregtech/textures/blocks/materialicons/CUSTOM/draconium/ore_OVERLAY.png",
+    13: "assets/gregtech/textures/blocks/materialicons/CUSTOM/spacetime/block1.png",
+}
+
+# 没有原版贴图可用的材料，用材料自己的颜色重绘斑点（保留原有明暗）。
+# 海珀珍（Hypogen）的颜色取自 GT++ 里 MaterialsElements$STANDALONE 的定义：RGBA {220, 120, 75, 2}
+STATIC_DYE = {
+    12: "#dc784b",
 }
 
 # 特殊渲染的光晕贴图：原版 InfinityRenderer 用 HALO，CosmicNeutroniumRenderer 用 HALO_FUZZY
@@ -94,6 +101,31 @@ def is_ore_pixel(pixel: tuple[int, int, int, int]) -> bool:
     saturation = 0 if brightest == 0 else (brightest - darkest) / brightest
     luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
     return saturation > 0.15 or luminance > 0.62 or luminance < 0.30
+
+
+def luminance(color: tuple[int, int, int, int]) -> float:
+    return (0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2]) / 255
+
+
+def recolor(base: Image.Image, dye: str) -> Image.Image:
+    """把斑点换成材料色：保留每个斑点像素的明暗比例，只换掉色相。"""
+    target = tuple(int(dye[i : i + 2], 16) for i in (1, 3, 5))
+    target_lum = luminance((*target, 255))
+    tile = base.copy()
+    pixels = tile.load()
+    for y in range(tile.height):
+        for x in range(tile.width):
+            color = pixels[x, y]
+            if not is_ore_pixel(color):
+                continue
+            factor = luminance(color) / target_lum
+            pixels[x, y] = (
+                min(255, round(target[0] * factor)),
+                min(255, round(target[1] * factor)),
+                min(255, round(target[2] * factor)),
+                color[3],
+            )
+    return tile
 
 
 def read_frame(
@@ -160,7 +192,9 @@ def main() -> None:
             base = Image.open(BASE_DIR / f"t{index}.png").convert("RGBA")
             path = ANIMATED.get(index)
             if path is None:
-                strip, frames, durations, source = base, 1, [0], "静态"
+                dye = STATIC_DYE.get(index)
+                tile = recolor(base, dye) if dye else base
+                strip, frames, durations, source = tile, 1, [0], f"材料色 {dye}" if dye else "静态"
             else:
                 animation = read_animation(archive, path)
                 texture = Image.open(io.BytesIO(archive.read(path))).convert("RGBA")

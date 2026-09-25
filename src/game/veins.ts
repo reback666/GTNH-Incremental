@@ -39,31 +39,29 @@ export type VeinFx = 'none' | 'halo' | 'fuzzy';
 export interface VeinTierInfo extends VeinTierMeta {
   // 该阶段代表材料
   material: string;
-  color: string;
   fx: VeinFx;
 }
 
 interface VeinDesign {
   material: string;
-  color: string;
   fx: VeinFx;
 }
 
 const DESIGN: VeinDesign[] = [
-  { material: '锻铁', color: '#c0c0c0', fx: 'none' },
-  { material: '铜', color: '#ff8000', fx: 'none' },
-  { material: '铝', color: '#6080ff', fx: 'none' },
-  { material: '不锈钢', color: '#ffffff', fx: 'none' },
-  { material: '钛', color: '#8000ff', fx: 'none' },
-  { material: '钨钢', color: '#0020ff', fx: 'none' },
-  { material: '钯', color: '#808080', fx: 'none' },
-  { material: '硅岩', color: '#202020', fx: 'none' },
-  { material: '中子素', color: '#ffffff', fx: 'none' },
-  { material: '宇宙中子素', color: '#202020', fx: 'fuzzy' },
-  { material: '无尽', color: '#ffffff', fx: 'halo' },
-  { material: '秘银', color: '#6080ff', fx: 'none' },
-  { material: '伊瑟利姆', color: '#ff8000', fx: 'none' },
-  { material: '龙芯', color: '#ff00ff', fx: 'none' },
+  { material: '锻铁', fx: 'none' },
+  { material: '铜', fx: 'none' },
+  { material: '铝', fx: 'none' },
+  { material: '不锈钢', fx: 'none' },
+  { material: '钛', fx: 'none' },
+  { material: '钨钢', fx: 'none' },
+  { material: '钯', fx: 'none' },
+  { material: '硅岩', fx: 'none' },
+  { material: '中子素', fx: 'none' },
+  { material: '宇宙中子素', fx: 'fuzzy' },
+  { material: '无尽', fx: 'halo' },
+  { material: '龙芯', fx: 'none' },
+  { material: '海珀珍', fx: 'none' },
+  { material: '时空', fx: 'none' },
 ];
 
 export const VEIN_TIERS: VeinTierInfo[] = VEIN_META.map((meta) => ({
