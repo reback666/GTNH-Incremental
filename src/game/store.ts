@@ -29,6 +29,7 @@ import {
 import { PURIFY_PER_TIER_PER_SECOND, purifierMachineCoverage } from '../numeric/pollution';
 import { REBIRTH_NODES, REBIRTH_ROOT, treeTotalCost, type RebirthEffectKind } from './rebirth';
 import {
+  RESEARCH_FROM_TIER,
   RESEARCH_GATE_FROM_TIER,
   computerComputePerSecond,
   computerEnergyEU,
@@ -164,6 +165,8 @@ export interface ProductionRate {
 
 // 研究：算力（流量）与当前研究目标的进度
 export interface ResearchStats {
+  // 到 LuV 才解锁研究，之前资源条上不显示这一块
+  unlocked: boolean;
   // 每秒产出 / 被研究站吃掉 / 直接浪费的算力
   computeProduced: string;
   computeUsed: string;
@@ -501,7 +504,12 @@ function buildSnapshot(core: GameCore): Snapshot {
       value: amount.toString(),
       detail: [{ label: '产出', value: `${formatNumber(coinRate[index]!)}/秒` }],
     })),
-    columns: COLUMN_ORDER.map((kind) => machineColumn(core, kind)),
+    // 两类机器是条件出现的：灵气节点要奥术宇宙，研究类要到 LuV 才解锁
+    columns: COLUMN_ORDER.filter(
+      (kind) =>
+        (kind !== 'arcane' || core.hasUniverse('arcane')) &&
+        (kind !== 'research' || core.maxTier >= RESEARCH_FROM_TIER),
+    ).map((kind) => machineColumn(core, kind)),
     maxTier: core.maxTier,
     powerGenerated: formatNumber(report.euGenerated),
     powerConsumed: formatNumber(report.euConsumed),
@@ -665,6 +673,7 @@ function researchStats(core: GameCore): ResearchStats {
   }
 
   return {
+    unlocked: core.maxTier >= RESEARCH_FROM_TIER,
     computeProduced: `${formatNumber(report.computeProduced)}/秒`,
     computeUsed: `${formatNumber(used)}/秒`,
     computeWasted: `${formatNumber(report.computeWasted)}/秒`,

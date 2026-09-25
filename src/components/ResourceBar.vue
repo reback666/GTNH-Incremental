@@ -160,7 +160,8 @@ function togglePower(key: PowerKey) {
       <p class="muted small" style="margin: 6px 0 0">{{ snap.arcane.note }}</p>
     </template>
 
-    <!-- ── 第四行：研究 ─────────────────────────────────────── -->
+    <!-- ── 第四行：研究（LuV 起才有） ─────────────────────────── -->
+    <template v-if="snap.research.unlocked">
     <h2 class="mt">研究</h2>
     <dl class="stats">
       <div class="stat">
@@ -193,5 +194,6 @@ function togglePower(key: PowerKey) {
         <template v-if="snap.research.eta !== '—'">按当前算力还要 {{ snap.research.eta }}。</template>
       </p>
     </div>
+    </template>
   </section>
 </template>

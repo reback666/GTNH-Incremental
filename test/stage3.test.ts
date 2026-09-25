@@ -319,4 +319,28 @@ describe('界面购买入口', () => {
     );
     expect(failed).toEqual([]);
   });
+
+  it('机器面板的标签随进度出现：灵气节点要奥术宇宙，研究要到 LuV', () => {
+    const store = useGameStore();
+    store.boot();
+    const core = getCore();
+    core.maxTier = 3;
+    core.universes = [];
+    store.refresh();
+    const kinds = () => store.snap.columns.map((column) => column.kind);
+    expect(kinds()).not.toContain('research');
+    expect(kinds()).not.toContain('arcane');
+
+    // 到 LuV 出现「研究」
+    core.maxTier = 7;
+    store.refresh();
+    expect(kinds()).toContain('research');
+    expect(kinds()).not.toContain('arcane');
+    expect(store.snap.research.unlocked).toBe(true);
+
+    // 拥有奥术宇宙才出现「灵气节点」
+    core.universes = ['arcane'];
+    store.refresh();
+    expect(kinds()).toContain('arcane');
+  });
 });

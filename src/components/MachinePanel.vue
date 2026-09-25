@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import {
   useGameStore,
   type MachineColumn,
@@ -70,6 +70,17 @@ const bars = computed<Bar[]>(() => {
 });
 
 const activeColumn = computed(() => props.columns.find((item) => item.kind === active.value) ?? null);
+
+// 列可能整列消失（比如奥术宇宙的灵气节点在没那个宇宙时不显示），
+// 这时把选中的类别拉回第一列，面板不会空着
+watch(
+  () => props.columns.map((column) => column.kind).join(','),
+  () => {
+    if (!props.columns.some((column) => column.kind === active.value) && props.columns[0]) {
+      active.value = props.columns[0].kind;
+    }
+  },
+);
 
 // 类别标签上放一台该类的代表机型图标（用 GT 贴图，和面板里的机器图标一致）
 const TAB_ICON: Record<MachineKind, string> = {
