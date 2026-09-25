@@ -137,12 +137,13 @@ describe('电网模式在模拟里的效果', () => {
     // 没到等级：有钱也解锁不了
     core.coins[1] = dec('1000000');
     expect(core.unlockGrid('stable')).toBe(false);
-    // 到了 LV 还要付得起：稳定电网解锁价 = 10 × 该级首台机器成本，用 LV 币计价
+    // 到了 LV 还要付得起：稳定电网解锁价 = 16 × 该级首台机器价格，用 LV 币计价
+    // 首台 LV 机器 2000 铜币 = 500 白铜币，×16 = 8000 白铜币
     core.maxTier = 2;
-    expect(core.gridUnlockCost('stable').toString()).toBe('5000');
-    core.coins[1] = dec('4999');
+    expect(core.gridUnlockCost('stable').toString()).toBe('8000');
+    core.coins[1] = dec('7999');
     expect(core.canUnlockGrid('stable')).toBe(false);
-    core.coins[1] = dec('5000');
+    core.coins[1] = dec('8000');
     expect(core.unlockGrid('stable')).toBe(true);
     expect(core.coins[1]!.toString()).toBe('0'); // 钱被扣掉
     expect(core.isGridUnlocked('stable')).toBe(true);
