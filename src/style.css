@@ -1668,6 +1668,20 @@ h1 .small {
   border-top: 0;
 }
 
+/* 出售：退一半的价，配色压低一点，别和建造按钮抢注意力 */
+.sell-btn {
+  min-height: 32px;
+  padding: 0 8px;
+  border-color: var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sell-btn:not(:disabled):hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .tier-name {
   width: 40px;
   flex: none;

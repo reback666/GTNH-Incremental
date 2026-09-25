@@ -152,6 +152,8 @@ export interface MachineModelRow {
   icons: number;
   overflow: number;
   price: string;
+  // 卖回一台能拿回多少（币或矿石，跟着上面的支付方式）
+  refund: string;
   orePrice: string;
   affordable: boolean;
   oreAffordable: boolean;
@@ -479,6 +481,18 @@ export const useGameStore = defineStore('game', {
       this.refresh();
       this.save();
       return bought;
+    },
+    // 出售：退回该机型结算等级的资源（买的时候用什么付，卖的时候就退什么）
+    sell(modelId: string, count: number, payWith: PayWith = 'coin'): number {
+      const core = getCore();
+      const model = findModel(modelId);
+      if (!model) return 0;
+      const sold = core.sell(model, count, payWith);
+      if (sold > 0) {
+        this.refresh();
+        this.save();
+      }
+      return sold;
     },
     unlock(): boolean {
       const core = getCore();
@@ -1131,6 +1145,7 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
           icons: Math.min(count, TIER_ICON_LIMIT),
           overflow: Math.max(0, count - TIER_ICON_LIMIT),
           price: formatNumber(core.coinPriceOf(model)),
+          refund: formatNumber(core.refundOf(model)),
           orePrice: formatNumber(core.orePriceOf(model)),
           affordable: tier <= core.maxTier && core.canAfford(model, 'coin'),
           oreAffordable: tier <= core.maxTier && core.canAfford(model, 'ore'),

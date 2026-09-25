@@ -1,6 +1,6 @@
 import { Decimal, ONE, ZERO, dec } from '../numeric/decimal';
 import { MAX_TIER, VOLTAGE_TIERS, isValidTier } from '../numeric/voltage';
-import { MARGINAL_COST_GROWTH, machineCost } from '../numeric/cost';
+import { MARGINAL_COST_GROWTH, SELL_REFUND_RATE, machineCost } from '../numeric/cost';
 import { machineEnergy, machineOutput } from '../numeric/output';
 import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../numeric/generator';
 import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
@@ -999,6 +999,30 @@ export class GameCore {
     })
       .times(dec(model.costFactor))
       .floor();
+  }
+
+  // 出售一台能退多少：按当前单价的固定比例退，退的是该机型的结算等级资源（和买的时候一致）
+  refundOf(model: MachineModel, payWith: PayWith = 'coin'): Decimal {
+    return this.priceOf(model, payWith).times(SELL_REFUND_RATE).floor();
+  }
+
+  // 出售机器。卖出去之后「已购数量」减少，重新买回来的价钱也跟着回落。
+  sell(model: MachineModel, count: number, payWith: PayWith = 'coin'): number {
+    const index = payWith === 'ore' ? model.tier - 1 : paymentTier(model.tier) - 1;
+    let sold = 0;
+    for (let i = 0; i < count; i += 1) {
+      const have = this.countOf(model.id);
+      if (have <= 0) break;
+      const refund = this.refundOf(model, payWith);
+      this.counts[model.id] = have - 1;
+      // 坏掉的台数不能比剩下的台数还多
+      const faulty = this.faults[model.id];
+      if (faulty !== undefined && faulty > have - 1) this.faults[model.id] = have - 1;
+      if (payWith === 'ore') this.ores[index] = this.ores[index]!.plus(refund);
+      else this.coins[index] = this.coins[index]!.plus(refund);
+      sold += 1;
+    }
+    return sold;
   }
 
   orePriceOf(model: MachineModel): Decimal {

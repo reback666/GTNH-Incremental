@@ -161,13 +161,13 @@ describe('奥术宇宙', () => {
     core.universes = ['arcane'];
     core.maxTier = 3; // 净化器从 MV 起才有
     core.counts['p-3'] = 1; // MV 净化器：净化 3×0.0024 = 0.0072 %/秒
-    expect(core.purifyPerSecond().toString()).toBe('0.0072');
+    expect(core.purifyPerSecond().toString()).toBe('0.0192');
 
     core.essentia = dec('0');
     const report = core.tick(1);
-    // 每秒凝出 7.2 源质，节点需求 0 → 全部存起来
-    expect(report.essentiaProduced.toString()).toBe('7.2');
-    expect(core.essentia.toString()).toBe('7.2');
+    // 每秒凝出 19.2 源质，节点需求 0 → 全部存起来
+    expect(report.essentiaProduced.toString()).toBe('19.2');
+    expect(core.essentia.toString()).toBe('19.2');
   });
 
   it('奥术宇宙里超频不会故障', () => {

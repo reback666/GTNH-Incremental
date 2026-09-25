@@ -19,10 +19,10 @@ const ULV_GENERATOR = 'g-ulv';
 const ULV_MACHINE = 'c-1';
 
 describe('净化器的覆盖能力', () => {
-  it('一台净化器压得住 3 台同级机器，这个比值与等级无关', () => {
-    // 污染按「等级 × 台数 × 0.0008」涨、净化按「等级 × 台数 × 0.0024」降，
-    // 两边都随等级线性放大，所以配比恒定（每 3 台机器配 1 台净化器）。
-    expect(purifierMachineCoverage().toString()).toBe('3');
+  it('一台净化器压得住 8 台同级机器，这个比值与等级无关', () => {
+    // 污染按「等级 × 台数 × 0.0008」涨、净化按「等级 × 台数 × 0.0064」降，
+    // 两边都随等级线性放大，所以配比恒定（每 8 台机器配 1 台净化器）。
+    expect(purifierMachineCoverage().toString()).toBe('8');
   });
 });
 
@@ -61,8 +61,8 @@ describe('污染数值', () => {
   it('污染与净化都按「台数 × 电压等级」算', () => {
     // 50 台 MV（3 级）：污染 50×3×0.0008 = 0.12 %/秒
     expect(pollutionPerSecond([{ tier: 3, count: 50 }]).toString()).toBe('0.12');
-    // 50 台 MV 净化器：50×3×0.0024 = 0.36 %/秒，压得住（3 倍于污染增长）
-    expect(purifyPerSecond([{ tier: 3, count: 50 }]).toString()).toBe('0.36');
+    // 50 台 MV 净化器：50×3×0.0064 = 0.96 %/秒，压得住（8 倍于污染增长）
+    expect(purifyPerSecond([{ tier: 3, count: 50 }]).toString()).toBe('0.96');
   });
 
   it('电网耗电倍率：普通 1、稳定 1.08、波动 0.9、黑市 0.85', () => {

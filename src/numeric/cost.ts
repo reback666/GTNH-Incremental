@@ -5,6 +5,10 @@ import { VOLTAGE_STEP, assertTier } from './voltage';
 // 第 100 台相对第 1 台约 868 倍（1.07^100 ≈ 867.7）。
 export const MARGINAL_COST_GROWTH = '1.07';
 
+// 卖回机器的退款比例：按当时的单价的这个比例退币。
+// 取一半是为了让「买错了再卖」有代价，又不会让玩家舍不得清理旧机器。
+export const SELL_REFUND_RATE = '0.5';
+
 // 第八章的「后期成本增长从 4^n 调整为 4^n × log(n)」没有写明「后期」从哪个 tier 开始。
 // 实现为可配置项，默认关闭：fromTier = null 时不改变成本曲线。
 export interface LateGameLogOptions {

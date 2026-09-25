@@ -131,6 +131,44 @@ describe('游戏核心：ULV → LV 完整循环', () => {
     expect(steam.fuelEfficiency).toBe('0.85');
   });
 
+  it('出售机器：退回当前单价的一半，卖完价格也跟着回落', () => {
+    const core = new GameCore();
+    core.maxTier = 2;
+    core.coins[0] = dec('100000');
+    const steam = modelById('g-lv-steam');
+    expect(core.coinPriceOf(steam).toString()).toBe('2000');
+
+    core.buy(steam, 3);
+    // 第 3 台买完时，下一台要 2000 × 1.07^3 ≈ 2450
+    const priceBeforeSell = core.coinPriceOf(steam);
+    const walletBefore = core.coins[0]!;
+    const refund = core.refundOf(steam);
+    expect(refund.toString()).toBe(priceBeforeSell.times('0.5').floor().toString());
+
+    expect(core.sell(steam, 1)).toBe(1);
+    expect(core.countOf(steam.id)).toBe(2);
+    expect(core.coins[0]!.minus(walletBefore).toString()).toBe(refund.toString());
+    // 台数少了，重新买回来的价钱比刚才低
+    expect(core.coinPriceOf(steam).lt(priceBeforeSell)).toBe(true);
+
+    // 卖到一台不剩之后就卖不动了
+    expect(core.sell(steam, 10)).toBe(2);
+    expect(core.countOf(steam.id)).toBe(0);
+    expect(core.sell(steam, 1)).toBe(0);
+  });
+
+  it('出售带故障的机器时，坏掉的台数不会超过剩下的台数', () => {
+    const core = new GameCore();
+    core.maxTier = 2;
+    core.coins[0] = dec('100000');
+    const steam = modelById('g-lv-steam');
+    core.buy(steam, 3);
+    core.faults[steam.id] = 3;
+    expect(core.sell(steam, 2)).toBe(2);
+    expect(core.countOf(steam.id)).toBe(1);
+    expect(core.faultyCountOf(steam.id)).toBe(1);
+  });
+
   it('攒够币可以解锁 LV，并开放 T1 矿脉', () => {
     const core = new GameCore();
     expect(core.unlockCostOf(2).toString()).toBe('20000');

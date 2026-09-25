@@ -62,6 +62,7 @@ const tip = ref<TipState | null>(null);
 function showTip(event: Event, model: MachineModelRow) {
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
   const lines = [...model.single];
+  lines.push({ label: '卖回一台', value: `${model.refund}（单价的 50%）` });
   if (model.overclock > 0) {
     lines.push({ label: '超频', value: `${model.overclock} 档（速度 +${model.overclock * 60}%）` });
     lines.push({ label: '故障率', value: model.faultHint });
@@ -286,6 +287,22 @@ function canBuy(model: MachineModelRow): boolean {
             </span>
             <button :disabled="!canBuy(bar.model)" @click="store.buy(bar.model.id, 1, payWith)">×1</button>
             <button :disabled="!canBuy(bar.model)" @click="store.buy(bar.model.id, 10, payWith)">×10</button>
+            <button
+              class="sell-btn"
+              :disabled="bar.model.count === 0"
+              :title="`卖回一台拿回 ${bar.model.refund}（单价的 50%）；卖出后重新买回来的价钱也会跟着降`"
+              @click="store.sell(bar.model.id, 1, payWith)"
+            >
+              卖
+            </button>
+            <button
+              class="sell-btn"
+              :disabled="bar.model.count === 0"
+              title="一次卖 10 台"
+              @click="store.sell(bar.model.id, 10, payWith)"
+            >
+              卖10
+            </button>
           </div>
         </div>
       </div>
