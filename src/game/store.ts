@@ -22,13 +22,14 @@ import {
   pollutionBand,
   pollutionBandName,
 } from '../numeric/pollution';
-import { GRID_MODES, gridMode, type GridMode } from '../numeric/grid';
+import { GRID_MODES, gridEnergyMultiplier, gridMode, type GridMode } from '../numeric/grid';
 import { ACHIEVEMENTS } from './achievements';
 import { UNIVERSES, universeById } from './universes';
 import { essentiaFromPurify } from '../numeric/arcane';
 import {
   NODE_ESSENTIA_PER_SECOND,
   nodeEssentiaDemand,
+  nodeOutputFactor,
   nodeVisPerSecond,
 } from '../numeric/arcane';
 import { PURIFY_PER_TIER_PER_SECOND, purifierMachineCoverage } from '../numeric/pollution';
@@ -162,6 +163,8 @@ export interface MachineColumn {
   count: number;
   tiers: MachineTierGroup[];
   stats: { label: string; value: string }[];
+  // 这一类机器当前吃到的增益 / 减益（悬停标签时显示）
+  modifiers: ModifierRow[];
 }
 
 export interface ProductionRate {
@@ -196,6 +199,8 @@ export interface PickaxeStats {
   maxVeinTier: number;
   maxVeinName: string;
   lines: PickaxeLineRow[];
+  // 悬停「镐子」标签时显示的增益清单
+  modifiers: ModifierRow[];
 }
 
 // 研究：算力（流量）与当前研究目标的进度
@@ -762,26 +767,10 @@ function pickaxeStats(core: GameCore): PickaxeStats {
   const veinTier = core.pickaxeVeinTier();
   const maxVeinTier = core.unlockedVeins.length ? Math.max(...core.unlockedVeins) : 0;
 
-  const lines: PickaxeLineRow[] = [
-    {
-      id: 'vajra',
-      name: '金刚杵',
-      hint: '决定镐子能挖到哪一级矿脉',
-      ...pickaxeLineText(core, 'vajra'),
-    },
-    {
-      id: 'collect',
-      name: '连锁采集',
-      hint: '每次点击的产出翻倍，结算在连锁爆破之后',
-      ...pickaxeLineText(core, 'collect'),
-    },
-    {
-      id: 'blast',
-      name: '连锁爆破',
-      hint: '每次点击额外加一笔矿石，每笔的数值在机会产生时就按当时的电压定死',
-      ...pickaxeLineText(core, 'blast'),
-    },
-  ];
+  const lines: PickaxeLineRow[] = PICKAXE_LINE_META.map((meta) => ({
+    ...meta,
+    ...pickaxeLineText(core, meta.id),
+  }));
 
   return {
     outputPerClick: formatNumber(core.pickaxeOutput()),
@@ -790,6 +779,7 @@ function pickaxeStats(core: GameCore): PickaxeStats {
     maxVeinTier,
     maxVeinName: oreName(maxVeinTier),
     lines,
+    modifiers: modifierRows(core, 'pickaxe'),
   };
 }
 
@@ -801,15 +791,14 @@ function pickaxeLineText(
   const cap = core.pickaxeCap(line);
   const canUpgrade = core.canUpgradePickaxe(line);
   const iconTier = core.pickaxeLineIconTier(line);
-  const blast = (used: number) => blastBonus(core.maxTier, used);
-  const collect = (value: number) => collectMultiplier(value);
+  const effectNow = pickaxeEffectNow(core, line);
 
   if (line === 'vajra') {
     return {
       level,
       cap,
       iconTier,
-      effectNow: `可挖 ${oreName(level)} 矿脉`,
+      effectNow,
       effectNext: canUpgrade ? `可挖 ${oreName(level + 1)} 矿脉` : '',
       canUpgrade,
     };
@@ -819,8 +808,8 @@ function pickaxeLineText(
       level,
       cap,
       iconTier,
-      effectNow: level > 0 ? `产出 ×${formatNumber(collect(level))}` : '尚未升级',
-      effectNext: canUpgrade ? `产出 ×${formatNumber(collect(level + 1))}` : '',
+      effectNow,
+      effectNext: canUpgrade ? `产出 ×${formatNumber(collectMultiplier(level + 1))}` : '',
       canUpgrade,
     };
   }
@@ -828,8 +817,8 @@ function pickaxeLineText(
     level,
     cap,
     iconTier,
-    effectNow: level > 0 ? `每次点击 +${formatNumber(blast(level))}` : '尚未升级',
-    effectNext: canUpgrade ? `每次点击 +${formatNumber(blast(level + 1))}` : '',
+    effectNow,
+    effectNext: canUpgrade ? `每次点击 +${formatNumber(blastBonus(core.maxTier, level + 1))}` : '',
     canUpgrade,
   };
 }
@@ -891,6 +880,197 @@ function riskStats(core: GameCore): RiskStats {
   };
 }
 
+// ── 各类机器吃到的增益 / 减益 ─────────────────────────────────
+// 悬停机器面板的标签时显示：是什么在影响这一类机器、影响多少、谁给的。
+// 数值统一写成相对变化（×1.12 → +12%），这样正负一眼能对比。
+export interface ModifierRow {
+  // 影响的东西（速度 / 耗电 / 产出 / 燃料效率……）
+  effect: string;
+  value: string;
+  // 来源（转生加成树 / 电网 / 污染 / 平行宇宙 / 超频……）
+  source: string;
+  tone: 'good' | 'bad' | 'flat';
+}
+
+function modifierRows(core: GameCore, kind: MachineKind | 'pickaxe'): ModifierRow[] {
+  const rows: ModifierRow[] = [];
+  const add = (effect: string, value: string, source: string, tone: ModifierRow['tone']) => {
+    rows.push({ effect, value, source, tone });
+  };
+  // 倍率 → 「+12% / -20%」
+  const pct = (multiplier: Decimal): string => {
+    const delta = multiplier.minus(1).times(100);
+    return `${delta.gte(0) ? '+' : ''}${formatNumber(delta)}%`;
+  };
+  // 超过 1 是好事（产出/速度），小于 1 是坏事
+  const tone = (multiplier: Decimal): ModifierRow['tone'] =>
+    multiplier.gt(1) ? 'good' : multiplier.lt(1) ? 'bad' : 'flat';
+
+  // 镐子不吃电也不吃污染，它的修正就是自己的三条升级线
+  if (kind === 'pickaxe') {
+    for (const line of PICKAXE_LINE_META) {
+      add(
+        line.name,
+        pickaxeEffectNow(core, line.id),
+        '镐子升级线',
+        core.pickaxeLevel(line.id) > 0 ? 'good' : 'flat',
+      );
+    }
+    return rows;
+  }
+
+  const arcane = core.hasUniverse('arcane');
+  const abyss = core.hasUniverse('abyss');
+  const report = core.lastReport;
+
+  // ── 电力侧：电网倍率与供电降载 ─────────────────────────
+  // 发电机是发电的、存电装置只是池子、灵气节点与抑制器不吃电，都不受这两条影响
+  const drawsPower =
+    kind !== 'generator' && kind !== 'storage' && kind !== 'arcane' && kind !== 'abyss';
+  if (drawsPower && !arcane) {
+    const gridMul = gridEnergyMultiplier(core.grid);
+    if (!gridMul.eq(1)) {
+      add('耗电', pct(gridMul), `电网 · ${gridMode(core.grid).name}`, tone(gridMul));
+    }
+    const powerRatio = dec(String(report.powerRatio));
+    if (powerRatio.lt(1)) {
+      add('产出', pct(powerRatio), report.outage ? '电网断电' : '供电不足', 'bad');
+    }
+  }
+
+  // ── 转生加成树 ─────────────────────────────────────────
+  if (kind === 'miner' || kind === 'machine') {
+    const speed = kind === 'miner' ? core.minerSpeedBonus() : core.machineSpeedBonus();
+    if (!speed.eq(1)) add('速度', pct(speed), '转生 · 加成树', tone(speed));
+  }
+  if (kind === 'machine') {
+    const coins = core.coinOutputBonus();
+    if (!coins.eq(1)) add('产币', pct(coins), '转生 · 加成树', tone(coins));
+  }
+  if (kind === 'generator') {
+    const fuel = core.fuelEfficiencyBonus();
+    if (!fuel.eq(1)) add('燃料效率', pct(fuel), '转生 · 加成树', tone(fuel));
+  }
+  if (kind === 'research') {
+    const compute = core.computeOutputBonus();
+    if (!compute.eq(1)) add('算力产出', pct(compute), '转生 · 加成树（计算机）', tone(compute));
+    const speed = core.researchSpeedBonus();
+    if (!speed.eq(1)) add('研究速度', pct(speed), '转生 · 加成树（研究站）', tone(speed));
+    const cost = core.researchCostFactor();
+    if (!cost.eq(1)) add('研究需求', pct(cost), '转生 · 加成树（研究站）', cost.lt(1) ? 'good' : 'bad');
+  }
+
+  // ── 平行宇宙 ───────────────────────────────────────────
+  if (kind === 'miner' || kind === 'machine') {
+    if (abyss) {
+      // 深渊宇宙：污染变成燃料，30% 是中性点
+      const drive = pollutionDriveFactor(core.pollution);
+      add(
+        '产出',
+        pct(drive),
+        `深渊宇宙 · 污染 ${formatNumber(core.pollution)}%（30% 中性）`,
+        tone(drive),
+      );
+    } else {
+      const pollution = core.outputMultiplier();
+      if (!pollution.eq(1)) {
+        add('产出', pct(pollution), `污染 · ${pollutionBandName(core.pollution)}`, tone(pollution));
+      }
+    }
+    if (arcane) add('产出', '-50%', '奥术宇宙：机器改吃灵气', 'bad');
+  }
+
+  // ── 超频与故障（逐机型设置，这里汇总） ─────────────────
+  if (kind === 'miner' || kind === 'machine') {
+    const levels = modelsOf(kind).map((model) =>
+      canOverclock(model) ? core.overclockOf(model.id) : 0,
+    );
+    const opened = levels.filter((level) => level > 0).length;
+    if (opened > 0) {
+      const top = Math.max(...levels);
+      add(
+        '速度 / 耗电',
+        `+${top * 60}% / ×${2 ** top}`,
+        `超频 · ${opened} 个机型在开（最高 ${top} 档）`,
+        'flat',
+      );
+    }
+  }
+  const faulty = modelsOf(kind).reduce((sum, model) => sum + core.faultyCountOf(model.id), 0);
+  if (faulty > 0) add('停机', `${faulty} 台`, '故障未维护', 'bad');
+
+  // ── 各类机器自己的那条 ─────────────────────────────────
+  if (kind === 'generator') {
+    const rated = modelsOf('generator').reduce(
+      (sum, model) => sum.plus(core.generatorOutputRated(model)),
+      ZERO,
+    );
+    const actual = report.euGenerated.div(C.SIM_STEP_MS / 1000);
+    if (rated.gt(0) && actual.lt(rated)) {
+      add('出力', pct(actual.div(rated)), '矿石不够烧', 'bad');
+    }
+  }
+  if (kind === 'purifier') {
+    if (!core.pollutionEnabled) {
+      add('提示', '污染机制已关闭', '设置', 'flat');
+    } else {
+      const purify = core.purifyPerSecond();
+      add('净化量', `${formatNumber(purify.times(100))}%/秒`, '等级 × 台数', 'good');
+      if (abyss) add('副作用', '不抵消深渊腐蚀', '污染在这里是燃料', 'flat');
+    }
+  }
+  if (kind === 'research' && report.computeWasted.gt(0)) {
+    add('浪费算力', formatNumber(report.computeWasted), '研究站吃不下', 'bad');
+  }
+  if (kind === 'arcane') {
+    const need = core.nodeEssentiaDemandRated();
+    if (need.gt(0)) {
+      const factor = nodeOutputFactor(report.essentiaUsed, need);
+      if (factor.lt(1)) {
+        add('出力', pct(factor), '源质没喂满（最低仍有一半）', 'bad');
+      }
+    }
+  }
+  if (kind === 'abyss') {
+    const points = core.suppression();
+    if (points.gt(0)) add('抵消污染', `${formatNumber(points)} 点`, '腐蚀抑制器', 'good');
+  }
+  if (kind === 'storage') {
+    const capacity = core.batteryCapacity();
+    if (capacity.gt(0)) add('容量', `${formatNumber(capacity)} EU`, '存电装置合计', 'good');
+    if (report.euCharged.gt(0)) add('充电', `${formatNumber(report.euCharged)} EU/秒`, '上一拍', 'flat');
+    if (report.euDischarged.gt(0)) {
+      add('放电', `${formatNumber(report.euDischarged)} EU/秒`, '上一拍', 'flat');
+    }
+  }
+
+  return rows;
+}
+
+// 镐子三条升级线的固定信息。清单、面板、悬停提示都读这一份。
+const PICKAXE_LINE_META: { id: PickaxeLine; name: string; hint: string }[] = [
+  { id: 'vajra', name: '金刚杵', hint: '决定镐子能挖到哪一级矿脉' },
+  {
+    id: 'collect',
+    name: '连锁采集',
+    hint: '每次点击的产出翻倍，结算在连锁爆破之后',
+  },
+  {
+    id: 'blast',
+    name: '连锁爆破',
+    hint: '每次点击额外加一笔矿石，每笔的数值在机会产生时就按当时的电压定死',
+  },
+];
+
+function pickaxeEffectNow(core: GameCore, line: PickaxeLine): string {
+  const level = core.pickaxeLevel(line);
+  if (line === 'vajra') return `可挖 ${oreName(level)} 矿脉`;
+  if (line === 'collect') {
+    return level > 0 ? `产出 ×${formatNumber(collectMultiplier(level))}` : '尚未升级';
+  }
+  return level > 0 ? `每次点击 +${formatNumber(blastBonus(core.maxTier, level))}` : '尚未升级';
+}
+
 function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
   const meta = COLUMN_META[kind];
   const tiers: MachineTierGroup[] = [];
@@ -940,6 +1120,7 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
     count: core.countOfCategory(kind),
     tiers,
     stats: kindStats(core, kind),
+    modifiers: modifierRows(core, kind),
   };
 }
 
@@ -1449,7 +1630,7 @@ function powerStats(core: GameCore): PowerStats {
   const starved = rated.gt(0) && actualPerSecond.lt(rated);
   const ratio = core.lastReport.powerRatio;
   const storedNote = (): string => {
-    if (capacity.lte(0)) return '还没有存电装置：富余电力直接浪费，缺口只能降载';
+    if (capacity.lte(0)) return '';
     if (settled.euCharged.gt(0)) return `上一拍充入 ${formatNumber(settled.euCharged)} EU`;
     if (settled.euDischarged.gt(0)) return `上一拍放出 ${formatNumber(settled.euDischarged)} EU`;
     return '上一拍没有充放电';

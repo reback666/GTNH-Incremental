@@ -4,6 +4,7 @@ import {
   useGameStore,
   type MachineColumn,
   type MachineModelRow,
+  type ModifierRow,
   type MachineTierGroup,
 } from '../game/store';
 import type { MachineKind, PayWith } from '../game/core';
@@ -52,6 +53,8 @@ interface TipState {
   traits: string[];
   x: number;
   y: number;
+  // 类别提示用：这一类机器吃到的增益 / 减益
+  modifiers?: ModifierRow[];
 }
 
 const tip = ref<TipState | null>(null);
@@ -76,6 +79,21 @@ function showTip(event: Event, model: MachineModelRow) {
 
 function hideTip() {
   tip.value = null;
+}
+
+// 悬停某个标签：列出这一类机器吃到的全部增益 / 减益
+function showColumnTip(event: Event, name: string, modifiers: ModifierRow[]) {
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const width = 320;
+  const height = 40 + modifiers.length * 30;
+  tip.value = {
+    name,
+    lines: [],
+    traits: [],
+    modifiers,
+    x: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
+    y: rect.bottom + 8 + height > window.innerHeight ? rect.top - height - 6 : rect.bottom + 6,
+  };
 }
 
 const bars = computed<Bar[]>(() => {
@@ -137,6 +155,10 @@ function canBuy(model: MachineModelRow): boolean {
         class="machine-tab"
         :class="{ active: active === PICKAXE_TAB }"
         @click="active = PICKAXE_TAB"
+        @mouseenter="showColumnTip($event, '镐子', store.snap.pickaxe.modifiers)"
+        @mouseleave="hideTip"
+        @focus="showColumnTip($event, '镐子', store.snap.pickaxe.modifiers)"
+        @blur="hideTip"
       >
         <img v-if="pickaxeTabIcon" class="tab-icon" :src="pickaxeTabIcon" alt="" />
         <span class="tab-name">镐子</span>
@@ -151,6 +173,10 @@ function canBuy(model: MachineModelRow): boolean {
         class="machine-tab"
         :class="{ active: active === column.kind }"
         @click="active = column.kind"
+        @mouseenter="showColumnTip($event, column.title, column.modifiers)"
+        @mouseleave="hideTip"
+        @focus="showColumnTip($event, column.title, column.modifiers)"
+        @blur="hideTip"
       >
         <MachineIcon :model-id="tabIconId(column.kind)" :kind="column.kind" :size="30" />
         <span class="tab-name">{{ column.title }}</span>
@@ -313,8 +339,26 @@ function canBuy(model: MachineModelRow): boolean {
   </section>
 
   <Teleport to="body">
-    <div v-if="tip" class="model-tip" :style="{ left: tip.x + 'px', top: tip.y + 'px' }">
+    <div
+      v-if="tip"
+      class="model-tip"
+      :class="{ wide: tip.modifiers }"
+      :style="{ left: tip.x + 'px', top: tip.y + 'px' }"
+    >
       <div class="tip-name">{{ tip.name }}</div>
+      <template v-if="tip.modifiers">
+        <div v-if="tip.modifiers.length === 0" class="tip-empty">这一类没有任何增益或减益</div>
+        <div
+          v-for="mod in tip.modifiers"
+          :key="mod.source + mod.effect"
+          class="tip-mod"
+          :class="mod.tone"
+        >
+          <span class="tip-mod-effect">{{ mod.effect }}</span>
+          <b class="tip-mod-value">{{ mod.value }}</b>
+          <span class="tip-mod-source">{{ mod.source }}</span>
+        </div>
+      </template>
       <div v-for="line in tip.lines" :key="line.label" class="tip-row">
         <span>{{ line.label }}</span>
         <b>{{ line.value }}</b>

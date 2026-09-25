@@ -1727,6 +1727,11 @@ h1 .small {
   font-size: 12px;
 }
 
+/* 类别标签的清单有三列，放宽一些 */
+.model-tip.wide {
+  width: 320px;
+}
+
 .tip-name {
   margin-bottom: 5px;
   color: var(--accent);
@@ -1751,6 +1756,47 @@ h1 .small {
   margin-top: 5px;
   color: var(--warn);
   font-size: 11px;
+}
+
+/* 类别标签的悬停清单：作用 / 数值 / 来源三列 */
+.tip-empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tip-mod {
+  display: grid;
+  grid-template-columns: 64px 68px 1fr;
+  gap: 6px;
+  align-items: baseline;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.tip-mod-effect {
+  color: var(--text);
+}
+
+.tip-mod-value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.tip-mod-source {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.tip-mod.good .tip-mod-value {
+  color: var(--accent);
+}
+
+.tip-mod.bad .tip-mod-value {
+  color: var(--danger);
+}
+
+.tip-mod.flat .tip-mod-value {
+  color: var(--muted);
 }
 
 .badge {
