@@ -43,7 +43,8 @@ export const UI_REFRESH_MS = 50;
 // v11：加了奥术宇宙的源质存量
 // v12：加了「下次转生要带的平行宇宙」这个选择
 // v13：加了镐子的三条升级线（金刚杵 / 连锁采集 / 连锁爆破）
-export const SAVE_VERSION = 13;
+// v14：加了硅基宇宙的三项 AI 开关
+export const SAVE_VERSION = 14;
 export const SAVE_KEY = 'gtnh-incremental-save';
 
 export function unlockCost(machineTier: number): Decimal {

@@ -57,6 +57,10 @@ export interface SaveData {
   pickaxeVajra?: number;
   pickaxeCollect?: number;
   pickaxeBlast?: number;
+  // v14：硅基宇宙的三项 AI 开关
+  siliconAutoRepair?: boolean;
+  siliconAutoOverclock?: boolean;
+  siliconShedding?: boolean;
   // v1 遗留字段：按电压等级存的数量，读到旧存档时用来迁移
   miners?: number[];
   generators?: number[];
@@ -105,6 +109,9 @@ export function serialize(core: GameCore): SaveData {
     pickaxeVajra: core.pickaxeVajra,
     pickaxeCollect: core.pickaxeCollect,
     pickaxeBlast: core.pickaxeBlast,
+    siliconAutoRepair: core.siliconAutoRepair,
+    siliconAutoOverclock: core.siliconAutoOverclock,
+    siliconShedding: core.siliconShedding,
     siphoned: toSaveString(core.siphoned),
     maxTier: core.maxTier,
     unlockedVeins: [...core.unlockedVeins],
@@ -161,6 +168,9 @@ export function deserialize(data: SaveData): GameCore {
   core.pickaxeVajra = data.pickaxeVajra ?? 0;
   core.pickaxeCollect = data.pickaxeCollect ?? 0;
   core.pickaxeBlast = data.pickaxeBlast ?? 0;
+  core.siliconAutoRepair = data.siliconAutoRepair ?? true;
+  core.siliconAutoOverclock = data.siliconAutoOverclock ?? true;
+  core.siliconShedding = data.siliconShedding ?? true;
   core.playSeconds = data.playSeconds;
   core.totalOre = dec(data.totalOre ?? '0');
   core.totalCoins = dec(data.totalCoins ?? '0');

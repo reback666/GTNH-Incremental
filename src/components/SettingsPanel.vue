@@ -28,6 +28,62 @@ const unlockTier = ref(1);
       关掉之后污染不再增长、也不产生任何影响（默认开启）。污染值显示在第 1 页最下方。
     </p>
 
+    <!-- ── 硅基宇宙：三项 AI 开关（只有拥有这个宇宙才显示） ──── -->
+    <template v-if="snap.silicon.active">
+      <h2 class="mt">硅基宇宙 · AI 调度</h2>
+      <div class="row">
+        <div class="name">自动维护</div>
+        <button
+          :class="{ primary: snap.silicon.autoRepair }"
+          @click="store.setSiliconOption('repair', true)"
+        >
+          开启
+        </button>
+        <button
+          :class="{ primary: !snap.silicon.autoRepair }"
+          @click="store.setSiliconOption('repair', false)"
+        >
+          关闭
+        </button>
+      </div>
+      <div class="row">
+        <div class="name">自动超频</div>
+        <button
+          :class="{ primary: snap.silicon.autoOverclock }"
+          @click="store.setSiliconOption('overclock', true)"
+        >
+          开启
+        </button>
+        <button
+          :class="{ primary: !snap.silicon.autoOverclock }"
+          @click="store.setSiliconOption('overclock', false)"
+        >
+          关闭
+        </button>
+      </div>
+      <div class="row">
+        <div class="name">按优先级停机</div>
+        <button
+          :class="{ primary: snap.silicon.shedding }"
+          @click="store.setSiliconOption('shedding', true)"
+        >
+          开启
+        </button>
+        <button
+          :class="{ primary: !snap.silicon.shedding }"
+          @click="store.setSiliconOption('shedding', false)"
+        >
+          关闭
+        </button>
+      </div>
+      <p class="muted small" style="margin: 6px 0 0">
+        自动维护：故障机器当拍修好。自动超频：电力扛得住翻倍时才升档，明显缺电就降档。
+        按优先级停机：缺电时整组停掉优先级最低的机器（研究 → 制造机 → 采矿机 → 净化器），
+        而不是全厂一起减半。三件事都有 5% 误判率，做错了下一拍自己纠正。
+      </p>
+      <p class="muted small" style="margin: 6px 0 0">{{ snap.silicon.note }}</p>
+    </template>
+
     <!-- ── 开发者模式 ─────────────────────────────────────────── -->
     <h2 class="mt">开发者模式</h2>
     <div class="row">

@@ -21,6 +21,15 @@ import {
 } from '../numeric/abyss';
 import { isValidOverclockLevel, overclockEnergyMultiplier, overclockSpeedMultiplier } from '../numeric/overclock';
 import { expectedFaults, sampleFaults } from '../numeric/fault';
+import {
+  SILICON_KEEP_PRIORITY,
+  SILICON_MISJUDGE_CHANCE,
+  SILICON_DOWNGRADE_RATIO,
+  SILICON_UPGRADE_HEADROOM,
+  type SiliconKind,
+  isSheddableKind,
+} from '../numeric/silicon';
+import { MAX_OVERCLOCK_LEVEL } from '../numeric/overclock';
 import { batteryCapacityEU, settleStorage } from '../numeric/storage';
 import { rebirthCables } from '../numeric/rebirth';
 import {
@@ -123,6 +132,11 @@ export interface TickReport {
   corrosionPerSecond: Decimal;
   suppression: Decimal;
   corrosionFaults: number;
+  // 硅基宇宙：这一拍 AI 自动修好了几台、升/降了几档、停了哪几类机器
+  autoRepairs: number;
+  autoOverclockUp: number;
+  autoOverclockDown: number;
+  sheddedKinds: string[];
   // 污染：本拍净变化与产出倍率（关掉污染机制时倍率恒为 1）
   pollutionDelta: Decimal;
   outputMultiplier: Decimal;
@@ -175,6 +189,10 @@ export class GameCore {
   universes: UniverseId[] = [];
   // 已经选好、等下一次转生带走的宇宙（只存选择本身，转生时才生效）
   pendingUniverse: UniverseId | null = null;
+  // 硅基宇宙的三项 AI 功能，默认全开（三个开关互相独立，跨周目保留）
+  siliconAutoRepair = true;
+  siliconAutoOverclock = true;
+  siliconShedding = true;
   // 奥术宇宙的源质存量（净化器副产，喂给灵气节点）
   essentia = ZERO;
   // ── 镐子（手动开采） ───────────────────────────────────────
@@ -300,6 +318,35 @@ export class GameCore {
 
   // 工业宇宙：跨电压结算。把「不高于结算等级的币」按币值合并后统一扣款，
   // 剩下的零头自动按 4:1 拆回低等级币（等价于 GTNH 的变压器 + 4 合 1 自动合成）。
+  // 硅基宇宙的停机调度：从优先级最低的类别开始整组停，直到剩下的需求装得进供给。
+  // AI 有 5% 概率误判 —— 那次不按优先级来，而是随机停掉一组，下一拍它会自己纠正。
+  private shedKinds(
+    demandByKind: Map<MachineKind, Decimal>,
+    supply: Decimal,
+  ): Set<MachineKind> {
+    const shed = new Set<MachineKind>();
+    if (this.random() < SILICON_MISJUDGE_CHANCE) {
+      const candidates = SILICON_KEEP_PRIORITY.filter((kind) => demandByKind.has(kind));
+      if (candidates.length > 0) {
+        const pick = Math.min(
+          candidates.length - 1,
+          Math.floor(this.random() * candidates.length),
+        );
+        shed.add(candidates[pick] as MachineKind);
+      }
+    }
+
+    let remaining = ZERO;
+    for (const value of demandByKind.values()) remaining = remaining.plus(value);
+    for (let i = SILICON_KEEP_PRIORITY.length - 1; i >= 0 && remaining.gt(supply); i -= 1) {
+      const kind = SILICON_KEEP_PRIORITY[i] as SiliconKind;
+      if (!demandByKind.has(kind) || shed.has(kind)) continue;
+      shed.add(kind);
+      remaining = remaining.minus(demandByKind.get(kind)!);
+    }
+    return shed;
+  }
+
   private payAcrossTiers(price: Decimal, payTier: number): boolean {
     const unit = coinValueInTier1(payTier);
     let available = ZERO;
@@ -1103,28 +1150,36 @@ export class GameCore {
 
     // 1) 发电能力与耗电需求。坏掉的机器不耗电，超频的机器按档位吃电
     let capacity = ZERO;
-    let demand = ZERO;
+    // 耗电按类别分开记：硅基宇宙的停机调度要按类别整组停
+    const demandByKind = new Map<MachineKind, Decimal>();
     for (const model of active) {
       if (model.category === 'generator') {
         capacity = capacity.plus(this.generatorOutputRated(model));
       } else if (model.visPowered) {
         // 魔法机器不吃电，它们要的是灵气，见下面的灵气结算
         continue;
-      } else if (model.category === 'miner') {
-        demand = demand.plus(this.minerEnergyDrain(model));
-      } else if (model.category === 'machine') {
-        demand = demand.plus(this.machineEnergyDrain(model));
-      } else if (model.category === 'purifier') {
-        demand = demand.plus(this.purifierEnergyDrain(model));
-      } else if (model.category === 'research' && model.computeRole === 'produce') {
+      } else {
+        let drain = ZERO;
+        if (model.category === 'miner') drain = this.minerEnergyDrain(model);
+        else if (model.category === 'machine') drain = this.machineEnergyDrain(model);
+        else if (model.category === 'purifier') drain = this.purifierEnergyDrain(model);
         // 研究站不直接耗电，它吃的是计算机产出的算力
-        demand = demand.plus(this.computerEnergyDrain(model));
-      } else if (model.category === 'abyss') {
-        demand = demand.plus(this.purifierEnergyDrain(model));
+        else if (model.category === 'research' && model.computeRole === 'produce') {
+          drain = this.computerEnergyDrain(model);
+        } else if (model.category === 'abyss') drain = this.purifierEnergyDrain(model);
+        if (drain.gt(0)) {
+          demandByKind.set(
+            model.category,
+            (demandByKind.get(model.category) ?? ZERO).plus(drain),
+          );
+        }
       }
     }
     // 电网模式直接改耗电：稳定 +20%、波动 -30%、黑市 -50%
-    demand = demand.times(gridEnergyMultiplier(this.grid));
+    const gridMul = gridEnergyMultiplier(this.grid);
+    for (const [kind, value] of demandByKind) demandByKind.set(kind, value.times(gridMul));
+    let demand = ZERO;
+    for (const value of demandByKind.values()) demand = demand.plus(value);
 
     // 2) 发电机按库存矿石实际烧掉多少 —— 烧不到就发不满
     let generated = ZERO;
@@ -1158,6 +1213,23 @@ export class GameCore {
           this.outageSeconds = outageRule.outageSeconds;
           report.outage = true;
         }
+      }
+    }
+    // 3b) 硅基宇宙的停机调度：电力不够时按类别整组停，而不是全厂等比降载。
+    //     保住优先级高的那几类满速跑，被停的那几类这一拍不产也不耗。
+    const silicon = this.hasUniverse('silicon');
+    // 调度会把这个比值修回 1，所以先记下「没调度时电力到底够不够」——
+    let shed = new Set<MachineKind>();
+    const rawDemand = demand;
+    const rawRatio = rawDemand.lte(0) ? 1 : Decimal.min(ONE, generated.div(rawDemand)).toNumber();
+    if (silicon && this.siliconShedding && !report.outage && demand.gt(generated)) {
+      shed = this.shedKinds(demandByKind, generated);
+      if (shed.size > 0) {
+        demand = ZERO;
+        for (const [kind, value] of demandByKind) {
+          if (!shed.has(kind)) demand = demand.plus(value);
+        }
+        report.sheddedKinds = [...shed];
       }
     }
     const effectiveDemand = report.outage ? ZERO : demand;
@@ -1239,6 +1311,8 @@ export class GameCore {
     // 奥术宇宙里魔法机器按灵气比例降载，普通机器仍按电力比例降载。
     const pollutionFactor = abyss ? driveMul : pollutionMul;
     const factorOf = (model: MachineModel): Decimal => {
+      // 被停机调度停掉的那几类：这一拍不产
+      if (shed.has(model.category)) return ZERO;
       const driven = arcane && model.visPowered ? visRatio : ratioDec;
       const bonus = arcane ? arcaneOutputBonus(plenty, model.visPowered === true) : ONE;
       return driven.times(pollutionFactor).times(bonus);
@@ -1356,6 +1430,18 @@ export class GameCore {
       }
     }
 
+    // 6c) 硅基宇宙：AI 自动维护，故障当拍就修好。
+    //     5% 概率这一拍没修（AI 误判），下一拍会补上。
+    if (silicon && this.siliconAutoRepair && this.random() >= SILICON_MISJUDGE_CHANCE) {
+      for (const model of active) {
+        const faulty = this.faultyCountOf(model.id);
+        if (faulty <= 0) continue;
+        this.faults[model.id] = 0;
+        this.repairs += faulty;
+        report.autoRepairs += faulty;
+      }
+    }
+
     // 7) 污染事件：中度污染偶尔"变异"给一笔奖励，重度污染可能工厂崩溃
     if (this.pollutionEnabled) {
       this.handlePollutionEvents(dtSeconds, report);
@@ -1372,6 +1458,32 @@ export class GameCore {
     this.playSeconds += dtSeconds;
     this.runEU = this.runEU.plus(generated);
     this.totalEU = this.totalEU.plus(generated);
+
+    // 8b) 硅基宇宙：AI 按供电情况自动升降档。
+    //     升档要求电力扛得住翻倍，降档只在明显缺电时动手，中间地带不动 —— 免得来回抖。
+    if (silicon && this.siliconAutoOverclock && this.random() >= SILICON_MISJUDGE_CHANCE) {
+      // 用没经过停机调度修正的比值：调度把需求砍下去之后，缺电这件事仍然要反映到档位上
+      const ratio = rawRatio;
+      for (const model of active) {
+        if (!canOverclock(model)) continue;
+        const level = this.overclockOf(model.id);
+        if (
+          // 被停机的机器这一拍不干活，不给它升档
+          !shed.has(model.category) &&
+          ratio >= 1 &&
+          level < MAX_OVERCLOCK_LEVEL &&
+          rawDemand.gt(0) &&
+          generated.gte(rawDemand.times(SILICON_UPGRADE_HEADROOM))
+        ) {
+          this.setOverclock(model.id, level + 1);
+          report.autoOverclockUp += 1;
+        } else if (ratio < SILICON_DOWNGRADE_RATIO && level > 0) {
+          this.setOverclock(model.id, level - 1);
+          report.autoOverclockDown += 1;
+        }
+      }
+    }
+
     report.euGenerated = generated;
     report.euConsumed = effectiveDemand.times(dtSeconds).times(ratioDec);
     report.powerRatio = ratioDec.toNumber();
@@ -1400,6 +1512,10 @@ function emptyReport(): TickReport {
     corrosionPerSecond: ZERO,
     suppression: ZERO,
     corrosionFaults: 0,
+    autoRepairs: 0,
+    autoOverclockUp: 0,
+    autoOverclockDown: 0,
+    sheddedKinds: [],
     pollutionDelta: ZERO,
     outputMultiplier: ONE,
     outage: false,

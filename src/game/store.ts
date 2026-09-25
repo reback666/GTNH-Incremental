@@ -315,6 +315,15 @@ export interface ArcaneStats {
   note: string;
 }
 
+// 硅基宇宙：三项 AI 开关与它们上一拍干了什么
+export interface SiliconStats {
+  active: boolean;
+  autoRepair: boolean;
+  autoOverclock: boolean;
+  shedding: boolean;
+  note: string;
+}
+
 // 深渊宇宙的读数：腐蚀速率与抑制器抵消的污染点数
 export interface AbyssStats {
   active: boolean;
@@ -351,6 +360,7 @@ export interface Snapshot {
   universes: UniverseRow[];
   arcane: ArcaneStats;
   abyss: AbyssStats;
+  silicon: SiliconStats;
   // 累计统计（存档面板里显示）
   stats: { label: string; value: string }[];
   // 开发者模式开关（设置页）
@@ -519,6 +529,15 @@ export const useGameStore = defineStore('game', {
     // 换电网 / 开关污染机制：都属于设置，改完立刻生效并存档
     setGrid(mode: GridMode): void {
       getCore().setGrid(mode);
+      this.refresh();
+      this.save();
+    },
+    // 硅基宇宙的三项 AI 开关
+    setSiliconOption(option: 'repair' | 'overclock' | 'shedding', value: boolean): void {
+      const core = getCore();
+      if (option === 'repair') core.siliconAutoRepair = value;
+      else if (option === 'overclock') core.siliconAutoOverclock = value;
+      else core.siliconShedding = value;
       this.refresh();
       this.save();
     },
@@ -779,6 +798,7 @@ function buildSnapshot(core: GameCore): Snapshot {
     universes: universeRows(core),
     arcane: arcaneStats(core),
     abyss: abyssStats(core),
+    silicon: siliconStats(core),
     stats: statRows(core),
     devMode: core.devMode,
     nextTier,
@@ -1012,6 +1032,16 @@ function modifierRows(core: GameCore, kind: MachineKind | 'pickaxe'): ModifierRo
     const source = `奥术宇宙 · 灵气充裕度 ${formatNumber(plenty.times(100), { significantDigits: 3 })}%`;
     add('产量（电力机器）', pct(arcaneOutputBonus(plenty, false)), source, 'good');
     add('产量（魔法机器）', pct(arcaneOutputBonus(plenty, true)), source, 'good');
+  }
+  // 硅基宇宙：AI 接管维护、超频与停机调度
+  if (core.hasUniverse('silicon')) {
+    if (core.siliconAutoRepair) add('维护', '自动', '硅基宇宙 · AI 自动维护', 'good');
+    if (core.siliconAutoOverclock && (kind === 'miner' || kind === 'machine')) {
+      add('超频', '自动升降档', '硅基宇宙 · AI 自动超频', 'good');
+    }
+    if (core.siliconShedding && (kind === 'miner' || kind === 'machine' || kind === 'purifier')) {
+      add('缺电时', '可能整组停机', '硅基宇宙 · AI 按优先级停机', 'flat');
+    }
   }
 
   // ── 超频与故障（逐机型设置，这里汇总） ─────────────────
@@ -1371,6 +1401,41 @@ function arcaneStats(core: GameCore): ArcaneStats {
     essentiaNet: `${essentiaNet.gte(0) ? '+' : ''}${formatNumber(essentiaNet, { significantDigits: 3 })}/秒`,
     essentiaPositive: essentiaNet.gte(0),
     nodes,
+    note,
+  };
+}
+
+// 硅基宇宙：三项 AI 功能的状态，以及上一拍它们做了什么
+function siliconStats(core: GameCore): SiliconStats {
+  const active = core.hasUniverse('silicon');
+  const report = core.lastReport;
+  const did: string[] = [];
+  if (report.autoRepairs > 0) did.push(`修好 ${report.autoRepairs} 台故障`);
+  if (report.autoOverclockUp > 0) did.push(`升档 ${report.autoOverclockUp} 次`);
+  if (report.autoOverclockDown > 0) did.push(`降档 ${report.autoOverclockDown} 次`);
+  if (report.sheddedKinds.length > 0) {
+    const names = report.sheddedKinds.map(
+      (kind) => COLUMN_META[kind as MachineKind]?.title ?? kind,
+    );
+    did.push(`停掉${names.join('、')}`);
+  }
+
+  let note: string;
+  if (!active) {
+    note = '没有硅基宇宙：三项 AI 都不生效。';
+  } else if (did.length > 0) {
+    note = `上一拍 AI：${did.join('，')}。`;
+  } else if (!core.siliconAutoRepair && !core.siliconAutoOverclock && !core.siliconShedding) {
+    note = '三个开关都关着，AI 什么都不做。';
+  } else {
+    note = '上一拍 AI 没动手 —— 没故障、电力也够。';
+  }
+
+  return {
+    active,
+    autoRepair: core.siliconAutoRepair,
+    autoOverclock: core.siliconAutoOverclock,
+    shedding: core.siliconShedding,
     note,
   };
 }
