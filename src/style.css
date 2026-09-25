@@ -680,7 +680,7 @@ h1 .small {
 
 /*
   石头碎裂：原版挖方块时贴上去的那层裂纹贴图（destroy_stage_0..9），
-  一次点击从最浅播到最深再淡出。一格按 56px 画，和矿脉 2×2 方块的尺度对齐。
+  一次点击从最浅播到最深再淡出。只在矿脉正中裂开一小块（40px），不盖满整块矿脉。
 */
 @keyframes crack-fade {
   0% {
@@ -693,9 +693,11 @@ h1 .small {
 
 .crack {
   position: absolute;
-  width: 56px;
-  height: 56px;
-  margin: -28px 0 0 -28px;
+  left: 50%;
+  top: 50%;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
   pointer-events: none;
   animation: crack-fade 0.22s linear 0.62s forwards;
 }

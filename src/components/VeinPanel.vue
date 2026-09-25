@@ -90,8 +90,8 @@ const sparks = ref<Burst[]>([]);
 const ripples = ref<Burst[]>([]);
 // 镐子落点：中心亮点 + 一圈短星芒
 const hits = ref<Burst[]>([]);
-// 落点裂开的石头缝
-const cracks = ref<Burst[]>([]);
+// 矿脉中间裂开的石头缝：每次点击换一个 key，动画就从头播一遍
+const crackSeq = ref(0);
 const chips = ref<Chip[]>([]);
 const shaking = ref(false);
 let seq = 0;
@@ -107,7 +107,7 @@ function mine(event: MouseEvent) {
   sparks.value.push(point);
   ripples.value.push(point);
   hits.value.push(point);
-  cracks.value.push(point);
+  crackSeq.value += 1;
 
   // 石头碎屑：八片朝四周飞散
   const fresh: Chip[] = Array.from({ length: 8 }, (_, index) => {
@@ -136,9 +136,6 @@ function mine(event: MouseEvent) {
   setTimeout(() => {
     hits.value = hits.value.filter((s) => s.id !== point.id);
   }, 320);
-  setTimeout(() => {
-    cracks.value = cracks.value.filter((s) => s.id !== point.id);
-  }, 900);
   setTimeout(() => {
     chips.value = chips.value.filter((chip) => !chipIds.has(chip.id));
   }, 800);
@@ -178,6 +175,9 @@ function mine(event: MouseEvent) {
             <span class="vein-clip">
               <span class="vein-frames" :style="spriteStyle" />
             </span>
+          </span>
+          <span v-if="crackSeq" :key="crackSeq" class="crack" :style="crackStyle">
+            <span class="crack-strip" />
           </span>
         </span>
       </span>
@@ -221,14 +221,6 @@ function mine(event: MouseEvent) {
       >
         <span v-for="ray in 4" :key="ray" class="hit-ray" :style="{ '--angle': ray * 90 - 45 + 'deg' }" />
         <span class="hit-core" />
-      </span>
-      <span
-        v-for="crack in cracks"
-        :key="'k' + crack.id"
-        class="crack"
-        :style="{ ...crackStyle, left: crack.x + 'px', top: crack.y + 'px' }"
-      >
-        <span class="crack-strip" />
       </span>
     </button>
   </section>
