@@ -60,8 +60,9 @@ GTNH（GregTech: New Horizons）主题的增量 / 放置游戏：从超低压 UL
 **镐子（手动开采的升级线）**：
 
 - 手动挖矿改成「手动版采矿机」：作用在当前挖得动的矿脉上，产量按矿脉规则均分给它的全部矿种
-- 金刚杵按电压分级，图标取自 GT 的金刚杵贴图（`gt.Tool_Vajra.png`）并按 14 级电压上色
-  （`python scripts/build-pickaxe-icons.py`，预览图 `docs/pickaxe-tiers.png`）
+- 三条线在矿脉面板里做成和机器面板一样的**小标签**：点谁展开谁的详情，标签上带各自的工具图标
+  （金刚杵取自 GT 的 `gt.Tool_Vajra.png`、连锁采集用 IC2 的电动钻头、连锁爆破用 IC2 的炸药，
+  都按 14 级电压上色：`python scripts/build-pickaxe-icons.py`，预览图 `docs/pickaxe-tiers.png`）
 - 三条升级线（公式见 `src/numeric/pickaxe.ts`，设计见 `plan.txt` 第四章）：
   金刚杵每电压 1 次、每次多挖一级矿脉；连锁采集每 2 个电压 1 次、每次产出 ×2；
   连锁爆破每电压 2 次、每次 +n^(n/2)（n = 当前最高电压等级）

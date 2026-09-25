@@ -6,6 +6,7 @@ import {
   blastChances,
   collectChances,
   collectMultiplier,
+  pickaxeIconTier,
   pickaxeOutputPerClick,
   vajraChances,
   vajraMaxLevel,
@@ -57,6 +58,17 @@ describe('镐子的三条升级线', () => {
   it('MAX 用满全部机会时的产出', () => {
     const output = pickaxeOutputPerClick({ tier: 14, blastUsed: 28, collectLevel: 7 });
     expect(output.toString()).toBe('377801998464');
+  });
+
+  it('图标配色按各自进度取：没升是 ULV 色，满级是 MAX 的彩虹', () => {
+    expect(pickaxeIconTier(0, 13)).toBe(1);
+    expect(pickaxeIconTier(13, 13)).toBe(14);
+    expect(pickaxeIconTier(0, 7)).toBe(1);
+    expect(pickaxeIconTier(7, 7)).toBe(14);
+    expect(pickaxeIconTier(0, 28)).toBe(1);
+    expect(pickaxeIconTier(28, 28)).toBe(14);
+    // 三条线机会数不同，但走完一半进度时取的色阶一致
+    expect(pickaxeIconTier(13, 26)).toBe(pickaxeIconTier(7, 14));
   });
 });
 
@@ -153,7 +165,7 @@ describe('镐子面板拿到的数据', () => {
     setActivePinia(createPinia());
   });
 
-  it('列出三条升级线，并给出当前产出与图标等级', () => {
+  it('列出三条升级线，并给出当前产出与各自的图标等级', () => {
     const store = useGameStore();
     store.boot();
     const core = getCore();
@@ -163,12 +175,13 @@ describe('镐子面板拿到的数据', () => {
     const pickaxe = store.snap.pickaxe;
     expect(pickaxe.lines.map((line) => line.id)).toEqual(['vajra', 'collect', 'blast']);
     expect(pickaxe.outputPerClick).toBe('1');
-    expect(pickaxe.iconTier).toBe(1);
     expect(pickaxe.veinTier).toBe(0);
     expect(pickaxe.maxVeinTier).toBe(0);
+    // 三条线都还没升级：都是 ULV 色
+    expect(pickaxe.lines.map((line) => line.iconTier)).toEqual([1, 1, 1]);
   });
 
-  it('点了升级就立刻反映到产出与图标上', () => {
+  it('点了升级就立刻反映到产出、矿脉与图标上', () => {
     const store = useGameStore();
     store.boot();
     const core = getCore();
@@ -179,10 +192,12 @@ describe('镐子面板拿到的数据', () => {
     store.upgradePickaxe('collect'); // HV 时连锁采集有 2 次机会
     expect(store.snap.pickaxe.lines[1]!.level).toBe(1);
     expect(store.snap.pickaxe.outputPerClick).toBe('2');
+    // 采集线 2 次机会走了 1 次：图标色跟着进度走
+    expect(store.snap.pickaxe.lines[1]!.iconTier).toBeGreaterThan(1);
 
     store.upgradePickaxe('vajra');
     expect(store.snap.pickaxe.veinTier).toBe(1);
-    expect(store.snap.pickaxe.iconTier).toBe(2);
+    expect(store.snap.pickaxe.lines[0]!.iconTier).toBeGreaterThan(1);
   });
 
   it('金刚杵跟不上时，面板提示已解锁更高级矿脉但挖不动', () => {

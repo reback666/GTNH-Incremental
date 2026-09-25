@@ -27,6 +27,7 @@ import {
   blastChances,
   collectChances,
   pickaxeOutputPerClick,
+  pickaxeIconTier,
   vajraChances,
   vajraMaxLevel,
 } from '../numeric/pickaxe';
@@ -969,9 +970,9 @@ export class GameCore {
     return Math.min(best, this.pickaxeVajra);
   }
 
-  // 镐子图标用哪一档电压色：金刚杵 0 级（开局）用 ULV 色
-  pickaxeIconTier(): number {
-    return Math.min(MAX_TIER, this.pickaxeVajra + 1);
+  // 这条线的图标用哪一档电压色：按各自进度取色，满级就是 MAX 的彩虹
+  pickaxeLineIconTier(line: PickaxeLine): number {
+    return pickaxeIconTier(this.pickaxeLevel(line), this.pickaxeCap(line));
   }
 
   // 单价：基准成本 × 机型成本系数

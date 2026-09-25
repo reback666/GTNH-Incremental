@@ -47,7 +47,7 @@ describe('机型图标', () => {
     }
   });
 
-  it('镐子有 14 张 32×32 图标，且按电压色两两不同', () => {
+  it('镐子三条线各有 14 张 32×32 图标，同一线内按电压色两两不同', () => {
     const dir = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
       '..',
@@ -55,14 +55,16 @@ describe('机型图标', () => {
       'assets',
       'pickaxe',
     );
-    const hashes = new Set<string>();
-    for (let tier = 1; tier <= 14; tier += 1) {
-      const file = path.join(dir, `v-${tier}.png`);
-      expect(existsSync(file), `缺 v-${tier}.png`).toBe(true);
-      const bytes = readFileSync(file);
-      expect(pngSize(bytes), `v-${tier} 尺寸`).toBe('32x32');
-      hashes.add(createHash('md5').update(bytes).digest('hex'));
+    for (const line of ['vajra', 'drill', 'blast']) {
+      const hashes = new Set<string>();
+      for (let tier = 1; tier <= 14; tier += 1) {
+        const file = path.join(dir, `${line}-${tier}.png`);
+        expect(existsSync(file), `缺 ${line}-${tier}.png`).toBe(true);
+        const bytes = readFileSync(file);
+        expect(pngSize(bytes), `${line}-${tier} 尺寸`).toBe('32x32');
+        hashes.add(createHash('md5').update(bytes).digest('hex'));
+      }
+      expect(hashes.size, `${line} 系列的图标数`).toBe(14);
     }
-    expect(hashes.size, '金刚杵图标数').toBe(14);
   });
 });

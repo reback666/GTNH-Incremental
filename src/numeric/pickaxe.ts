@@ -56,6 +56,14 @@ export function collectMultiplier(level: number): Decimal {
   return pow(String(COLLECT_MULTIPLIER), level);
 }
 
+// 把「这条线走到第几级」映射成 14 档电压配色：0 级是全空时的 ULV 色，满级是 MAX 的彩虹。
+// 三条线的机会数不同（13 / 7 / 28），所以各自按进度比例取色，界面上能直接看出哪条线走得更远。
+export function pickaxeIconTier(level: number, cap: number): number {
+  if (cap <= 0) return 1;
+  const ratio = Math.min(1, Math.max(0, level / cap));
+  return 1 + Math.floor(ratio * (MAX_TIER - 1));
+}
+
 // 一次点击的产出总量（枚），按矿脉规则分给各矿种。
 // 先算连锁爆破的加法，再乘连锁采集的倍率。
 export function pickaxeOutputPerClick(input: {

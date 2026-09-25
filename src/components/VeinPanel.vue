@@ -15,12 +15,17 @@ import {
 const store = useGameStore();
 const info = computed(() => veinTierInfo(store.snap.currentVein.tier));
 const veinUrl = computed(() => veinIconUrl(store.snap.currentVein.tier));
-// 镐子图标按金刚杵等级取电压色，升级后颜色会跟着变
-const pickaxeUrl = computed(() => pickaxeIconUrl(store.snap.pickaxe.iconTier));
 // 金刚杵还没升级时，面板上说明「已解锁更高级矿脉但挖不动」
 const veinLocked = computed(
   () => store.snap.pickaxe.veinTier < store.snap.pickaxe.maxVeinTier,
 );
+
+// 三条升级线和机器面板一样用标签切换：点谁就展开谁的详情
+const activeLine = ref<'vajra' | 'collect' | 'blast'>('vajra');
+
+function lineIcon(line: { id: 'vajra' | 'collect' | 'blast'; iconTier: number }): string | undefined {
+  return pickaxeIconUrl(line.id, line.iconTier);
+}
 
 function upgrade(line: 'vajra' | 'collect' | 'blast') {
   store.upgradePickaxe(line);
@@ -236,39 +241,56 @@ function mine(event: MouseEvent) {
     </button>
 
     <div class="pickaxe">
-      <div class="pickaxe-head">
-        <span class="pickaxe-icon">
-          <img v-if="pickaxeUrl" :src="pickaxeUrl" alt="" />
+      <div class="pickaxe-summary">
+        <span class="pickaxe-output">镐子 · 每次点击 {{ store.snap.pickaxe.outputPerClick }} 枚</span>
+        <span class="muted small">
+          正在开采 {{ store.snap.pickaxe.veinName }} 矿脉，产出按矿脉规则分给它有产出的全部矿种
         </span>
-        <div class="pickaxe-summary">
-          <span class="pickaxe-output">镐子 · 每次点击 {{ store.snap.pickaxe.outputPerClick }} 枚</span>
-          <span class="muted small">
-            正在开采 {{ store.snap.pickaxe.veinName }} 矿脉，产出按矿脉规则分给它有产出的全部矿种
-          </span>
-          <span v-if="veinLocked" class="pickaxe-locked">
-            已解锁 {{ store.snap.pickaxe.maxVeinName }} 矿脉，升级金刚杵才挖得动
-          </span>
-        </div>
+        <span v-if="veinLocked" class="pickaxe-locked">
+          已解锁 {{ store.snap.pickaxe.maxVeinName }} 矿脉，升级金刚杵才挖得动
+        </span>
       </div>
 
-      <div class="pickaxe-lines">
-        <div v-for="line in store.snap.pickaxe.lines" :key="line.id" class="pickaxe-line">
-          <div class="pickaxe-line-text">
-            <span class="pickaxe-line-name">{{ line.name }}</span>
-            <span class="muted small">{{ line.hint }}</span>
-            <span class="pickaxe-line-effect">
-              {{ line.effectNow }}<template v-if="line.effectNext"> → {{ line.effectNext }}</template>
-            </span>
-          </div>
-          <div class="pickaxe-line-action">
-            <span class="muted small">{{ line.level }} / {{ line.cap }}</span>
+      <div class="machine-tabs">
+        <button
+          v-for="line in store.snap.pickaxe.lines"
+          :key="line.id"
+          type="button"
+          class="machine-tab"
+          :class="{ active: activeLine === line.id }"
+          @click="activeLine = line.id"
+        >
+          <img v-if="lineIcon(line)" class="tab-icon" :src="lineIcon(line)" alt="" />
+          <span class="tab-name">{{ line.name }}</span>
+          <span class="tab-count" :class="{ can: line.canUpgrade }">
+            {{ line.canUpgrade ? `可升 ${line.cap - line.level} 次` : `${line.level} / ${line.cap}` }}
+          </span>
+        </button>
+      </div>
+
+      <div
+        v-for="line in store.snap.pickaxe.lines"
+        :key="line.id"
+        class="machine-body"
+        :class="{ collapsed: activeLine !== line.id }"
+      >
+        <div class="inner">
+          <div class="pad">
+            <p class="muted small hint">{{ line.hint }}</p>
+            <div class="pickaxe-effect">
+              <span>{{ line.effectNow }}</span>
+              <template v-if="line.effectNext">
+                <span class="pickaxe-arrow">→</span>
+                <span class="pickaxe-next">{{ line.effectNext }}</span>
+              </template>
+            </div>
             <button
               class="pickaxe-upgrade"
               type="button"
               :disabled="!line.canUpgrade"
               @click="upgrade(line.id)"
             >
-              {{ line.canUpgrade ? '升级' : '已满' }}
+              {{ line.canUpgrade ? '升级' : '已满级' }}
             </button>
           </div>
         </div>

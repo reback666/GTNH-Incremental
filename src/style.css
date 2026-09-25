@@ -522,35 +522,12 @@ h1 .small {
   padding-top: 10px;
 }
 
-.pickaxe-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.pickaxe-icon {
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  flex: 0 0 56px;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.pickaxe-icon img {
-  width: 32px;
-  height: 32px;
-  image-rendering: pixelated;
-}
-
 .pickaxe-summary {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  margin-bottom: 10px;
 }
 
 .pickaxe-output {
@@ -563,51 +540,46 @@ h1 .small {
   color: var(--warn);
 }
 
-.pickaxe-lines {
+/* 标签上的工具图标：和机器标签一样用 32×32 的贴图 */
+.tab-icon {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+/* 有没用掉的机会就提示出来，玩家一眼看到哪条线还能升 */
+.machine-tab .tab-count.can {
+  color: var(--warn);
+}
+
+.pickaxe-effect {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
-}
-
-.pickaxe-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 10px;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.pickaxe-line-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.pickaxe-line-name {
   font-size: 13px;
+  margin-bottom: 10px;
 }
 
-.pickaxe-line-effect {
-  font-size: 12px;
-  color: var(--text);
+.pickaxe-arrow {
+  color: var(--muted);
 }
 
-.pickaxe-line-action {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
+.pickaxe-next {
+  color: var(--accent);
 }
 
 .pickaxe-upgrade {
-  min-height: 32px;
+  width: 100%;
+  min-height: 38px;
   padding: 0 14px;
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* 最后一条线的展开体不要多留一段底边距 */
+.pickaxe .machine-body:last-child {
+  margin-bottom: 0;
 }
 
 /* 机型行里的超频档位与故障维护 */

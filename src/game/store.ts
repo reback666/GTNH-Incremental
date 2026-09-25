@@ -180,6 +180,8 @@ export interface PickaxeLineRow {
   hint: string;
   level: number;
   cap: number;
+  // 这条线自己的图标用哪一档电压色（按进度走，满级是 MAX 的彩虹）
+  iconTier: number;
   effectNow: string;
   // 下一次升级后的效果，满级时是空串
   effectNext: string;
@@ -187,8 +189,6 @@ export interface PickaxeLineRow {
 }
 
 export interface PickaxeStats {
-  // 镐子图标按金刚杵等级取电压色
-  iconTier: number;
   outputPerClick: string;
   // 手动挖矿当前作用在哪座矿脉上，以及已解锁的最高矿脉
   veinTier: number;
@@ -784,7 +784,6 @@ function pickaxeStats(core: GameCore): PickaxeStats {
   ];
 
   return {
-    iconTier: core.pickaxeIconTier(),
     outputPerClick: formatNumber(core.pickaxeOutput()),
     veinTier,
     veinName: oreName(veinTier),
@@ -797,10 +796,11 @@ function pickaxeStats(core: GameCore): PickaxeStats {
 function pickaxeLineText(
   core: GameCore,
   line: PickaxeLine,
-): Pick<PickaxeLineRow, 'level' | 'cap' | 'effectNow' | 'effectNext' | 'canUpgrade'> {
+): Pick<PickaxeLineRow, 'level' | 'cap' | 'iconTier' | 'effectNow' | 'effectNext' | 'canUpgrade'> {
   const level = core.pickaxeLevel(line);
   const cap = core.pickaxeCap(line);
   const canUpgrade = core.canUpgradePickaxe(line);
+  const iconTier = core.pickaxeLineIconTier(line);
   const blast = (used: number) => blastBonus(core.maxTier, used);
   const collect = (value: number) => collectMultiplier(value);
 
@@ -808,6 +808,7 @@ function pickaxeLineText(
     return {
       level,
       cap,
+      iconTier,
       effectNow: `可挖 ${oreName(level)} 矿脉`,
       effectNext: canUpgrade ? `可挖 ${oreName(level + 1)} 矿脉` : '',
       canUpgrade,
@@ -817,6 +818,7 @@ function pickaxeLineText(
     return {
       level,
       cap,
+      iconTier,
       effectNow: level > 0 ? `产出 ×${formatNumber(collect(level))}` : '尚未升级',
       effectNext: canUpgrade ? `产出 ×${formatNumber(collect(level + 1))}` : '',
       canUpgrade,
@@ -825,6 +827,7 @@ function pickaxeLineText(
   return {
     level,
     cap,
+    iconTier,
     effectNow: level > 0 ? `每次点击 +${formatNumber(blast(level))}` : '尚未升级',
     effectNext: canUpgrade ? `每次点击 +${formatNumber(blast(level + 1))}` : '',
     canUpgrade,

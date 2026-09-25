@@ -138,17 +138,24 @@ T12 海珀珍没有原版贴图可用（它的材质定义在 GT++，颜色取�
 
 ## 镐子图标（金刚杵）
 
-`src/assets/pickaxe/v-<等级>.png` 是同一把金刚杵在 14 个电压下的样子：
+`src/assets/pickaxe/` 下是镐子三条升级线的图标，每条线 14 张（同一个物件在 14 个电压下的样子）：
 
 ```
-素材：assets/gregtech/textures/items/gt.Tool_Vajra.png（GT 的金刚杵，16×16，原图是金头红柄）
-脚本：python scripts/build-pickaxe-icons.py
-产物：32×32，14 张；预览图 docs/pickaxe-tiers.png
+线          文件前缀        素材                                                      原图
+金刚杵      vajra-<等级>    assets/gregtech/textures/items/gt.Tool_Vajra.png           16×16，金头红柄
+连锁采集    drill-<等级>    assets/ic2/textures/items/itemToolDrill.png                32×32，电动钻头
+连锁爆破    blast-<等级>    assets/ic2/textures/items/itemDynamite.png                 16×16，炸药
+
+脚本：python scripts/build-pickaxe-icons.py（同时读 GT5-Unofficial 与 IC2 两个 jar）
+产物：32×32，共 42 张；预览图 docs/pickaxe-tiers.png
 ```
 
 原图本身是彩色的，机器那套淡染（`TINT_STRENGTH = 0.2`）用在它身上几乎看不出等级差别，
 所以这里先按感知亮度把原图转成明暗，再乘上该等级的电压色（暗部有 0.45 的亮度保底，
 否则原图里那截暗红柄会糊成黑块）。配色同样取自 `gtnh_tiers.py`，MAX 也是横向彩虹。
+
+界面按每条线各自的进度取色（`pickaxeIconTier`）：没升级是 ULV 色，走满就是 MAX 的彩虹。
+三条线的机会数不同（13 / 7 / 28），所以按进度比例取色，一眼能看出哪条线走得更远。
 
 ## 多方块机器图标（wiki 整机图）
 
