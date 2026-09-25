@@ -11,12 +11,13 @@ const ULV_MACHINE = 'c-1';
 
 // 从实际使用入口验证：开局手动挖矿 → 造机器 → 循环转起来 → 解锁 LV。
 describe('游戏核心：ULV → LV 完整循环', () => {
-  it('机型目录：LV 的发电机有三种，其中一种是多方块', () => {
+  it('机型目录：LV 有四种发电机（三种电力 + 一台魔法），其中一种是多方块', () => {
     const lv = modelsOf('generator').filter((model) => model.tier === 2);
     expect(lv.map((model) => model.name)).toEqual([
       '基础蒸汽轮机',
       '基础内燃发电机',
       '基础燃气轮机',
+      '魔法发电机',
     ]);
     const multiblocks = modelsOf('generator').filter((model) => model.block === 'multiblock');
     expect(multiblocks.length).toBeGreaterThan(0);

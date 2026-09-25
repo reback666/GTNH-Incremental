@@ -39,6 +39,8 @@ export interface MachineModel {
   computeRole?: 'produce' | 'consume';
   // 只有拥有对应平行宇宙才能建造（灵气节点要奥术宇宙，腐蚀抑制器要深渊宇宙）
   requiresUniverse?: 'arcane' | 'abyss';
+  // 灵气驱动：不耗电、改吃灵气（奥术宇宙的魔法机器）
+  visPowered?: boolean;
   traits?: string[];
 }
 
@@ -197,8 +199,8 @@ const LABS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
 }).filter((model) => model.tier >= RESEARCH_FROM_TIER);
 
 // ── 灵气节点（奥术宇宙专属） ────────────────────────────────
-// 奥术宇宙里机器改吃灵气，灵气由这台设施从矿脉抽出来。
-// 它不烧矿：代价体现在宇宙层面（全厂产量 -50%），不体现在燃料上。
+// 奥术宇宙里魔法机器吃灵气，灵气由这台设施从矿脉抽出来。
+// 它不烧矿，代价在源质上：净化器压污染时凝出源质，源质喂满它才满负荷（见 numeric/arcane.ts）。
 const NODES: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
   const tier = index + 1;
   return {
@@ -213,6 +215,54 @@ const NODES: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
     traits: ['产出灵气'],
   };
 });
+
+// ── 魔法机器（奥术宇宙专属） ────────────────────────────────
+// 和同级电力机器同价，但不吃电、改吃灵气，产能是电力版的 2.5 倍。
+// 只从 LV（tier 2）做到 LuV（tier 7）：ZPM 及以后没有魔法机器，
+// 所以奥术宇宙是一条「中期更强、后期仍要靠电力」的路线。
+export const ARCANE_MACHINE_FACTOR = '2.5';
+export const ARCANE_FROM_TIER = 2;
+export const ARCANE_TO_TIER = 7;
+
+function arcaneMachines(): MachineModel[] {
+  const out: MachineModel[] = [];
+  for (let tier = ARCANE_FROM_TIER; tier <= ARCANE_TO_TIER; tier += 1) {
+    const shared = {
+      block: 'single' as const,
+      tier,
+      costFactor: '1',
+      requiresUniverse: 'arcane' as const,
+      visPowered: true,
+    };
+    out.push(
+      {
+        ...shared,
+        id: `mm-${tier}`,
+        name: '魔法采矿机',
+        category: 'miner',
+        outputFactor: ARCANE_MACHINE_FACTOR,
+      },
+      {
+        ...shared,
+        id: `mg-${tier}`,
+        name: '魔法发电机',
+        category: 'generator',
+        // 不烧矿，直接吃灵气发电，所以没有燃料效率这一项
+        outputFactor: ARCANE_MACHINE_FACTOR,
+      },
+      {
+        ...shared,
+        id: `mc-${tier}`,
+        name: '魔法制造机',
+        category: 'machine',
+        outputFactor: ARCANE_MACHINE_FACTOR,
+      },
+    );
+  }
+  return out;
+}
+
+const ARCANE_MACHINES: MachineModel[] = arcaneMachines();
 
 // ── 腐蚀抑制器（深渊宇宙专属） ──────────────────────────────
 // 深渊宇宙里污染会腐蚀机器，这台设施按等级抵消一部分污染点数。
@@ -235,6 +285,7 @@ export const MACHINE_MODELS: MachineModel[] = [
   ...GENERATORS,
   ...MINERS,
   ...MACHINES,
+  ...ARCANE_MACHINES,
   ...STORAGES,
   ...PURIFIERS,
   ...COMPUTERS,

@@ -112,23 +112,21 @@ describe('深渊宇宙', () => {
     const arcaneOnly = new GameCore();
     arcaneOnly.universes = ['arcane'];
     arcaneOnly.ores[0] = dec('1e6');
+    arcaneOnly.counts['g-ulv'] = 1; // 普通制造机吃电，得配台发电机
     arcaneOnly.counts['c-1'] = 1;
-    arcaneOnly.counts['n-1'] = 1;
-    arcaneOnly.essentia = dec('100');
     arcaneOnly.pollution = dec('70');
     arcaneOnly.tick(1);
-    // 只有奥术：0.5（减半）× 0.6（重度污染惩罚）= 0.3
-    expect(Number(arcaneOnly.coins[0]!.toString())).toBeCloseTo(0.3, 3);
+    // 只有奥术：吃电的机器照普通规则走，污染惩罚 0.6
+    expect(Number(arcaneOnly.coins[0]!.toString())).toBeCloseTo(0.6, 3);
 
     const both = new GameCore();
     both.universes = ['arcane', 'abyss'];
     both.ores[0] = dec('1e6');
+    both.counts['g-ulv'] = 1;
     both.counts['c-1'] = 1;
-    both.counts['n-1'] = 1;
-    both.essentia = dec('100');
     both.pollution = dec('70');
     both.tick(1);
-    // 两个宇宙都有：0.5（减半）× 1.4（深渊的污染驱动）= 0.7，只算一次
-    expect(Number(both.coins[0]!.toString())).toBeCloseTo(0.7, 3);
+    // 两个宇宙都有：污染从惩罚变成燃料，70% 对应 +40%
+    expect(Number(both.coins[0]!.toString())).toBeCloseTo(1.4, 3);
   });
 });

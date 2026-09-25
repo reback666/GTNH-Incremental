@@ -47,6 +47,18 @@ describe('机型图标', () => {
     }
   });
 
+  it('魔法机器的 6 级图标两两不同（电压色叠奥术紫）', () => {
+    for (const prefix of ['mm-', 'mg-', 'mc-']) {
+      const hashes = new Set<string>();
+      for (let tier = 2; tier <= 7; tier += 1) {
+        const file = path.join(ICON_DIR, `${prefix}${tier}.png`);
+        expect(existsSync(file), `缺 ${prefix}${tier}.png`).toBe(true);
+        hashes.add(createHash('md5').update(readFileSync(file)).digest('hex'));
+      }
+      expect(hashes.size, `${prefix} 系列的图标数`).toBe(6);
+    }
+  });
+
   it('镐子三条线各有 14 张 32×32 图标，同一线内按电压色两两不同', () => {
     const dir = path.join(
       path.dirname(fileURLToPath(import.meta.url)),

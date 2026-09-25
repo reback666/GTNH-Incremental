@@ -7,11 +7,12 @@ import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
 import { coinValueInTier1, convertCoins, paymentTier } from '../numeric/credit';
 import { type UniverseId, universeById } from './universes';
 import {
-  ARCANE_OUTPUT_FACTOR,
+  arcaneOutputBonus,
   essentiaFromPurify,
   nodeEssentiaDemand,
   nodeOutputFactor,
   nodeVisPerSecond,
+  visPerMachine,
 } from '../numeric/arcane';
 import {
   corrosionPerSecond,
@@ -112,6 +113,8 @@ export interface TickReport {
   // 奥术宇宙：本拍的灵气产出 / 实际用掉，以及源质的产出 / 消耗
   visProduced: Decimal;
   visUsed: Decimal;
+  // 灵气充裕度（0~1）：喂满魔法机器就是 1，产量加成按它算
+  arcanePlenty: Decimal;
   essentiaProduced: Decimal;
   essentiaUsed: Decimal;
   // 奥术宇宙：污染对灵气机器产出的倍率
@@ -640,19 +643,23 @@ export class GameCore {
     return corrosionPerSecond(this.pollution, this.suppression());
   }
 
-  // 本拍机器要多少灵气（同一套耗电公式，只是换成灵气）
-  visDemand(): Decimal {
+  // 魔法机器要多少灵气：每台按该等级的「本级 1A」算，超频按档位翻倍。
+  // 采矿机只吃 1A 的 1/4（和耗电曲线一致）。坏掉的机器不耗灵气，和耗电一个规矩。
+  magicVisDemand(): Decimal {
     let demand = ZERO;
     for (const model of MACHINE_MODELS) {
-      if (model.tier > this.maxTier || this.countOf(model.id) === 0) continue;
-      if (model.category === 'miner') demand = demand.plus(this.minerEnergyDrain(model));
-      else if (model.category === 'machine') demand = demand.plus(this.machineEnergyDrain(model));
-      else if (model.category === 'purifier') demand = demand.plus(this.purifierEnergyDrain(model));
-      else if (model.category === 'research' && model.computeRole === 'produce') {
-        demand = demand.plus(this.computerEnergyDrain(model));
-      }
+      if (!model.visPowered || model.tier > this.maxTier) continue;
+      const working = this.workingCountOf(model.id);
+      if (working <= 0) continue;
+      const base =
+        model.category === 'miner'
+          ? minerEnergyEU(model.tier)
+          : visPerMachine(model.tier);
+      demand = demand.plus(
+        base.times(overclockEnergyMultiplier(this.overclockOf(model.id))).times(working),
+      );
     }
-    return demand.times(gridEnergyMultiplier(this.grid));
+    return demand;
   }
 
   // 存电装置的总容量（EU）
@@ -671,6 +678,7 @@ export class GameCore {
 
   minerOutputPerSecond(model: MachineModel): Decimal {
     return minerOrePerSecond(model.tier)
+      .times(model.outputFactor)
       .times(overclockSpeedMultiplier(this.overclockOf(model.id)))
       .times(this.minerSpeedBonus())
       .times(this.workingCountOf(model.id));
@@ -1069,6 +1077,9 @@ export class GameCore {
     for (const model of active) {
       if (model.category === 'generator') {
         capacity = capacity.plus(this.generatorOutputRated(model));
+      } else if (model.visPowered) {
+        // 魔法机器不吃电，它们要的是灵气，见下面的灵气结算
+        continue;
       } else if (model.category === 'miner') {
         demand = demand.plus(this.minerEnergyDrain(model));
       } else if (model.category === 'machine') {
@@ -1089,6 +1100,8 @@ export class GameCore {
     let generated = ZERO;
     for (const model of active) {
       if (model.category !== 'generator') continue;
+      // 魔法发电机不烧矿，它在灵气结算那里直接按灵气出力
+      if (model.visPowered) continue;
       const want = this.generatorFuelDrain(model).times(dtSeconds);
       const oreTier = model.tier - 1; // 本级发电机烧本级矿石
       const available = this.ores[oreTier]!;
@@ -1120,13 +1133,16 @@ export class GameCore {
     const effectiveDemand = report.outage ? ZERO : demand;
 
     // 4) 供电结算。
-    //    平时走电网：富余电力存进电池，不够先放存量，放完才降载。
-    //    奥术宇宙里机器吃的是灵气，电池不参与 —— 发电机照转，只是电没人用。
+    //    电力侧：富余电力存进电池，不够先放存量，放完才降载。
+    //    奥术宇宙多一条灵气侧：节点产灵气，只有魔法机器吃灵气（它们不接电网）。
     const arcane = this.hasUniverse('arcane');
     const abyss = this.hasUniverse('abyss');
-    let ratioDec: Decimal;
+    const step = dec(String(dtSeconds));
+    // 魔法机器拿到的灵气比例，以及它带来的产量加成（0 = 没喂上，1 = 喂满）
+    let visRatio = ONE;
+    let plenty = ZERO;
+
     if (arcane) {
-      const step = dec(String(dtSeconds));
       const essentiaProduced = essentiaFromPurify(this.purifyPerSecond()).times(step);
       const essentiaNeed = this.nodeEssentiaDemandRated().times(step);
       const essentiaUsed = Decimal.min(essentiaNeed, this.essentia.plus(essentiaProduced));
@@ -1136,30 +1152,41 @@ export class GameCore {
 
       const factor = nodeOutputFactor(essentiaUsed, essentiaNeed);
       const vis = this.nodeVisRated().times(factor);
+      const visNeed = this.magicVisDemand();
       report.visProduced = vis;
-      report.visUsed = Decimal.min(vis, effectiveDemand);
-      ratioDec = report.outage
-        ? ZERO
-        : effectiveDemand.lte(0)
-          ? ONE
-          : Decimal.min(ONE, vis.div(effectiveDemand));
-    } else {
-      const settlement = settleStorage({
-        stored: this.storedEU,
-        capacity: this.batteryCapacity(),
-        net: generated.minus(effectiveDemand),
-        dtSeconds,
-      });
-      this.storedEU = settlement.stored;
-      const needEU = effectiveDemand.times(dtSeconds);
-      ratioDec = report.outage
-        ? ZERO
-        : needEU.lte(0)
-          ? ONE
-          : Decimal.max(0, Decimal.min(ONE, needEU.minus(settlement.shortfall).div(needEU)));
-      report.euCharged = settlement.charged;
-      report.euDischarged = settlement.discharged;
+      report.visUsed = Decimal.min(vis, visNeed);
+      visRatio = visNeed.lte(0) ? ONE : Decimal.min(ONE, vis.div(visNeed));
+      // 没有魔法机器就没有加成：奥术宇宙的收益得靠魔法机器自己挣
+      plenty = visNeed.gt(0) ? visRatio : ZERO;
+      report.arcanePlenty = plenty;
+
+      // 魔法发电机：不烧矿，直接按拿到的灵气出力
+      for (const model of active) {
+        if (model.category !== 'generator' || !model.visPowered) continue;
+        generated = generated.plus(
+          this.generatorOutputRated(model)
+            .times(step)
+            .times(visRatio)
+            .times(arcaneOutputBonus(plenty, true)),
+        );
+      }
     }
+
+    const settlement = settleStorage({
+      stored: this.storedEU,
+      capacity: this.batteryCapacity(),
+      net: generated.minus(effectiveDemand),
+      dtSeconds,
+    });
+    this.storedEU = settlement.stored;
+    const needEU = effectiveDemand.times(dtSeconds);
+    const ratioDec = report.outage
+      ? ZERO
+      : needEU.lte(0)
+        ? ONE
+        : Decimal.max(0, Decimal.min(ONE, needEU.minus(settlement.shortfall).div(needEU)));
+    report.euCharged = settlement.charged;
+    report.euDischarged = settlement.discharged;
 
     // 污染：边污染边被净化器压，产出按污染档位打折
     const pollutionDelta = this.pollutionDeltaPerSecond();
@@ -1178,9 +1205,14 @@ export class GameCore {
     report.arcanePollutionFactor = driveMul;
     report.outputMultiplier = abyss ? driveMul : pollutionMul;
     this.maxPollution = Decimal.max(this.maxPollution, this.pollution);
-    const productive = ratioDec
-      .times(abyss ? driveMul : pollutionMul)
-      .times(arcane ? dec(ARCANE_OUTPUT_FACTOR) : ONE);
+    // 一台机器这一拍吃到的总倍率：驱动方式（电 / 灵气）× 污染 × 灵气充裕加成。
+    // 奥术宇宙里魔法机器按灵气比例降载，普通机器仍按电力比例降载。
+    const pollutionFactor = abyss ? driveMul : pollutionMul;
+    const factorOf = (model: MachineModel): Decimal => {
+      const driven = arcane && model.visPowered ? visRatio : ratioDec;
+      const bonus = arcane ? arcaneOutputBonus(plenty, model.visPowered === true) : ONE;
+      return driven.times(pollutionFactor).times(bonus);
+    };
 
     // 4) 采矿机产矿。超频提速，坏了的机器不算数
     //
@@ -1190,13 +1222,13 @@ export class GameCore {
     const veinRates = new Map<number, Decimal>();
     for (const model of active) {
       if (model.category !== 'miner') continue;
-      const rate = this.minerOutputPerSecond(model);
+      const rate = this.minerOutputPerSecond(model).times(factorOf(model));
       if (rate.lte(0)) continue;
       const veinTier = model.tier - 1;
       veinRates.set(veinTier, (veinRates.get(veinTier) ?? ZERO).plus(rate));
     }
     for (const [veinTier, ratePerSecond] of veinRates) {
-      const total = ratePerSecond.times(dtSeconds).times(productive);
+      const total = ratePerSecond.times(dtSeconds);
       if (total.lte(0)) continue;
       const kinds = veinTier + 1;
       const share = total.div(kinds);
@@ -1210,7 +1242,7 @@ export class GameCore {
     // 5) 制造机产币，同时吃矿。超频提速，吃矿与耗电同步上涨
     for (const model of active) {
       if (model.category !== 'machine') continue;
-      const produce = this.machineOutputPerSecond(model).times(dtSeconds).times(productive);
+      const produce = this.machineOutputPerSecond(model).times(dtSeconds).times(factorOf(model));
       const wantOre = produce.div(C.COINS_PER_ORE);
       const oreTier = model.tier - 1;
       const available = this.ores[oreTier]!;
@@ -1331,6 +1363,7 @@ function emptyReport(): TickReport {
     researchUnlocked: null,
     visProduced: ZERO,
     visUsed: ZERO,
+    arcanePlenty: ZERO,
     essentiaProduced: ZERO,
     essentiaUsed: ZERO,
     arcanePollutionFactor: ONE,

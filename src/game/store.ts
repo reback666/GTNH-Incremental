@@ -27,10 +27,12 @@ import { ACHIEVEMENTS } from './achievements';
 import { UNIVERSES, universeById } from './universes';
 import { essentiaFromPurify } from '../numeric/arcane';
 import {
+  arcaneOutputBonus,
   NODE_ESSENTIA_PER_SECOND,
   nodeEssentiaDemand,
   nodeOutputFactor,
   nodeVisPerSecond,
+  visPerMachine,
 } from '../numeric/arcane';
 import { PURIFY_PER_TIER_PER_SECOND, purifierMachineCoverage } from '../numeric/pollution';
 import { pollutionDriveFactor, suppressionOfTier } from '../numeric/abyss';
@@ -45,7 +47,13 @@ import {
   researchRequired,
 } from '../numeric/research';
 import { type GameCore, type MachineKind, type PayWith, type TickReport } from './core';
-import { canOverclock, modelsOf, type BlockKind, type MachineModel } from './models';
+import {
+  MACHINE_MODELS,
+  canOverclock,
+  modelsOf,
+  type BlockKind,
+  type MachineModel,
+} from './models';
 import { getCore, resetCore, setCore } from './engine';
 import * as C from './constants';
 import { clearStorage, loadFromStorage, saveToStorage } from './save';
@@ -130,6 +138,8 @@ export interface MachineModelRow {
   unlocked: boolean;
   // 需要哪个平行宇宙才能建造，没有需求时是空串
   needsUniverse: string;
+  // 灵气驱动的魔法机器（不耗电、吃灵气）
+  visPowered: boolean;
   // 单台的消耗与产出，鼠标移到机器名上时显示
   single: { label: string; value: string }[];
   count: number;
@@ -288,9 +298,13 @@ export interface UniverseRow {
 // 奥术宇宙的资源读数：灵气（流量）与源质（存量）
 export interface ArcaneStats {
   active: boolean;
-  // 每秒产出 / 用掉的灵气
+  // 每秒产出 / 魔法机器用掉的灵气
   visProduced: string;
   visUsed: string;
+  // 灵气充裕度与它带来的产量加成（普通机器 / 魔法机器）
+  plenty: string;
+  bonusNormal: string;
+  bonusMagic: string;
   // 源质存量与每秒净变化
   essentia: string;
   essentiaNet: string;
@@ -977,7 +991,13 @@ function modifierRows(core: GameCore, kind: MachineKind | 'pickaxe'): ModifierRo
         add('产出', pct(pollution), `污染 · ${pollutionBandName(core.pollution)}`, tone(pollution));
       }
     }
-    if (arcane) add('产出', '-50%', '奥术宇宙：机器改吃灵气', 'bad');
+  }
+  // 奥术宇宙：灵气喂得越满，产量加成越高（普通机器 +10%、魔法机器 +30%）
+  if (arcane && (kind === 'miner' || kind === 'generator' || kind === 'machine')) {
+    const plenty = report.arcanePlenty;
+    const source = `奥术宇宙 · 灵气充裕度 ${formatNumber(plenty.times(100), { significantDigits: 3 })}%`;
+    add('产量（电力机器）', pct(arcaneOutputBonus(plenty, false)), source, 'good');
+    add('产量（魔法机器）', pct(arcaneOutputBonus(plenty, true)), source, 'good');
   }
 
   // ── 超频与故障（逐机型设置，这里汇总） ─────────────────
@@ -1096,7 +1116,12 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
           researched: core.isResearched(model.tier),
           unlocked: core.isModelUnlocked(model),
           needsUniverse:
-            model.requiresUniverse === 'arcane' && !core.hasUniverse('arcane') ? '奥术宇宙' : '',
+            model.requiresUniverse === 'arcane' && !core.hasUniverse('arcane')
+              ? '奥术宇宙'
+              : model.requiresUniverse === 'abyss' && !core.hasUniverse('abyss')
+                ? '深渊宇宙'
+                : '',
+          visPowered: model.visPowered === true,
           single: singleStats(model, level),
           count,
           overclock: level,
@@ -1298,13 +1323,24 @@ function arcaneStats(core: GameCore): ArcaneStats {
     : ZERO;
   const essentiaNet = produced.minus(demand);
 
+  const plenty = report.arcanePlenty;
+  const magicCount = MACHINE_MODELS.filter(
+    (model) => model.visPowered && core.countOf(model.id) > 0,
+  ).length;
+  const percent = (factor: Decimal) =>
+    `+${formatNumber(factor.minus(1).times(100), { significantDigits: 3 })}%`;
+
   let note: string;
   if (!active) {
-    note = '没有奥术宇宙：灵气节点造不了，机器照常吃电。';
+    note = '没有奥术宇宙：灵气节点与魔法机器都造不了，机器照常吃电。';
+  } else if (magicCount === 0) {
+    note = '还没有魔法机器：灵气没人用，也就没有灵气加成。建几台魔法机器（LV~LuV 的采矿机 / 发电机 / 制造机）才吃得上。';
   } else if (nodes === 0) {
-    note = '还没有灵气节点：机器没灵气可用，全厂停摆。';
+    note = '魔法机器没有灵气可用，全部停摆：先建一台灵气节点。';
+  } else if (plenty.gte(1)) {
+    note = '灵气喂满了：普通机器 +10% 产量、魔法机器 +30%。';
   } else if (essentiaNet.gte(0)) {
-    note = '源质够用，灵气节点满出力。';
+    note = '灵气不够喂满全部魔法机器：少建几台魔法机器或多建节点，加成会跟着涨。';
   } else {
     note = '源质不够：灵气节点按比例降出力（最低 50%），多建净化器。';
   }
@@ -1313,6 +1349,9 @@ function arcaneStats(core: GameCore): ArcaneStats {
     active,
     visProduced: `${formatNumber(report.visProduced)}/秒`,
     visUsed: `${formatNumber(report.visUsed)}/秒`,
+    plenty: `${formatNumber(plenty.times(100), { significantDigits: 3 })}%`,
+    bonusNormal: percent(arcaneOutputBonus(plenty, false)),
+    bonusMagic: percent(arcaneOutputBonus(plenty, true)),
     essentia: formatNumber(core.essentia),
     essentiaNet: `${essentiaNet.gte(0) ? '+' : ''}${formatNumber(essentiaNet, { significantDigits: 3 })}/秒`,
     essentiaPositive: essentiaNet.gte(0),
@@ -1374,20 +1413,31 @@ function singleStats(model: MachineModel, level = 0): { label: string; value: st
   }
   if (model.category === 'generator') {
     const efficiency = model.fuelEfficiency ?? generatorFuelEfficiency(model.tier).toString();
+    const output = {
+      label: '出力',
+      value: `${formatNumber(generatorOutputEU(model.tier, model.outputFactor))} EU/t`,
+    };
+    // 魔法发电机不烧矿，直接吃灵气发电
+    if (model.visPowered) {
+      return [
+        output,
+        { label: '吃灵气', value: `${formatNumber(visPerMachine(model.tier).times(energy))}/秒` },
+      ];
+    }
     return [
-      {
-        label: '出力',
-        value: `${formatNumber(generatorOutputEU(model.tier, model.outputFactor))} EU/t`,
-      },
+      output,
       { label: '烧矿', value: `${formatNumber(fuelRateOf(model))}/秒` },
       { label: '燃料效率', value: `${formatNumber(dec(efficiency).times(100))}%` },
     ];
   }
   if (model.category === 'miner') {
-    return [
-      { label: '产矿', value: `${formatNumber(minerOrePerSecond(model.tier).times(speed))}/秒` },
-      { label: '耗电', value: `${formatNumber(minerEnergyEU(model.tier).times(energy))} EU/t` },
-    ];
+    const output = {
+      label: '产矿',
+      value: `${formatNumber(minerOrePerSecond(model.tier).times(speed).times(model.outputFactor))}/秒`,
+    };
+    return model.visPowered
+      ? [output, { label: '吃灵气', value: `${formatNumber(minerEnergyEU(model.tier).times(energy))}/秒` }]
+      : [output, { label: '耗电', value: `${formatNumber(minerEnergyEU(model.tier).times(energy))} EU/t` }];
   }
   if (model.category === 'storage') {
     return [{ label: '容量', value: `${formatNumber(batteryCapacityEU(model.tier))} EU` }];
@@ -1418,12 +1468,18 @@ function singleStats(model: MachineModel, level = 0): { label: string; value: st
   const output = machineOutput({ baseOutput: C.BASE_MACHINE_OUTPUT, tier: model.tier }).times(
     model.outputFactor,
   );
+  const power = model.visPowered
+    ? {
+        label: '吃灵气',
+        value: `${formatNumber(machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }).times(energy))}/秒`,
+      }
+    : {
+        label: '耗电',
+        value: `${formatNumber(machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }).times(energy))} EU/t`,
+      };
   return [
     { label: '产币', value: `${formatNumber(output.times(speed))}/秒` },
-    {
-      label: '耗电',
-      value: `${formatNumber(machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }).times(energy))} EU/t`,
-    },
+    power,
     { label: '吃矿', value: `${formatNumber(output.times(speed).div(C.COINS_PER_ORE))}/秒` },
   ];
 }

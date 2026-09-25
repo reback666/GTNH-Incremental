@@ -1821,6 +1821,12 @@ h1 .small {
   color: var(--warn);
 }
 
+/* 魔法机器：奥术宇宙专属，配色和灵气那一套对上 */
+.badge.magic {
+  border-color: #6b4a8a;
+  color: #c9a3ff;
+}
+
 /* GTNH 的原版像素贴图，放大时保持硬边 */
 .machine-icon {
   image-rendering: pixelated;
