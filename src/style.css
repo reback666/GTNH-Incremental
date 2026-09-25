@@ -562,6 +562,79 @@ h1 .small {
 
 /* 设置与风险：污染条与电网选择 */
 /* 转生：永久加成树 */
+/* 右侧页码条：当前页的按钮放大、点亮 */
+.page-nav {
+  position: fixed;
+  right: 14px;
+  top: 50%;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  transform: translateY(-50%);
+}
+
+.page-dot {
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(26, 32, 39, 0.86);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    background 0.18s ease;
+}
+
+.page-dot:hover {
+  border-color: #4a5563;
+  color: var(--text);
+}
+
+.page-dot.active {
+  transform: scale(1.18);
+  border-color: var(--accent);
+  background: rgba(88, 196, 163, 0.18);
+  color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(88, 196, 163, 0.12);
+}
+
+/* 换页过渡：先淡出上一页，再淡入下一页 */
+.page-enter-active,
+.page-leave-active {
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* 窄屏放不下右侧竖排，改成底部居中横排 */
+@media (max-width: 880px) {
+  .page-nav {
+    top: auto;
+    right: 50%;
+    bottom: 12px;
+    flex-direction: row;
+    transform: translateX(50%);
+  }
+}
+
 .rebirth-page {
   max-width: 760px;
 }
