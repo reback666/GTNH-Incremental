@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { Decimal, ZERO, dec } from '../numeric/decimal';
+import { Decimal, ONE, ZERO, dec } from '../numeric/decimal';
 import { MAX_TIER, VOLTAGE_TIERS } from '../numeric/voltage';
 import { coinName, oreName } from '../numeric/credit';
 import { formatNumber } from '../numeric/format';
@@ -16,6 +16,32 @@ export interface ResourceRow {
   name: string;
   amount: string; // 显示用（3 位有效数字 + 后缀）
   value: string; // 原始值，供界面判断涨跌方向
+  // 悬停 / 聚焦时展开的明细，例如矿石的产出、消耗、净变化
+  detail: { label: string; value: string }[];
+}
+
+// 电能统计下拉表格的一行：某一类机器在某个电压等级上的合计
+export interface PowerDetailRow {
+  tier: number;
+  voltage: string;
+  name: string;
+  count: number;
+  amount: string;
+}
+
+export interface PowerStat {
+  value: string;
+  rows: PowerDetailRow[];
+  emptyText: string;
+  note?: string;
+}
+
+export interface PowerStats {
+  stored: PowerStat;
+  generated: PowerStat;
+  consumed: PowerStat;
+  ratio: string;
+  ratioShort: boolean;
 }
 
 export interface MachineTierRow {
@@ -69,6 +95,7 @@ export interface Snapshot {
   totalOre: string;
   totalCoins: string;
   rate: ProductionRate;
+  power: PowerStats;
   nextTier: number | null;
   unlockCost: string;
   canUnlock: boolean;
@@ -149,18 +176,29 @@ function buildSnapshot(core: GameCore): Snapshot {
   const report = core.lastReport;
   const nextTier = core.maxTier < MAX_TIER ? core.maxTier + 1 : null;
   const rate = productionOf(core);
+  const oreRate = oreRates(core);
+  const coinRate = coinRates(core);
   return {
     ores: core.ores.slice(0, core.maxTier).map((amount, index) => ({
       tier: index,
       name: oreName(index),
       amount: formatNumber(amount),
       value: amount.toString(),
+      detail: [
+        { label: '产出', value: `${formatNumber(oreRate[index]!.gross)}/秒` },
+        { label: '消耗', value: `${formatNumber(oreRate[index]!.spent)}/秒` },
+        {
+          label: '净变化',
+          value: `${formatNumber(oreRate[index]!.gross.minus(oreRate[index]!.spent))}/秒`,
+        },
+      ],
     })),
     coins: core.coins.slice(0, core.maxTier).map((amount, index) => ({
       tier: index + 1,
       name: coinName(index + 1),
       amount: formatNumber(amount),
       value: amount.toString(),
+      detail: [{ label: '产出', value: `${formatNumber(coinRate[index]!)}/秒` }],
     })),
     columns: (['miner', 'generator', 'machine'] as MachineKind[]).map((kind) =>
       machineColumn(core, kind),
@@ -181,6 +219,7 @@ function buildSnapshot(core: GameCore): Snapshot {
       coinsPerSecond: formatNumber(rate.coins),
       fuelPerSecond: formatNumber(rate.fuel),
     },
+    power: powerStats(core),
     nextTier,
     unlockCost: nextTier === null ? '—' : formatNumber(core.unlockCostOf(nextTier)),
     canUnlock: nextTier !== null && core.canUnlock(nextTier),
@@ -259,6 +298,121 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
     { label: '耗电', value: `${formatNumber(eu)} EU/t` },
     { label: '吃矿', value: `${formatNumber(ore)}/秒` },
   ];
+}
+
+// 各矿石等级的产出与消耗（枚/秒）。
+// 等级 n 的采矿机挖 T(n-1) 矿脉，产量均分给 0..n-1 共 n 种矿；
+// 等级 n 的发电机与制造机都吃 T(n-1) 矿。
+function oreRates(core: GameCore): { gross: Decimal; spent: Decimal }[] {
+  const gross = Array.from({ length: 14 }, () => ZERO) as Decimal[];
+  const spent = Array.from({ length: 14 }, () => ZERO) as Decimal[];
+  for (let tier = 1; tier <= core.maxTier; tier += 1) {
+    const miners = core.countOf('miner', tier);
+    if (miners > 0) {
+      const share = minerOrePerSecond(tier).times(miners).div(tier);
+      for (let ore = 0; ore <= tier - 1; ore += 1) gross[ore] = gross[ore]!.plus(share);
+    }
+    const generators = core.countOf('generator', tier);
+    if (generators > 0) {
+      spent[tier - 1] = spent[tier - 1]!.plus(generatorFuelRate(tier).times(generators));
+    }
+    const machines = core.countOf('machine', tier);
+    if (machines > 0) {
+      const output = machineOutput({ baseOutput: C.BASE_MACHINE_OUTPUT, tier }).times(machines);
+      spent[tier - 1] = spent[tier - 1]!.plus(output.div(C.COINS_PER_ORE));
+    }
+  }
+  return gross.map((value, index) => ({ gross: value, spent: spent[index]! }));
+}
+
+// 各 GT 币等级的产出（枚/秒）。
+function coinRates(core: GameCore): Decimal[] {
+  return Array.from({ length: MAX_TIER }, (_, index) => {
+    const tier = index + 1;
+    const count = core.countOf('machine', tier);
+    return count > 0
+      ? machineOutput({ baseOutput: C.BASE_MACHINE_OUTPUT, tier }).times(count)
+      : ZERO;
+  });
+}
+
+// 电能四格：存电量 / 总产电量 / 总耗电量 / 供电率。
+// 后三格各带一张按电压等级排序的下拉表。
+function powerStats(core: GameCore): PowerStats {
+  const generated: PowerDetailRow[] = [];
+  const consumed: PowerDetailRow[] = [];
+  let rated = ZERO;
+  let demand = ZERO;
+  for (let tier = 1; tier <= core.maxTier; tier += 1) {
+    const voltage = VOLTAGE_TIERS[tier - 1] ?? `T${tier}`;
+    const generators = core.countOf('generator', tier);
+    if (generators > 0) {
+      const amount = generatorOutputEU(tier).times(generators);
+      rated = rated.plus(amount);
+      generated.push({
+        tier,
+        voltage,
+        name: '发电机',
+        count: generators,
+        amount: `${formatNumber(amount)} EU/t`,
+      });
+    }
+    const miners = core.countOf('miner', tier);
+    if (miners > 0) {
+      const amount = minerEnergyEU(tier).times(miners);
+      demand = demand.plus(amount);
+      consumed.push({
+        tier,
+        voltage,
+        name: '采矿机',
+        count: miners,
+        amount: `${formatNumber(amount)} EU/t`,
+      });
+    }
+    const machines = core.countOf('machine', tier);
+    if (machines > 0) {
+      const amount = machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier }).times(machines);
+      demand = demand.plus(amount);
+      consumed.push({
+        tier,
+        voltage,
+        name: '制造机',
+        count: machines,
+        amount: `${formatNumber(amount)} EU/t`,
+      });
+    }
+  }
+
+  // 实际发出的电受燃料限制，可能低于额定出力
+  const actualPerSecond = core.lastReport.euGenerated.div(C.SIM_STEP_MS / 1000);
+  const starved = rated.gt(0) && actualPerSecond.lt(rated);
+  const ratio = core.lastReport.powerRatio;
+
+  return {
+    stored: {
+      value: '0 EU',
+      rows: [],
+      emptyText: '还没有存电装置',
+      note: '存电装置属于中期内容，数值层还没实现（计划书第七章）',
+    },
+    generated: {
+      value: `${formatNumber(rated)} EU/t`,
+      rows: generated,
+      emptyText: '还没建发电机',
+      ...(starved
+        ? {
+            note: `缺燃料：额定 ${formatNumber(rated)} EU/t，上一步实际只发出 ${formatNumber(actualPerSecond)} EU/t`,
+          }
+        : {}),
+    },
+    consumed: {
+      value: `${formatNumber(demand)} EU/t`,
+      rows: consumed,
+      emptyText: '还没建耗电机器',
+    },
+    ratio: `${(ratio * 100).toFixed(0)}%`,
+    ratioShort: ratio < 1,
+  };
 }
 
 // 全厂合计速率：矿石净变化、电力净收支、产币、烧矿。

@@ -76,13 +76,141 @@ button.big {
   font-size: 16px;
 }
 
+/* ── 顶部统计模块 ────────────────────────────────────────── */
+
+/* 第一行：电能四格 */
+.power-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+@media (max-width: 560px) {
+  .power-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.power-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 52px;
+  padding: 8px 10px;
+  text-align: left;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.power-box:not(.static) {
+  cursor: pointer;
+}
+
+.power-box.active {
+  border-color: var(--accent);
+  background: #1d2a2c;
+}
+
+.power-box.static {
+  cursor: default;
+}
+
+.power-box.danger {
+  border-color: var(--danger);
+}
+
+.power-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.power-value {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 从电能格子下面拉出的明细表 */
+.power-detail {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition:
+    grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.power-detail.open {
+  grid-template-rows: 1fr;
+  margin-top: 8px;
+}
+
+.power-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.power-pad {
+  padding: 8px 10px;
+  background: #141920;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.detail-table th,
+.detail-table td {
+  padding: 5px 6px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.detail-table thead th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.detail-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.detail-table .num-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  margin: 0 0 6px;
+}
+
+/*
+  第二、三行：矿石与 GT 币。
+  鼠标悬停（或键盘聚焦）时，框向下拉伸出这一级的实时产量。
+  用 grid-template-rows 的 0fr↔1fr 过渡，展开高度自动、不会跳。
+*/
 .chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/* 技术树的电压标签：只是静态标签，不参与悬停展开 */
+.tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.chip {
+.tag {
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -91,13 +219,85 @@ button.big {
   white-space: nowrap;
 }
 
-.chip b {
-  color: var(--text);
-  font-weight: 600;
+.tag span {
+  color: var(--muted);
 }
 
-.chip span {
+.tag b {
+  margin-left: 4px;
+}
+
+.chip {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: default;
+  transition:
+    border-color 0.22s ease,
+    background 0.22s ease;
+}
+
+.chip:hover,
+.chip:focus {
+  border-color: var(--accent);
+  background: #1d2a2c;
+  outline: none;
+}
+
+.chip-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.chip-name {
   color: var(--muted);
+}
+
+.chip-head b {
+  font-variant-numeric: tabular-nums;
+}
+
+.chip-detail {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition:
+    grid-template-rows 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-top 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chip:hover .chip-detail,
+.chip:focus .chip-detail {
+  grid-template-rows: 1fr;
+  margin-top: 5px;
+}
+
+.chip-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.chip-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 1px 0;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.chip-line b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+h1 .small {
+  font-weight: 400;
 }
 
 .row {

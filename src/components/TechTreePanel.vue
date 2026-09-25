@@ -17,11 +17,11 @@ const payName = computed(() =>
 <template>
   <section class="panel">
     <h2>科技树</h2>
-    <div class="chips">
+    <div class="tags">
       <div
         v-for="(name, index) in VOLTAGE_TIERS"
         :key="name"
-        class="chip"
+        class="tag"
         :style="index + 1 <= snap.maxTier ? { borderColor: 'var(--accent)' } : {}"
       >
         <span>{{ name }}</span>
