@@ -6,6 +6,12 @@ import { machineCost } from '../src/numeric/cost';
 import { machineEnergy, machineOutput } from '../src/numeric/output';
 import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../src/numeric/generator';
 import { MINER_OUTPUT_FACTOR, minerOrePerSecond } from '../src/numeric/miner';
+import {
+  blastChances,
+  collectChances,
+  pickaxeOutputPerClick,
+  vajraChances,
+} from '../src/numeric/pickaxe';
 import { VOLTAGE_TIERS, MAX_TIER } from '../src/numeric/voltage';
 
 // ── 模型参数（计划书未定义的量，集中在这里，方便对照） ──────────────────
@@ -275,6 +281,29 @@ for (const kStr of ['1.2', '1.5', '1.8', '2']) {
 lines.push('');
 lines.push('k < 2 会让矿石逐级收紧（k = 1.2 时 MAX 每台发电机仍要上百台采矿机，等于卡死）；');
 lines.push('k > 2 则逐级放宽。k = 2 是唯一让矿石约束强度恒定的取值。');
+
+// ── 2.5 镐子（手动开采）的强度 ──────────────────────────────
+lines.push('');
+lines.push('### 2.5 镐子（手动开采）的强度');
+lines.push('');
+lines.push('三条线的升级机会随电压发放，下表按「全部机会都用掉」算。');
+lines.push('产出 =（基础 1 枚 + 连锁爆破加值）× 连锁采集倍率，产出按矿脉规则均分给各矿种。');
+lines.push('');
+lines.push('| 等级 | 机会（金刚杵 / 采集 / 爆破） | 单次点击产出 | 同级采矿机 | 折合秒数 |');
+lines.push('| --- | --- | --- | --- | --- |');
+for (let tier = 1; tier <= MAX_TIER; tier += 1) {
+  const collect = collectChances(tier);
+  const blast = blastChances(tier);
+  const click = pickaxeOutputPerClick({ tier, blastUsed: blast, collectLevel: collect });
+  const miner = minerOrePerSecond(tier);
+  lines.push(
+    `| ${VOLTAGE_TIERS[tier - 1]} | ${vajraChances(tier)} / ${collect} / ${blast} | ${fmt(click)} | ${fmt(miner)} 枚/秒 | ${fmt(click.div(miner))} 秒 |`,
+  );
+}
+lines.push('');
+lines.push('「折合秒数」= 一次点击等于同级一台采矿机跑多少秒。前期（ULV~MV）是几秒到几十秒，');
+lines.push('点击是明显划算的主动投入；从 HV 起开始超过机器，到 MAX 时一次点击约等于一台 MAX 采矿机跑三年。');
+lines.push('也就是说后期矿石完全由手点决定，挂机产出只是零头 —— 想收紧就把连锁爆破的指数从 n/2 调小。');
 lines.push('');
 lines.push('顺带一个电力比例：同级采矿机耗电只有同级发电机输出的 1/4，所以「1 台发电机 : 4 台采矿机」');
 lines.push('（若制造机按 1 台吃满 1 台发电机的电，则「1 发电机 : 1 制造机 : 4 采矿机」）。');
