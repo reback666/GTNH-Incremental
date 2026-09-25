@@ -744,6 +744,8 @@ h1 .small {
   height: 40px;
   margin: -20px 0 0 -20px;
   pointer-events: none;
+  /* 里面是 10 帧竖排的条带，不裁的话会看到一整条 400px 的长方形 */
+  overflow: hidden;
   animation: crack-fade 0.22s linear 0.62s forwards;
 }
 
