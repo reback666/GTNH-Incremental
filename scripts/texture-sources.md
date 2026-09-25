@@ -83,6 +83,16 @@ T12 海珀珍没有原版贴图可用（它的材质定义在 GT++，颜色取�
 宇宙中子素用 `HALO_FUZZY.png`（8 帧毛边白光晕，白色 30% 透明）。
 这两条都对应原版 `InfinityRenderer` 与 `CosmicNeutroniumRenderer` 里的实际参数。
 
+同一目录下的 `destroy.png` 是挖矿时的石头碎裂贴图：原版客户端里挖方块的 10 级破坏贴图
+（`destroy_stage_0..9`，从最浅的裂纹到最深），竖排成条带，一次点击从第 0 级播到第 9 级再淡出。
+素材来自开发环境缓存的原版客户端：
+
+```
+~/.gradle/caches/retro_futura_gradle/mc-vanilla/1.7.10/client.jar
+```
+
+按 16×16 一格 56px 画，和矿脉 2×2 方块的尺度对得上。
+
 重新生成：`python scripts/build-veins.py`（默认从 gradle 缓存里找 jar，可用 `--jar` 指定）。
 它会重写 `src/assets/veins/t*.png`、`fx/*.png` 与 `src/game/vein-meta.ts`。
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { VEIN_TIERS, veinLoopMs, veinTierInfo } from '../src/game/veins';
+import { VEIN_TIERS, fxIconLoopMs, veinLoopMs, veinTierInfo } from '../src/game/veins';
 import { VEIN_FX_META } from '../src/game/vein-meta';
 
 // 贴图条带、帧长、材料表是分开维护的，最容易出的错是对不上号（帧数与帧长列表不等长、等级缺项）。
@@ -27,6 +27,9 @@ describe('矿脉贴图与特殊渲染', () => {
     expect(veinLoopMs(veinTierInfo(13)!)).toBe(113 * 150);
     expect(VEIN_FX_META.haloFuzzy?.frames).toBe(8);
     expect(VEIN_FX_META.haloFuzzy?.frameDurationsMs).toHaveLength(8);
+    // 挖矿裂纹用原版 10 级破坏贴图
+    expect(VEIN_FX_META.destroy?.frames).toBe(10);
+    expect(fxIconLoopMs('destroy')).toBe(600);
   });
 
   it('只有原版带特殊渲染的材料挂了特效', () => {

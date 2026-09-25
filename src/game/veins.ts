@@ -82,15 +82,18 @@ export function veinLoopMs(info: VeinTierInfo): number {
   return info.frameDurationsMs.reduce((sum, ms) => sum + ms, 0) || 1000;
 }
 
-export function haloIconUrl(name: 'halo' | 'haloFuzzy'): string | undefined {
+// 界面用的原版辅助贴图：两种光晕，加挖矿时的石头碎裂阶段
+export type VeinFxIcon = 'halo' | 'haloFuzzy' | 'destroy';
+
+export function fxIconUrl(name: VeinFxIcon): string | undefined {
   return FX_URLS[name];
 }
 
-export function haloIconFrames(name: 'halo' | 'haloFuzzy'): number {
+export function fxIconFrames(name: VeinFxIcon): number {
   return VEIN_FX_META[name]?.frames ?? 1;
 }
 
-export function haloIconLoopMs(name: 'halo' | 'haloFuzzy'): number {
+export function fxIconLoopMs(name: VeinFxIcon): number {
   const meta = VEIN_FX_META[name];
   if (!meta) return 1000;
   return meta.frameDurationsMs.reduce((sum, ms) => sum + ms, 0) || 1000;

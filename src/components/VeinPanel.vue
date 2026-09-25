@@ -3,9 +3,9 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useGameStore } from '../game/store';
 import SpriteIcon from './SpriteIcon.vue';
 import {
-  haloIconFrames,
-  haloIconLoopMs,
-  haloIconUrl,
+  fxIconFrames,
+  fxIconLoopMs,
+  fxIconUrl,
   veinIconUrl,
   veinLoopMs,
   veinTierInfo,
@@ -22,11 +22,17 @@ const spriteStyle = computed(() => ({
   backgroundImage: veinUrl.value ? `url(${veinUrl.value})` : 'none',
 }));
 
-const haloStyle = computed(() => ({ '--icon': `url(${haloIconUrl('halo')})` }));
+const haloStyle = computed(() => ({ '--icon': `url(${fxIconUrl('halo')})` }));
 const fuzzyStyle = computed(() => ({
-  '--icon': `url(${haloIconUrl('haloFuzzy')})`,
-  '--frames': String(haloIconFrames('haloFuzzy')),
-  '--loop': `${haloIconLoopMs('haloFuzzy')}ms`,
+  '--icon': `url(${fxIconUrl('haloFuzzy')})`,
+  '--frames': String(fxIconFrames('haloFuzzy')),
+  '--loop': `${fxIconLoopMs('haloFuzzy')}ms`,
+}));
+// 石头碎裂：原版 10 级破坏贴图，一次点击播完整段
+const crackStyle = computed(() => ({
+  '--icon': `url(${fxIconUrl('destroy')})`,
+  '--frames': String(fxIconFrames('destroy')),
+  '--loop': `${fxIconLoopMs('destroy')}ms`,
 }));
 
 const echoEl = ref<HTMLElement | null>(null);
@@ -77,12 +83,15 @@ interface Chip extends Burst {
   color: string;
 }
 
-const CHIP_COLORS = ['#5ad2c0', '#2f8f83', '#8a97a8', '#4a5563'];
+// 石头碎屑：跟矿脉石头同色系的灰，混一片矿脉的青色
+const CHIP_COLORS = ['#7b7b7b', '#6a6a6a', '#8f8f8f', '#5c5c5c', '#9a9a9a', '#2f8f83'];
 
 const sparks = ref<Burst[]>([]);
 const ripples = ref<Burst[]>([]);
 // 镐子落点：中心亮点 + 一圈短星芒
 const hits = ref<Burst[]>([]);
+// 落点裂开的石头缝
+const cracks = ref<Burst[]>([]);
 const chips = ref<Chip[]>([]);
 const shaking = ref(false);
 let seq = 0;
@@ -98,19 +107,20 @@ function mine(event: MouseEvent) {
   sparks.value.push(point);
   ripples.value.push(point);
   hits.value.push(point);
+  cracks.value.push(point);
 
-  // 开采碎屑：六片朝四周飞散
-  const fresh: Chip[] = Array.from({ length: 6 }, (_, index) => {
-    const angle = (Math.PI * 2 * index) / 6 + Math.random() * 0.6;
-    const distance = 20 + Math.random() * 22;
+  // 石头碎屑：八片朝四周飞散
+  const fresh: Chip[] = Array.from({ length: 8 }, (_, index) => {
+    const angle = (Math.PI * 2 * index) / 8 + Math.random() * 0.5;
+    const distance = 18 + Math.random() * 26;
     return {
       id: seq++,
       x,
       y,
       dx: Math.cos(angle) * distance,
-      dy: Math.sin(angle) * distance - 9,
-      rot: (Math.random() - 0.5) * 300,
-      size: 3 + Math.round(Math.random() * 3),
+      dy: Math.sin(angle) * distance - 6,
+      rot: (Math.random() - 0.5) * 420,
+      size: 2 + Math.round(Math.random() * 3),
       color: CHIP_COLORS[index % CHIP_COLORS.length] as string,
     };
   });
@@ -126,6 +136,9 @@ function mine(event: MouseEvent) {
   setTimeout(() => {
     hits.value = hits.value.filter((s) => s.id !== point.id);
   }, 320);
+  setTimeout(() => {
+    cracks.value = cracks.value.filter((s) => s.id !== point.id);
+  }, 900);
   setTimeout(() => {
     chips.value = chips.value.filter((chip) => !chipIds.has(chip.id));
   }, 800);
@@ -208,6 +221,14 @@ function mine(event: MouseEvent) {
       >
         <span v-for="ray in 4" :key="ray" class="hit-ray" :style="{ '--angle': ray * 90 - 45 + 'deg' }" />
         <span class="hit-core" />
+      </span>
+      <span
+        v-for="crack in cracks"
+        :key="'k' + crack.id"
+        class="crack"
+        :style="{ ...crackStyle, left: crack.x + 'px', top: crack.y + 'px' }"
+      >
+        <span class="crack-strip" />
       </span>
     </button>
   </section>

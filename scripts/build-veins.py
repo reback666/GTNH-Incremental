@@ -12,6 +12,7 @@
   src/assets/veins/tN.png    贴图条带（宽 32，高 32×帧数），Minecraft 同款逐帧动画格式
   src/game/vein-meta.ts      每级的帧数与帧长（毫秒），界面按它播放
   src/assets/veins/fx/*.png  原版特殊渲染用的光晕贴图（无尽、宇宙中子素）
+                             以及挖矿时的石头碎裂贴图（原版破坏阶段）
 """
 
 from __future__ import annotations
@@ -39,6 +40,10 @@ JAR_GLOB = str(
     Path.home()
     / ".gradle/caches/modules-2/files-2.1/com.github.GTNewHorizons/GT5-Unofficial/*/*/GT5-Unofficial-*-dev.jar"
 )
+
+# 原版客户端的破坏阶段贴图（挖方块时那层逐渐变多的裂纹）
+VANILLA_JAR_GLOB = str(Path.home() / ".gradle/caches/retro_futura_gradle/mc-vanilla/1.7.10/client.jar")
+DESTROY_STAGES = [f"assets/minecraft/textures/blocks/destroy_stage_{i}.png" for i in range(10)]
 
 # 只有这几级在原版里带动画，贴图路径来自 GT5-Unofficial jar。
 # 其余等级原版就是静态贴图，直接用 base 图。
@@ -227,12 +232,36 @@ def main() -> None:
             print(
                 f"{name}: {len(animation.order)} 帧，每帧 {fx[name]['frameDurationsMs'][0]}ms，来源 {fx[name]['source']}"
             )
+        fx["destroy"] = build_destroy_strip()
 
     write_meta_module(tiers, fx)
 
 
 def _has_mcmeta(archive: zipfile.ZipFile, path: str) -> bool:
     return path + ".mcmeta" in archive.namelist()
+
+
+def build_destroy_strip() -> dict:
+    """把原版 10 张破坏阶段贴图竖排成条带，界面按帧播放成「越裂越大」。"""
+    jar = glob.glob(VANILLA_JAR_GLOB)
+    if not jar:
+        raise SystemExit("找不到原版客户端 jar（挖矿裂纹贴图要用它），路径：~/.gradle/caches/retro_futura_gradle")
+    with zipfile.ZipFile(jar[0]) as archive:
+        stages = [Image.open(io.BytesIO(archive.read(path))).convert("RGBA") for path in DESTROY_STAGES]
+    width, height = stages[0].size
+    strip = Image.new("RGBA", (width, height * len(stages)))
+    for index, stage in enumerate(stages):
+        strip.paste(stage, (0, index * height))
+    # 文件名要和 vein-meta 里的键一致（界面用它找图），所以叫 destroy.png
+    strip.save(FX_DIR / "destroy.png")
+    # 原版是按住不放逐渐裂开，这里一次点击放完整段，60ms 一级（共 0.6 秒）
+    frame_ms = 60
+    print(f"destroy: {len(stages)} 级裂纹，每级 {frame_ms}ms，来源 原版 destroy_stage_0..9")
+    return {
+        "frames": len(stages),
+        "frameDurationsMs": [frame_ms] * len(stages),
+        "source": "minecraft 1.7.10 destroy_stage_0..9",
+    }
 
 
 def write_meta_module(tiers: list[dict], fx: dict) -> None:

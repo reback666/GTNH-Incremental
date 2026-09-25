@@ -34,4 +34,5 @@ export const VEIN_META: VeinTierMeta[] = [
 export const VEIN_FX_META: Record<string, VeinFxMeta> = {
   halo: { frames: 1, frameDurationsMs: [50], source: 'HALO.png' },
   haloFuzzy: { frames: 8, frameDurationsMs: [50, 50, 50, 50, 50, 50, 50, 50], source: 'HALO_FUZZY.png' },
+  destroy: { frames: 10, frameDurationsMs: [60, 60, 60, 60, 60, 60, 60, 60, 60, 60], source: 'minecraft 1.7.10 destroy_stage_0..9' },
 };
