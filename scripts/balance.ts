@@ -5,7 +5,7 @@ import { Decimal, ONE, ZERO, dec, pow } from '../src/numeric/decimal';
 import { machineCost } from '../src/numeric/cost';
 import { machineEnergy, machineOutput } from '../src/numeric/output';
 import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../src/numeric/generator';
-import { minerOrePerSecond } from '../src/numeric/miner';
+import { MINER_OUTPUT_FACTOR, minerOrePerSecond } from '../src/numeric/miner';
 import { VOLTAGE_TIERS, MAX_TIER } from '../src/numeric/voltage';
 
 // ── 模型参数（计划书未定义的量，集中在这里，方便对照） ──────────────────
@@ -221,7 +221,7 @@ lines.push(`- 这些发电机合计烧矿 **${fmt(target.orePerSecondPerTier)} �
 lines.push('');
 lines.push('注意：同级制造机耗电与同级发电机输出**都是 4^(tier-1) 倍**，所以「1 台发电机养 1 台制造机」这个比例**与等级无关**。');
 lines.push('');
-lines.push('### 2.3 采矿机：GTNH 数值下矿石不会成为瓶颈');
+lines.push('### 2.3 采矿机：矿石是宽裕资源，不是瓶颈');
 lines.push('');
 lines.push('采矿机的 GTNH 实测值（wiki「采矿机」条目）：');
 lines.push('');
@@ -233,7 +233,8 @@ lines.push('| HV（进阶采矿机） | 128 EU/t | 2 秒 | III | 49×49 |');
 lines.push('');
 lines.push('规律是**耗电 ×4、耗时 ÷2**，与 wiki 实测值完全一致。GTNH 只做到 HV，再往上都是外推。');
 lines.push('');
-lines.push('按这个规律，各级采矿机的产矿速率与「一台采矿机够养几台同级发电机」：');
+lines.push(`本作在这个规律上叠加**整体产矿倍率 ×${MINER_OUTPUT_FACTOR}**（耗时 ÷${MINER_OUTPUT_FACTOR}，耗电不变），`);
+lines.push('下面的实际产矿速率已经含这个倍率：');
 lines.push('');
 lines.push('| 等级 | 产矿（枚/秒） | 烧矿（枚/秒/台） | 一台采矿机养几台发电机 |');
 lines.push('| --- | --- | --- | --- |');
@@ -243,10 +244,10 @@ for (let tier = 1; tier <= MAX_TIER; tier += 1) {
   lines.push(`| ${VOLTAGE_TIERS[tier - 1]} | ${fmt(ore)} | ${fmt(burn)} | ${fmt(ore.div(burn))} |`);
 }
 lines.push('');
-lines.push('**关键结论：矿石从头到尾都是真约束，而且强度稳定。** 采矿机产矿与发电机烧矿同比放大，比例恒定，');
-lines.push('每台发电机始终需要约 1.2-1.5 台采矿机（燃料效率 85% 时 1.18 台，降到 65% 后 1.54 台）。');
+lines.push('**关键结论：矿石从头到尾都很宽裕，而且宽裕程度稳定。** 采矿机产矿与发电机烧矿同比放大，比例恒定，');
+lines.push('每台采矿机始终能养约 10.4-13.6 台同级发电机（燃料效率 85% 时 13.6 台，降到 65% 后 10.4 台）。');
 lines.push('');
-lines.push('上表里「一台采矿机养几台发电机」这一列从 ULV 的 0.85 平滑降到 MAX 的 0.65，变化只来自燃料效率，');
+lines.push('上表里「一台采矿机养几台发电机」这一列从 ULV 的 13.6 平滑降到 MAX 的 10.4，变化只来自燃料效率，');
 lines.push('不再有量级上的漂移——这正是 s × k = 4 的结果。');
 lines.push('');
 lines.push('### 2.4 矿石供需之比取决于两个倍数的乘积');
@@ -266,13 +267,13 @@ for (const kStr of ['1.2', '1.5', '1.8', '2']) {
   const k = dec(kStr);
   const grow = dec('2').times(k).div(4);
   const eff = generatorFuelEfficiency(MAX_TIER);
-  const ratio = eff.times(grow.pow(MAX_TIER - 1));
+  const ratio = dec(MINER_OUTPUT_FACTOR).times(eff).times(grow.pow(MAX_TIER - 1));
   lines.push(
     `| ${kStr} | ${fmt(dec('2').times(k))} | ${fmt(ratio)} | ${ratio.gt(0) ? fmt(ONE.div(ratio)) : '—'} |`,
   );
 }
 lines.push('');
-lines.push('k < 2 会让矿石逐级收紧（k = 1.2 时 MAX 每台发电机需要上千台采矿机，等于卡死）；');
+lines.push('k < 2 会让矿石逐级收紧（k = 1.2 时 MAX 每台发电机仍要几十台采矿机，等于卡死）；');
 lines.push('k > 2 则逐级放宽。k = 2 是唯一让矿石约束强度恒定的取值。');
 lines.push('');
 lines.push('顺带一个电力比例：同级采矿机耗电只有同级发电机输出的 1/4，所以「1 台发电机 : 4 台采矿机」');
@@ -286,8 +287,8 @@ lines.push('2. **升级不加快回本。** 币值 4 合 1 与产出 4 倍递增
 lines.push('   这不算问题，但意味着「升级」的收益必须来自别处——目前看是省机器、省电力。');
 lines.push('3. **电力是等比放大的约束。** 同级制造机耗电与发电机输出同倍率，所以发电机∶制造机恒为 1∶1。');
 lines.push('   想让电力成为真正的资源，需要让发电机的倍数低于制造机，或让矿石供给卡住。');
-lines.push('4. **矿石是稳定成立的约束。** 采矿机提速 ×2 与矿石能量递增 ×2 相乘等于 4，');
-lines.push('   所以每台发电机始终需要约 1.2-1.5 台采矿机，不会随等级漂移。');
+lines.push('4. **矿石不是瓶颈。** 采矿机提速 ×2 与矿石能量递增 ×2 相乘等于 4，比例本就恒定；');
+lines.push(`   再叠加整体产矿 ×${MINER_OUTPUT_FACTOR} 后，每台采矿机能养约 10-14 台同级发电机，矿石只进不出。`);
 lines.push('');
 lines.push('## 四、待定');
 lines.push('');

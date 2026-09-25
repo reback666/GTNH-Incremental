@@ -5,7 +5,7 @@ import {
   generatorOutputEU,
   oreEnergyValue,
 } from '../src/numeric/generator';
-import { minerOrePerSecond } from '../src/numeric/miner';
+import { MINER_OUTPUT_FACTOR, minerOrePerSecond } from '../src/numeric/miner';
 
 describe('发电机', () => {
   it('输出 = 4^(tier-1) × 8 EU/t，与 GTNH 的 LV 32 / MV 128 / HV 512 对齐', () => {
@@ -35,13 +35,13 @@ describe('发电机', () => {
     expect(oreEnergyValue(3).toString()).toBe('512');
   });
 
-  it('矿石能量 ×2 与采矿机提速 ×2 相乘为 4，采矿机与发电机的供需之比恒等于燃料效率', () => {
+  it('矿石能量 ×2 与采矿机提速 ×2 相乘为 4，一台采矿机能养的发电机台数恒等于 16 × 燃料效率', () => {
     // 烧矿速率随等级 ×2：输出 ×4，但矿石能量只 ×2
     expect(generatorFuelRate(2).div(generatorFuelRate(1)).toSignificantDigits(6).toString()).toBe('2');
-    // 采矿机产矿也随等级 ×2，两者抵消，比例只剩燃料效率
+    // 采矿机产矿也随等级 ×2，两者抵消，比例只剩燃料效率与全局产矿倍率
     for (const tier of [1, 2, 3, 5, 9, 14]) {
       expect(minerOrePerSecond(tier).div(generatorFuelRate(tier)).toSignificantDigits(10).toString()).toBe(
-        generatorFuelEfficiency(tier).toSignificantDigits(10).toString(),
+        generatorFuelEfficiency(tier).times(MINER_OUTPUT_FACTOR).toSignificantDigits(10).toString(),
       );
     }
   });
