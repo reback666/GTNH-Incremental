@@ -71,3 +71,9 @@ export function purifyPerSecond(running: { tier: number; count: number }[]): Dec
   }
   return units.times(PURIFY_PER_TIER_PER_SECOND);
 }
+
+// 一台净化器能压住几台同级机器的污染 —— 污染与净化都按「等级 × 台数」线性算，
+// 所以这个比值与等级无关，界面上用它来说明净化器的效果更直观。
+export function purifierMachineCoverage(): Decimal {
+  return dec(PURIFY_PER_TIER_PER_SECOND).div(POLLUTION_PER_TIER_PER_SECOND);
+}

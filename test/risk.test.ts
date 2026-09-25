@@ -11,11 +11,20 @@ import {
 import { gridEnergyMultiplier } from '../src/numeric/grid';
 import { gridMode } from '../src/numeric/grid';
 import type { GridMode } from '../src/numeric/grid';
+import { purifierMachineCoverage } from '../src/numeric/pollution';
 
 // 第二阶段收尾：风险杠杆（计划书第六章）——污染与电网。
 const ULV_MINER = 'm-1';
 const ULV_GENERATOR = 'g-ulv';
 const ULV_MACHINE = 'c-1';
+
+describe('净化器的覆盖能力', () => {
+  it('一台净化器压得住 1.5 台同级机器，这个比值与等级无关', () => {
+    // 污染按「等级 × 台数 × 0.0008」涨、净化按「等级 × 台数 × 0.0012」降，
+    // 两边都随等级线性放大，所以配比恒定（3 台机器配 2 台净化器）。
+    expect(purifierMachineCoverage().toString()).toBe('1.5');
+  });
+});
 
 function factory(pollution = '0'): GameCore {
   const core = new GameCore();

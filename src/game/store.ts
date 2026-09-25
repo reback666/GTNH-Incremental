@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { Decimal, ZERO, dec } from '../numeric/decimal';
+import { Decimal, ZERO, dec, decInt } from '../numeric/decimal';
 import { MAX_TIER, VOLTAGE_TIERS } from '../numeric/voltage';
 import { coinName, oreName } from '../numeric/credit';
 import { formatNumber } from '../numeric/format';
@@ -21,6 +21,12 @@ import { GRID_MODES, gridMode, type GridMode } from '../numeric/grid';
 import { ACHIEVEMENTS } from './achievements';
 import { UNIVERSES } from './universes';
 import { essentiaFromPurify } from '../numeric/arcane';
+import {
+  NODE_ESSENTIA_PER_SECOND,
+  nodeEssentiaDemand,
+  nodeVisPerSecond,
+} from '../numeric/arcane';
+import { PURIFY_PER_TIER_PER_SECOND, purifierMachineCoverage } from '../numeric/pollution';
 import { REBIRTH_NODES, REBIRTH_ROOT, treeTotalCost, type RebirthEffectKind } from './rebirth';
 import {
   RESEARCH_GATE_FROM_TIER,
@@ -854,6 +860,23 @@ function singleStats(model: MachineModel, level = 0): { label: string; value: st
   if (model.category === 'storage') {
     return [{ label: '容量', value: `${formatNumber(batteryCapacityEU(model.tier))} EU` }];
   }
+  if (model.category === 'purifier') {
+    const rate = decInt(model.tier, 'tier').times(PURIFY_PER_TIER_PER_SECOND);
+    return [
+      { label: '净化', value: `${formatNumber(rate, { significantDigits: 3 })}%/秒` },
+      {
+        label: '能压住',
+        value: `${formatNumber(purifierMachineCoverage())} 台同级机器`,
+      },
+      { label: '耗电', value: `${formatNumber(machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }))} EU/t` },
+    ];
+  }
+  if (model.category === 'arcane') {
+    return [
+      { label: '产出灵气', value: `${formatNumber(nodeVisPerSecond(model.tier))}/秒` },
+      { label: '吃源质', value: `${NODE_ESSENTIA_PER_SECOND}/秒（喂不满时只出一半）` },
+    ];
+  }
   const output = machineOutput({ baseOutput: C.BASE_MACHINE_OUTPUT, tier: model.tier }).times(
     model.outputFactor,
   );
@@ -873,6 +896,8 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
   let eu = ZERO;
   let coins = ZERO;
   let fuel = ZERO;
+  let vis = ZERO;
+  let essentia = ZERO;
   for (const model of core.unlockedModels(kind)) {
     if (core.countOf(model.id) === 0) continue;
     if (kind === 'miner') {
@@ -888,6 +913,9 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
       ore = ore.plus(output.div(C.COINS_PER_ORE));
     } else if (kind === 'purifier') {
       eu = eu.plus(core.purifierEnergyDrain(model));
+    } else if (kind === 'arcane') {
+      vis = vis.plus(nodeVisPerSecond(model.tier).times(core.workingCountOf(model.id)));
+      essentia = essentia.plus(nodeEssentiaDemand(decInt(core.workingCountOf(model.id), 'count')));
     }
   }
   if (kind === 'miner') {
@@ -930,6 +958,12 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
             ? '—'
             : `${formatNumber(core.researchProgress)} / ${formatNumber(required)}`,
       },
+    ];
+  }
+  if (kind === 'arcane') {
+    return [
+      { label: '灵气产出', value: `${formatNumber(vis)}/秒` },
+      { label: '源质需求', value: `${formatNumber(essentia, { significantDigits: 3 })}/秒` },
     ];
   }
   return [
