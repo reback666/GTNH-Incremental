@@ -24,6 +24,7 @@ describe('像素图标', () => {
       'machine',
       'miner',
       'purifier',
+      'research',
       'storage',
       'vein',
     ]);

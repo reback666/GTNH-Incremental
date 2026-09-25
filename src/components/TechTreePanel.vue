@@ -37,7 +37,11 @@ const payName = computed(() =>
         解锁 {{ nextName }}
       </button>
       <p class="muted" style="margin: 8px 0 0">
-        解锁后开放 {{ nextName }} 级矿脉与三类机器。已开放矿脉：T{{ snap.veins.join(' / T') }}
+        解锁后开放 {{ nextName }} 级矿脉。
+        <template v-if="snap.nextTier >= 8">
+          {{ nextName }} 及以后的机型还要先在「研究」里研究出来才能建造。
+        </template>
+        已开放矿脉：T{{ snap.veins.join(' / T') }}
       </p>
     </template>
     <p v-else class="muted">已达 MAX 电压。</p>

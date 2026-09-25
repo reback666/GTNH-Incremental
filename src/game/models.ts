@@ -1,4 +1,5 @@
 import { MAX_TIER, VOLTAGE_TIERS } from '../numeric/voltage';
+import { RESEARCH_FROM_TIER } from '../numeric/research';
 
 // 机器分两层：
 //   类别（采矿机 / 发电机 / 制造机）
@@ -9,7 +10,13 @@ import { MAX_TIER, VOLTAGE_TIERS } from '../numeric/voltage';
 // （基础蒸汽轮机 / 进阶蒸汽轮机 / 涡轮蒸汽轮机是三条独立条目），
 // 这样最直观，也方便逐条调数值。
 
-export type MachineCategory = 'miner' | 'generator' | 'machine' | 'storage' | 'purifier';
+export type MachineCategory =
+  | 'miner'
+  | 'generator'
+  | 'machine'
+  | 'storage'
+  | 'purifier'
+  | 'research';
 export type BlockKind = 'single' | 'multiblock';
 
 export interface MachineModel {
@@ -26,6 +33,8 @@ export interface MachineModel {
   outputFactor: string;
   // 相对同等级基准的建造成本倍率 —— 效率越高越贵，形成取舍
   costFactor: string;
+  // 研究类专用：计算机产出算力，研究站消耗算力
+  computeRole?: 'produce' | 'consume';
   traits?: string[];
 }
 
@@ -141,12 +150,48 @@ const PURIFIERS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) =>
   };
 }).filter((model) => model.tier >= PURIFIER_FROM_TIER);
 
+// ── 计算机与研究站 ──────────────────────────────────────────
+// 计划书第七章资源四：LuV 起解锁计算机与研究站，用算力驱动的研究进度解锁 ZPM 及以后的机器。
+// 这两类机器单开一类：计算机把电力换成算力，研究站吃掉算力换研究进度（见 numeric/research.ts）。
+// 算力是流量、不累积，所以研究站不需要「存量」这种东西。
+const COMPUTERS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
+  const tier = index + 1;
+  return {
+    id: `x-${tier}`,
+    name: `${VOLTAGE_TIERS[index]} 计算机`,
+    category: 'research' as const,
+    block: 'single' as const,
+    tier,
+    outputFactor: '1',
+    costFactor: '1',
+    computeRole: 'produce' as const,
+    traits: ['提供算力'],
+  };
+}).filter((model) => model.tier >= RESEARCH_FROM_TIER);
+
+const LABS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
+  const tier = index + 1;
+  return {
+    id: `r-${tier}`,
+    name: `${VOLTAGE_TIERS[index]} 研究站`,
+    category: 'research' as const,
+    block: 'single' as const,
+    tier,
+    outputFactor: '1',
+    costFactor: '1',
+    computeRole: 'consume' as const,
+    traits: ['消耗算力'],
+  };
+}).filter((model) => model.tier >= RESEARCH_FROM_TIER);
+
 export const MACHINE_MODELS: MachineModel[] = [
   ...GENERATORS,
   ...MINERS,
   ...MACHINES,
   ...STORAGES,
   ...PURIFIERS,
+  ...COMPUTERS,
+  ...LABS,
 ];
 
 const BY_ID = new Map(MACHINE_MODELS.map((model) => [model.id, model]));

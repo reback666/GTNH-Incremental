@@ -1,11 +1,15 @@
-"""生成设施（存电装置、净化器）的图标。
+"""生成设施（存电装置、净化器、计算机、研究站）的图标。
 
 和机器图标同一套做法：底层是 GT 的 MACHINE_<电压>_SIDE 机壳，上面叠一个自画的图案。
 图案是本项目自己画的像素画（GT 的储电箱、净化器贴图不在开发包里），
 画好在 16×16 上再以最近邻放大到 32×32，保持像素硬边。
 
+计算机与研究站用的是 GT 自己的面片（EM_COMPUTER、OVERLAY_FRONT_RESEARCH_COMPLETER），
+只有一个型号所以直接取第一帧。
+
 用法：python scripts/build-facility-icons.py
-产物：src/assets/machines/b-<等级>.png（存电装置）、p-<等级>.png（净化器）
+产物：src/assets/machines/b-<等级>.png（存电装置）、p-<等级>.png（净化器）、
+      x-<等级>.png（计算机）、r-<等级>.png（研究站）
 """
 
 from __future__ import annotations
@@ -45,6 +49,12 @@ VOLTAGES = [
 
 # 存电装置从 MV（tier 3）开始，和 src/game/models.ts 的 STORAGE_FROM_TIER 对齐
 STORAGE_FROM_TIER = 3
+# 计算机与研究站从 LuV（tier 7）开始，和 numeric/research.ts 的 RESEARCH_FROM_TIER 对齐
+RESEARCH_FROM_TIER = 7
+
+# 这两张是 GT 自带的面片，直接贴在机壳上
+COMPUTER_FACE = "assets/gregtech/textures/blocks/iconsets/EM_COMPUTER.png"
+LAB_FACE = "assets/gregtech/textures/blocks/iconsets/OVERLAY_FRONT_RESEARCH_COMPLETER.png"
 
 OUTLINE = (24, 27, 34, 255)
 BODY = (168, 176, 190, 255)
@@ -109,6 +119,12 @@ def main() -> None:
         raise SystemExit("找不到 GT5-Unofficial jar")
     faces = {"b": battery_face(), "p": purifier_face()}
     with zipfile.ZipFile(jar) as archive:
+        # 计算机的贴图是 5 帧的竖排条带，取最上面一格
+        computer = Image.open(io.BytesIO(archive.read(COMPUTER_FACE))).convert("RGBA").crop(
+            (0, 0, 16, 16)
+        )
+        lab = Image.open(io.BytesIO(archive.read(LAB_FACE))).convert("RGBA")
+        research_faces = {"x": computer, "r": lab}
         for tier in range(STORAGE_FROM_TIER, len(VOLTAGES) + 1):
             voltage = VOLTAGES[tier - 1]
             casing = Image.open(
@@ -122,6 +138,13 @@ def main() -> None:
                 icon = icon.resize((32, 32), Image.NEAREST)
                 icon.save(OUT_DIR / f"{prefix}-{tier}.png")
             print(f"{voltage}: b-{tier} 存电装置 / p-{tier} 净化器 ← 机壳 MACHINE_{voltage}_SIDE")
+            if tier >= RESEARCH_FROM_TIER:
+                for prefix, face in research_faces.items():
+                    icon = casing.copy()
+                    icon.alpha_composite(face)
+                    icon = icon.resize((32, 32), Image.NEAREST)
+                    icon.save(OUT_DIR / f"{prefix}-{tier}.png")
+                print(f"{voltage}: x-{tier} 计算机 / r-{tier} 研究站 ← GT 面片 + 机壳")
 
 
 if __name__ == "__main__":

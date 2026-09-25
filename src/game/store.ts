@@ -18,6 +18,14 @@ import {
   pollutionBandName,
 } from '../numeric/pollution';
 import { GRID_MODES, gridMode, type GridMode } from '../numeric/grid';
+import {
+  RESEARCH_GATE_FROM_TIER,
+  computerComputePerSecond,
+  computerEnergyEU,
+  labComputeThroughput,
+  researchRemaining,
+  researchRequired,
+} from '../numeric/research';
 import { type GameCore, type MachineKind, type PayWith } from './core';
 import { canOverclock, modelsOf, type BlockKind, type MachineModel } from './models';
 import { getCore, resetCore, setCore } from './engine';
@@ -94,6 +102,8 @@ export interface MachineModelRow {
   name: string;
   block: BlockKind;
   traits: string[];
+  // ZPM 及以后的机型要先研究出来才能建造
+  researched: boolean;
   // 单台的消耗与产出，鼠标移到机器名上时显示
   single: { label: string; value: string }[];
   count: number;
@@ -138,6 +148,24 @@ export interface ProductionRate {
   fuelPerSecond: string;
 }
 
+// 研究：算力（流量）与当前研究目标的进度
+export interface ResearchStats {
+  // 每秒产出 / 被研究站吃掉 / 直接浪费的算力
+  computeProduced: string;
+  computeUsed: string;
+  computeWasted: string;
+  computers: number;
+  labs: number;
+  hasTarget: boolean;
+  targetTier: number | null;
+  targetName: string;
+  progress: string;
+  required: string;
+  percent: number;
+  eta: string;
+  note: string;
+}
+
 export interface Snapshot {
   ores: ResourceRow[];
   coins: ResourceRow[];
@@ -153,6 +181,7 @@ export interface Snapshot {
   rate: ProductionRate;
   power: PowerStats;
   risk: RiskStats;
+  research: ResearchStats;
   nextTier: number | null;
   unlockCost: string;
   canUnlock: boolean;
@@ -163,6 +192,16 @@ export interface Snapshot {
 
 // 每一级、每个机型最多画这么多个图标，再多就折叠成 +N。
 export const TIER_ICON_LIMIT = 24;
+
+// 机器面板的标签顺序。购买、统计、显示都走这一份，避免各写一遍漏类别
+const COLUMN_ORDER: MachineKind[] = [
+  'miner',
+  'generator',
+  'machine',
+  'storage',
+  'purifier',
+  'research',
+];
 
 const COLUMN_META: Record<MachineKind, { title: string; hint: string }> = {
   miner: { title: '采矿机', hint: '放在矿脉上自动产矿，是整条循环的入口。' },
@@ -175,6 +214,10 @@ const COLUMN_META: Record<MachineKind, { title: string; hint: string }> = {
   purifier: {
     title: '净化器',
     hint: '压污染。重度污染下产出 -40%，还会随机砸掉机器，靠它把污染拉回安全区。',
+  },
+  research: {
+    title: '研究',
+    hint: '计算机把电力换成算力，研究站吃掉算力推进研究进度；进度满才解锁 ZPM 及以后的机型。算力是流量，用不掉就浪费。',
   },
 };
 
@@ -273,7 +316,7 @@ export const useGameStore = defineStore('game', {
 });
 
 function findModel(id: string): MachineModel | undefined {
-  return ['miner', 'generator', 'machine', 'storage']
+  return COLUMN_ORDER
     .flatMap((category) => modelsOf(category as MachineKind))
     .find((model) => model.id === id);
 }
@@ -306,9 +349,7 @@ function buildSnapshot(core: GameCore): Snapshot {
       value: amount.toString(),
       detail: [{ label: '产出', value: `${formatNumber(coinRate[index]!)}/秒` }],
     })),
-    columns: (['miner', 'generator', 'machine', 'storage', 'purifier'] as MachineKind[]).map((kind) =>
-      machineColumn(core, kind),
-    ),
+    columns: COLUMN_ORDER.map((kind) => machineColumn(core, kind)),
     maxTier: core.maxTier,
     powerGenerated: formatNumber(report.euGenerated),
     powerConsumed: formatNumber(report.euConsumed),
@@ -327,6 +368,7 @@ function buildSnapshot(core: GameCore): Snapshot {
     },
     power: powerStats(core),
     risk: riskStats(core),
+    research: researchStats(core),
     nextTier,
     unlockCost: nextTier === null ? '—' : formatNumber(core.unlockCostOf(nextTier)),
     canUnlock: nextTier !== null && core.canUnlock(nextTier),
@@ -402,6 +444,7 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
           name: model.name,
           block: model.block,
           traits: model.traits ?? [],
+          researched: core.isResearched(model.tier),
           single: singleStats(model, level),
           count,
           overclock: level,
@@ -428,6 +471,55 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
   };
 }
 
+// 算力（流量）与当前研究目标。
+// 上报的是「上一拍」的实际数据，和电能四格同一个口径。
+function researchStats(core: GameCore): ResearchStats {
+  const report = core.lastReport;
+  const target = core.researchTargetTier();
+  const required = target === null ? ZERO : researchRequired(target);
+  const remaining = researchRemaining(core.researchProgress, required);
+  const targetName = target === null ? '' : (VOLTAGE_TIERS[target - 1] ?? `T${target}`);
+  const used = report.computeUsed;
+
+  let computers = 0;
+  let labs = 0;
+  for (const model of core.unlockedModels('research')) {
+    const count = core.countOf(model.id);
+    if (model.computeRole === 'produce') computers += count;
+    else labs += count;
+  }
+
+  const percent =
+    target !== null && required.gt(0)
+      ? Math.min(100, core.researchProgress.div(required).times(100).toNumber())
+      : 0;
+
+  let note: string;
+  if (target === null && core.maxTier < RESEARCH_GATE_FROM_TIER) {
+    note = `还没到 ${VOLTAGE_TIERS[RESEARCH_GATE_FROM_TIER - 1]}：计算机可以先建起来，但研究站现在空转，算力会浪费掉。`;
+  } else if (target === null) {
+    note = '当前已解锁的机型都研究完了。';
+  } else {
+    note = `正在研究 ${targetName} 级机型：工程进度 ${formatNumber(core.researchProgress)} / ${formatNumber(required)}。`;
+  }
+
+  return {
+    computeProduced: `${formatNumber(report.computeProduced)}/秒`,
+    computeUsed: `${formatNumber(used)}/秒`,
+    computeWasted: `${formatNumber(report.computeWasted)}/秒`,
+    computers,
+    labs,
+    hasTarget: target !== null,
+    targetTier: target,
+    targetName,
+    progress: formatNumber(core.researchProgress),
+    required: target === null ? '—' : formatNumber(required),
+    percent,
+    eta: target !== null && used.gt(0) ? formatDuration(remaining.div(used).toNumber()) : '—',
+    note,
+  };
+}
+
 function paymentUnit(tier: number): string {
   const paying = Math.max(1, tier - 1);
   return paying === 1 ? '铜币' : coinName(paying);
@@ -439,6 +531,18 @@ function paymentUnit(tier: number): string {
 function singleStats(model: MachineModel, level = 0): { label: string; value: string }[] {
   const speed = overclockSpeedMultiplier(level);
   const energy = overclockEnergyMultiplier(level);
+  if (model.category === 'research') {
+    if (model.computeRole === 'produce') {
+      return [
+        { label: '产出算力', value: `${formatNumber(computerComputePerSecond(model.tier))}/秒` },
+        { label: '耗电', value: `${formatNumber(computerEnergyEU(model.tier))} EU/t` },
+      ];
+    }
+    return [
+      { label: '消耗算力', value: `${formatNumber(labComputeThroughput(model.tier))}/秒` },
+      { label: '研究速度', value: `${formatNumber(labComputeThroughput(model.tier))} 进度/秒` },
+    ];
+  }
   if (model.category === 'generator') {
     const efficiency = model.fuelEfficiency ?? generatorFuelEfficiency(model.tier).toString();
     return [
@@ -520,6 +624,21 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
         value: `${formatNumber(core.purifyPerSecond(), { significantDigits: 3 })}%/秒`,
       },
       { label: '耗电', value: `${formatNumber(eu)} EU/t` },
+    ];
+  }
+  if (kind === 'research') {
+    const target = core.researchTargetTier();
+    const required = target === null ? ZERO : researchRequired(target);
+    return [
+      { label: '算力产出', value: `${formatNumber(core.computerComputeRated())}/秒` },
+      { label: '算力消耗', value: `${formatNumber(core.labComputeDemand())}/秒` },
+      {
+        label: '研究进度',
+        value:
+          target === null
+            ? '—'
+            : `${formatNumber(core.researchProgress)} / ${formatNumber(required)}`,
+      },
     ];
   }
   return [
@@ -619,6 +738,12 @@ function powerStats(core: GameCore): PowerStats {
     if (n === 0) continue;
     demand = push(consumed, model, n, core.purifierEnergyDrain(model), demand);
   }
+  for (const model of core.unlockedModels('research')) {
+    if (model.computeRole !== 'produce') continue;
+    const n = core.countOf(model.id);
+    if (n === 0) continue;
+    demand = push(consumed, model, n, core.computerEnergyDrain(model), demand);
+  }
 
   // 存电装置：每台容量 × 台数，合起来是一个池子
   const stored: PowerDetailRow[] = [];
@@ -694,6 +819,10 @@ function productionOf(core: GameCore): {
     coins = coins.plus(output);
     euNet = euNet.minus(core.machineEnergyDrain(model));
     oreNet = oreNet.minus(output.div(C.COINS_PER_ORE));
+  }
+  for (const model of core.unlockedModels('research')) {
+    if (model.computeRole !== 'produce' || core.countOf(model.id) === 0) continue;
+    euNet = euNet.minus(core.computerEnergyDrain(model));
   }
   return { oreNet, euNet, coins, fuel };
 }

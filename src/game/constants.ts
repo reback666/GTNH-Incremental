@@ -38,7 +38,8 @@ export const UI_REFRESH_MS = 50;
 // v3：加了超频档位、故障台数、存电存量（第二阶段：自动化与深度）
 // v4：加了污染值与开关、电网模式、黑市窃取累计（第二阶段：风险杠杆）
 // v5：电网改成花 GT 币解锁，存档要记「已解锁哪些电网」
-export const SAVE_VERSION = 5;
+// v6：加了算力驱动的研究（第三阶段：研究站与计算机）
+export const SAVE_VERSION = 6;
 export const SAVE_KEY = 'gtnh-incremental-save';
 
 export function unlockCost(machineTier: number): Decimal {

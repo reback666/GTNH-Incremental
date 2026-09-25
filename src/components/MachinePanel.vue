@@ -77,7 +77,8 @@ function cells(count: number): number[] {
 }
 
 function canBuy(model: MachineModelRow): boolean {
-  return payWith.value === 'ore' ? model.oreAffordable : model.affordable;
+  // 还没研究出来的机型（ZPM 及以后）不能建造，灰掉按钮
+  return model.researched && (payWith.value === 'ore' ? model.oreAffordable : model.affordable);
 }
 </script>
 
@@ -140,6 +141,7 @@ function canBuy(model: MachineModelRow): boolean {
                 class="badge warn"
                 >{{ trait }}</span
               >
+              <span v-if="!bar.model.researched" class="badge warn" title="要先在研究里解锁这一级机型">需研究</span>
             </span>
 
             <div class="tier-icons">

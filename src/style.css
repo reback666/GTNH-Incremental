@@ -561,6 +561,40 @@ h1 .small {
 }
 
 /* 设置与风险：污染条与电网选择 */
+.research {
+  margin-top: 10px;
+}
+
+.research-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.research-head b {
+  font-size: 15px;
+  color: var(--text);
+}
+
+.research-bar {
+  position: relative;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 5px;
+  background: #1b2129;
+  border: 1px solid #333c48;
+  overflow: hidden;
+}
+
+.research-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #3f6fb0, #6fb3ff);
+  transition: width 0.3s ease-out;
+}
+
 .pollution {
   margin-top: 10px;
 }

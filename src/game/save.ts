@@ -1,6 +1,7 @@
 import { dec, fromSaveString, toSaveString } from '../numeric/decimal';
 import { MAX_TIER } from '../numeric/voltage';
 import { DEFAULT_GRID } from '../numeric/grid';
+import { RESEARCH_GATE_FROM_TIER } from '../numeric/research';
 import { GameCore, type MachineKind } from './core';
 import { baseModelOf } from './models';
 import { SAVE_KEY, SAVE_VERSION } from './constants';
@@ -24,6 +25,9 @@ export interface SaveData {
   siphoned?: string;
   // v5：已解锁的电网（解锁要花对应等级的 GT 币）
   grids?: string[];
+  // v6：研究进度与已研究出来的电压等级（ZPM 及以后要先研究）
+  researchProgress?: string;
+  researched?: number[];
   // v1 遗留字段：按电压等级存的数量，读到旧存档时用来迁移
   miners?: number[];
   generators?: number[];
@@ -49,6 +53,8 @@ export function serialize(core: GameCore): SaveData {
     pollutionEnabled: core.pollutionEnabled,
     grid: core.grid,
     grids: [...core.grids],
+    researchProgress: toSaveString(core.researchProgress),
+    researched: [...core.researched],
     siphoned: toSaveString(core.siphoned),
     maxTier: core.maxTier,
     unlockedVeins: [...core.unlockedVeins],
@@ -77,6 +83,11 @@ export function deserialize(data: SaveData): GameCore {
   core.siphoned = fromSaveString(data.siphoned ?? '0');
   core.maxTier = data.maxTier;
   core.unlockedVeins = [...data.unlockedVeins];
+  // v5 及以前没有研究概念：默认只有 LuV 及以前不用研究的那几级
+  core.researchProgress = fromSaveString(data.researchProgress ?? '0');
+  core.researched = data.researched
+    ? [...data.researched]
+    : Array.from({ length: RESEARCH_GATE_FROM_TIER - 1 }, (_, index) => index + 1);
   core.playSeconds = data.playSeconds;
   core.totalOre = dec(data.totalOre ?? '0');
   core.totalCoins = dec(data.totalCoins ?? '0');
@@ -115,7 +126,7 @@ export function loadFromStorage(): GameCore | null {
   if (!raw) return null;
   try {
     const data = JSON.parse(raw) as SaveData;
-    if (![1, 2, 3, 4, SAVE_VERSION].includes(data.version)) {
+    if (!Number.isInteger(data.version) || data.version < 1 || data.version > SAVE_VERSION) {
       throw new Error(`存档版本 ${data.version} 无法识别`);
     }
     return deserialize(data);

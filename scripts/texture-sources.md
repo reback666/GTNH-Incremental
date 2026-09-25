@@ -38,6 +38,8 @@ GT 的机器不是一张整图，而是「**机壳 + 功能面片**」两层叠�
 | 多方块发电机 | `iconsets/LARGETURBINE_<ST/SS/TU/TI/ADVGAS/NEW>_ACTIVE1.png`，取 16×64 竖条的最上一格 |
 | 各级采矿机 | `basicmachines/miner/OVERLAY_FRONT.png` |
 | 各级制造机 | `basicmachines/macerator/OVERLAY_FRONT.png` |
+| 各级计算机 | `iconsets/EM_COMPUTER.png` 的最上一格（原图是 5 帧竖排条带） |
+| 各级研究站 | `iconsets/OVERLAY_FRONT_RESEARCH_COMPLETER.png` |
 
 机壳按机型的电压等级取，所以同一面片在不同等级下颜色不同、能区分开。
 
@@ -93,12 +95,18 @@ T12 海珀珍没有原版贴图可用（它的材质定义在 GT++，颜色取�
 
 按 16×16 一格 56px 画，和矿脉 2×2 方块的尺度对得上。
 
-## 设施图标（存电装置、净化器）
+## 设施图标（存电装置、净化器、计算机、研究站）
 
-`src/assets/machines/b-<等级>.png`（存电装置）与 `p-<等级>.png`（净化器）也是「机壳 + 面片」合成的：
-机壳用 `iconsets/MACHINE_<电压>_SIDE.png`，上面叠一个自己画的图案
-（GT 的储电箱、净化器贴图不在开发包里）。
-生成脚本：`python scripts/build-facility-icons.py`（从 MV 起，与 `models.ts` 里的开放等级对齐）。
+四个前缀都是「机壳 + 面片」合成的，机壳统一用 `iconsets/MACHINE_<电压>_SIDE.png`：
+
+| 前缀 | 设施 | 面片 | 开放等级 |
+|---|---|---|---|
+| `b-<等级>` | 存电装置 | 自己画的电池图案（GT 的储电箱贴图不在开发包里） | MV（tier 3） |
+| `p-<等级>` | 净化器 | 自己画的过滤塔图案 | MV（tier 3） |
+| `x-<等级>` | 计算机 | `iconsets/EM_COMPUTER.png` | LuV（tier 7） |
+| `r-<等级>` | 研究站 | `iconsets/OVERLAY_FRONT_RESEARCH_COMPLETER.png` | LuV（tier 7） |
+
+生成脚本：`python scripts/build-facility-icons.py`，开放等级与 `models.ts`、`numeric/research.ts` 对齐。
 
 重新生成：`python scripts/build-veins.py`（默认从 gradle 缓存里找 jar，可用 `--jar` 指定）。
 它会重写 `src/assets/veins/t*.png`、`fx/*.png` 与 `src/game/vein-meta.ts`。

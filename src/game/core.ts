@@ -9,6 +9,16 @@ import { isValidOverclockLevel, overclockEnergyMultiplier, overclockSpeedMultipl
 import { expectedFaults, sampleFaults } from '../numeric/fault';
 import { batteryCapacityEU, settleStorage } from '../numeric/storage';
 import {
+  RESEARCH_GATE_FROM_TIER,
+  computerComputePerSecond,
+  computerEnergyEU,
+  labComputeThroughput,
+  needsResearch,
+  researchGain,
+  researchRequired,
+  settleCompute,
+} from '../numeric/research';
+import {
   COLLAPSE_CHANCE_PER_10_MINUTES,
   MUTATION_CHANCE_PER_MINUTE,
   MUTATION_REWARD_SECONDS,
@@ -61,6 +71,13 @@ export interface TickReport {
   euGenerated: Decimal;
   euConsumed: Decimal;
   powerRatio: number;
+  // 算力（流量）：本拍产出、被研究站吃掉的、以及直接浪费掉的
+  computeProduced: Decimal;
+  computeUsed: Decimal;
+  computeWasted: Decimal;
+  // 本拍推进的研究进度，以及是否刚好研究完成（值是刚解锁的电压等级）
+  researchGained: Decimal;
+  researchUnlocked: number | null;
   // 污染：本拍净变化与产出倍率（关掉污染机制时倍率恒为 1）
   pollutionDelta: Decimal;
   outputMultiplier: Decimal;
@@ -106,6 +123,13 @@ export class GameCore {
   collapseTimer = 0;
   maxTier = 1;
   unlockedVeins: number[] = [0];
+  // 当前研究目标已经攒下的进度（研究完一级就清零重来）
+  researchProgress = ZERO;
+  // 已经研究出来、可以建造的电压等级。LuV 及以前不用研究，开局就在里面
+  researched: number[] = Array.from(
+    { length: RESEARCH_GATE_FROM_TIER - 1 },
+    (_, index) => index + 1,
+  );
   playSeconds = 0;
   totalOre = ZERO;
   totalCoins = ZERO;
@@ -154,6 +178,47 @@ export class GameCore {
     const fixed = this.faultyCountOf(modelId);
     delete this.faults[modelId];
     return fixed;
+  }
+
+  // ── 研究：算力与研究进度 ───────────────────────────────────
+
+  // 这一级的机型能不能造。ZPM 及以后要先研究出来
+  isResearched(tier: number): boolean {
+    return !needsResearch(tier) || this.researched.includes(tier);
+  }
+
+  // 当前研究目标：已解锁电压里最低的那个还没研究出来的等级。
+  // 没有目标（还没到 ZPM，或目标都研究完了）时返回 null
+  researchTargetTier(): number | null {
+    for (let tier = RESEARCH_GATE_FROM_TIER; tier <= this.maxTier; tier += 1) {
+      if (!this.researched.includes(tier)) return tier;
+    }
+    return null;
+  }
+
+  // 计算机的算力总产量（额定值，不含供电降载）
+  computerComputeRated(): Decimal {
+    let total = ZERO;
+    for (const model of modelsOf('research')) {
+      if (model.computeRole !== 'produce' || model.tier > this.maxTier) continue;
+      total = total.plus(computerComputePerSecond(model.tier).times(this.workingCountOf(model.id)));
+    }
+    return total;
+  }
+
+  // 研究站想吃的算力总量（额定值）。没有研究目标时研究站空转，不打算力
+  labComputeDemand(): Decimal {
+    if (this.researchTargetTier() === null) return ZERO;
+    let total = ZERO;
+    for (const model of modelsOf('research')) {
+      if (model.computeRole !== 'consume' || model.tier > this.maxTier) continue;
+      total = total.plus(labComputeThroughput(model.tier).times(this.workingCountOf(model.id)));
+    }
+    return total;
+  }
+
+  computerEnergyDrain(model: MachineModel): Decimal {
+    return computerEnergyEU(model.tier).times(this.workingCountOf(model.id));
   }
 
   // 存电装置的总容量（EU）
@@ -280,6 +345,7 @@ export class GameCore {
       ...this.runningTiers('miner'),
       ...this.runningTiers('generator'),
       ...this.runningTiers('machine'),
+      ...this.runningTiers('research'),
     ];
     return pollutionPerSecond(machinery);
   }
@@ -417,6 +483,7 @@ export class GameCore {
   }
 
   canAfford(model: MachineModel, payWith: PayWith = 'coin'): boolean {
+    if (!this.isResearched(model.tier)) return false;
     const price = this.priceOf(model, payWith);
     const index = payWith === 'ore' ? model.tier - 1 : paymentTier(model.tier) - 1;
     const wallet = payWith === 'ore' ? this.ores[index]! : this.coins[index]!;
@@ -424,6 +491,8 @@ export class GameCore {
   }
 
   buy(model: MachineModel, count: number, payWith: PayWith = 'coin'): number {
+    // 没研究出来的机型买不了 —— 硬墙挡在这里，不只是界面灰掉
+    if (!this.isResearched(model.tier)) return 0;
     let bought = 0;
     for (let i = 0; i < count; i += 1) {
       const price = this.priceOf(model, payWith);
@@ -477,6 +546,9 @@ export class GameCore {
         demand = demand.plus(this.machineEnergyDrain(model));
       } else if (model.category === 'purifier') {
         demand = demand.plus(this.purifierEnergyDrain(model));
+      } else if (model.category === 'research' && model.computeRole === 'produce') {
+        // 研究站不直接耗电，它吃的是计算机产出的算力
+        demand = demand.plus(this.computerEnergyDrain(model));
       }
     }
     // 电网模式直接改耗电：稳定 +20%、波动 -30%、黑市 -50%
@@ -589,6 +661,29 @@ export class GameCore {
       }
     }
 
+    // 5b) 研究：计算机产算力，研究站吃算力推进研究进度。
+    //     算力是流量 —— 产出来当拍不用掉就浪费掉；缺电按供电比例少产。
+    //     它不受污染影响：污染惩罚的是"产出物"（矿与币），不是基础设施。
+    const computeProduced = this.computerComputeRated().times(ratioDec);
+    const computeSettlement = settleCompute(computeProduced, this.labComputeDemand());
+    report.computeProduced = computeProduced;
+    report.computeUsed = computeSettlement.used;
+    report.computeWasted = computeSettlement.wasted;
+    const researchTarget = this.researchTargetTier();
+    if (researchTarget !== null) {
+      const gain = researchGain(computeSettlement.used, dtSeconds);
+      if (gain.gt(0)) {
+        this.researchProgress = this.researchProgress.plus(gain);
+        report.researchGained = gain;
+        const required = researchRequired(researchTarget);
+        if (this.researchProgress.gte(required)) {
+          this.researchProgress = this.researchProgress.minus(required);
+          this.researched.push(researchTarget);
+          report.researchUnlocked = researchTarget;
+        }
+      }
+    }
+
     // 6) 超频机器的故障判定：档位越高越容易坏，坏掉的下一拍开始停机
     for (const model of active) {
       const level = this.overclockOf(model.id);
@@ -629,6 +724,11 @@ function emptyReport(): TickReport {
     euGenerated: ZERO,
     euConsumed: ZERO,
     powerRatio: 1,
+    computeProduced: ZERO,
+    computeUsed: ZERO,
+    computeWasted: ZERO,
+    researchGained: ZERO,
+    researchUnlocked: null,
     pollutionDelta: ZERO,
     outputMultiplier: ONE,
     outage: false,

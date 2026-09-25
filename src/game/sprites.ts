@@ -4,7 +4,14 @@
 // 所以贴图先用 SVG 方块拼出来：零依赖、可缩放、随时能替换。
 // 以后拿到真正的位图贴图，只需把 SpriteIcon 换成 <img>，接口（kind / size）不变。
 
-export type SpriteKind = 'vein' | 'miner' | 'generator' | 'machine' | 'storage' | 'purifier';
+export type SpriteKind =
+  | 'vein'
+  | 'miner'
+  | 'generator'
+  | 'machine'
+  | 'storage'
+  | 'purifier'
+  | 'research';
 
 export const SPRITE_GRID = 16;
 
@@ -121,6 +128,20 @@ const PURIFIER: SpriteRect[] = [
   [5, 10, 6, 1, 'accent'],
 ];
 
+// 研究：机箱 + 屏幕 + 键盘，屏幕上是滚动的数据行
+const RESEARCH: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [3, 2, 10, 10, 'metalDark'],
+  [4, 3, 8, 6, 'dark'],
+  [5, 4, 6, 1, 'ore'],
+  [5, 5, 4, 1, 'accent'],
+  [5, 6, 5, 1, 'oreDark'],
+  [5, 7, 3, 1, 'ore'],
+  [11, 3, 1, 1, 'warm'],
+  [3, 12, 10, 1, 'metal'],
+  [5, 12, 6, 1, 'stoneLight'],
+];
+
 export const SPRITES: Record<SpriteKind, SpriteRect[]> = {
   vein: VEIN,
   miner: MINER,
@@ -128,4 +149,5 @@ export const SPRITES: Record<SpriteKind, SpriteRect[]> = {
   machine: MACHINE,
   storage: STORAGE,
   purifier: PURIFIER,
+  research: RESEARCH,
 };
