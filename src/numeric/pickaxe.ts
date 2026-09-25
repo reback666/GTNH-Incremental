@@ -39,10 +39,13 @@ export function blastChances(maxTier: number): number {
   return maxTier * BLAST_CHANCES_PER_TIER;
 }
 
-// 连锁爆破每次机会的加值：n^(n/2)，n 是这次机会产生时的电压等级
+// 连锁爆破每次机会的加值：2^(n/2)，n 是这次机会产生时的电压等级。
+// 底数取 2 而不是 n：n^(n/2) 长得太猛（MAX 一笔就是上亿），手点会直接盖过整条自动化产线。
+export const BLAST_BASE = '2';
+
 export function blastBonusPerUpgrade(tier: number): Decimal {
   assertTier(tier);
-  return powFraction(decInt(tier, 'tier'), tier, 2);
+  return powFraction(BLAST_BASE, tier, 2);
 }
 
 // 第 index 次机会（从 0 数）是哪一级电压给的：每个电压给 2 次，所以 0/1 来自 ULV、2/3 来自 LV……
