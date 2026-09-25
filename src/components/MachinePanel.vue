@@ -133,18 +133,6 @@ function canBuy(model: MachineModelRow): boolean {
   <section>
     <div class="machine-tabs">
       <button
-        v-for="column in columns"
-        :key="column.kind"
-        type="button"
-        class="machine-tab"
-        :class="{ active: active === column.kind }"
-        @click="active = column.kind"
-      >
-        <MachineIcon :model-id="tabIconId(column.kind)" :kind="column.kind" :size="30" />
-        <span class="tab-name">{{ column.title }}</span>
-        <span class="tab-count">已建 {{ column.count }} 台</span>
-      </button>
-      <button
         type="button"
         class="machine-tab"
         :class="{ active: active === PICKAXE_TAB }"
@@ -155,6 +143,18 @@ function canBuy(model: MachineModelRow): boolean {
         <span class="tab-count" :class="{ can: pickaxeChancesLeft > 0 }">
           {{ pickaxeChancesLeft > 0 ? `可升 ${pickaxeChancesLeft} 次` : '已全部升满' }}
         </span>
+      </button>
+      <button
+        v-for="column in columns"
+        :key="column.kind"
+        type="button"
+        class="machine-tab"
+        :class="{ active: active === column.kind }"
+        @click="active = column.kind"
+      >
+        <MachineIcon :model-id="tabIconId(column.kind)" :kind="column.kind" :size="30" />
+        <span class="tab-name">{{ column.title }}</span>
+        <span class="tab-count">已建 {{ column.count }} 台</span>
       </button>
     </div>
 
