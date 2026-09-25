@@ -37,6 +37,15 @@ export interface SaveData {
   riftOffered?: boolean;
   // v8：开发者模式开关
   devMode?: boolean;
+  // v9：累计统计与成就
+  peakTier?: number;
+  manualMines?: number;
+  builtMachines?: number;
+  overclockUsed?: boolean;
+  repairs?: number;
+  maxPollution?: string;
+  totalCables?: string;
+  achieved?: Record<string, number>;
   // v1 遗留字段：按电压等级存的数量，读到旧存档时用来迁移
   miners?: number[];
   generators?: number[];
@@ -71,6 +80,14 @@ export function serialize(core: GameCore): SaveData {
     totalEU: toSaveString(core.totalEU),
     riftOffered: core.riftOffered,
     devMode: core.devMode,
+    peakTier: core.peakTier,
+    manualMines: core.manualMines,
+    builtMachines: core.builtMachines,
+    overclockUsed: core.overclockUsed,
+    repairs: core.repairs,
+    maxPollution: toSaveString(core.maxPollution),
+    totalCables: toSaveString(core.totalCables),
+    achieved: { ...core.achieved },
     siphoned: toSaveString(core.siphoned),
     maxTier: core.maxTier,
     unlockedVeins: [...core.unlockedVeins],
@@ -113,6 +130,14 @@ export function deserialize(data: SaveData): GameCore {
   // 默认按「已处理」算，免得读档就弹窗；下一周目会正常弹。
   core.riftOffered = data.riftOffered ?? core.maxTier >= RIFT_FROM_TIER;
   core.devMode = data.devMode ?? false;
+  core.peakTier = data.peakTier ?? core.maxTier;
+  core.manualMines = data.manualMines ?? 0;
+  core.builtMachines = data.builtMachines ?? 0;
+  core.overclockUsed = data.overclockUsed ?? false;
+  core.repairs = data.repairs ?? 0;
+  core.maxPollution = fromSaveString(data.maxPollution ?? '0');
+  core.totalCables = fromSaveString(data.totalCables ?? '0');
+  core.achieved = { ...(data.achieved ?? {}) };
   core.playSeconds = data.playSeconds;
   core.totalOre = dec(data.totalOre ?? '0');
   core.totalCoins = dec(data.totalCoins ?? '0');

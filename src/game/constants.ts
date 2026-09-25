@@ -41,7 +41,8 @@ export const UI_REFRESH_MS = 50;
 // v6：加了算力驱动的研究（第三阶段：研究站与计算机）
 // v7：加了转生：时空线缆、永久加成节点、本周目累计 EU（第三阶段：转生）
 // v8：加了开发者模式开关（设置页里的测试开关）
-export const SAVE_VERSION = 8;
+// v9：加了累计统计与成就（最高电压、累计线缆、历史最高污染、达成记录…）
+export const SAVE_VERSION = 9;
 export const SAVE_KEY = 'gtnh-incremental-save';
 
 export function unlockCost(machineTier: number): Decimal {

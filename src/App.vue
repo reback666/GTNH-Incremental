@@ -10,6 +10,7 @@ import SettingsPanel from './components/SettingsPanel.vue';
 import RebirthPage from './components/RebirthPage.vue';
 import RiftDialog from './components/RiftDialog.vue';
 import PageNav from './components/PageNav.vue';
+import AchievementPanel from './components/AchievementPanel.vue';
 
 const store = useGameStore();
 // 工厂的内容分三页，右边点页码换页；转生是独立页面，不在页码里
@@ -54,6 +55,7 @@ onMounted(() => {
         <template v-else-if="page === 2">
           <TechTreePanel />
           <GridPanel />
+          <AchievementPanel />
           <section class="panel">
             <div class="row">
               <div class="name">
@@ -75,6 +77,15 @@ onMounted(() => {
         <!-- 第 3 页：设置与存档 -->
         <template v-else>
           <SettingsPanel />
+          <section class="panel">
+            <h2>统计</h2>
+            <dl class="stats">
+              <div v-for="row in store.snap.stats" :key="row.label" class="stat">
+                <dt>{{ row.label }}</dt>
+                <dd>{{ row.value }}</dd>
+              </div>
+            </dl>
+          </section>
           <section class="panel">
             <h2>存档</h2>
             <p class="muted" style="margin: 0 0 8px">

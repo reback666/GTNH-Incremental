@@ -56,6 +56,7 @@ import {
   researchCostMultiplier,
   type RebirthEffectKind,
 } from './rebirth';
+import { ACHIEVEMENTS, achievedCount, type AchievementState } from './achievements';
 import * as C from './constants';
 
 // 机型 → 数值：出力带上机型倍率，烧矿速率带上机型的燃料效率。
@@ -134,6 +135,19 @@ export class GameCore {
   riftOffered = false;
   // 开发者模式：设置页里的测试开关，开着时界面会露出测试用的快捷操作
   devMode = false;
+  // ── 累计统计与成就 ─────────────────────────────────────────
+  // 历史最高电压等级（转生会重置本周目的 maxTier，但不重置这个）
+  peakTier = 1;
+  manualMines = 0;
+  builtMachines = 0;
+  overclockUsed = false;
+  repairs = 0;
+  // 历史最高污染值，用来判「冒过烟又治好了」
+  maxPollution = ZERO;
+  // 累计获得过的时空线缆（转生不清零）
+  totalCables = ZERO;
+  // 成就 id → 达成时的游戏内秒数
+  achieved: Record<string, number> = {};
   // 波动电网：还要断多久、距离下次判定过了多久
   outageSeconds = 0;
   outageTimer = 0;
@@ -177,6 +191,7 @@ export class GameCore {
     const model = MACHINE_MODELS.find((item) => item.id === modelId);
     if (!model || !canOverclock(model)) return false;
     if (!isValidOverclockLevel(level)) return false;
+    if (level > 0) this.overclockUsed = true;
     // 调档位相当于顺手检修一次，把故障清掉
     delete this.faults[modelId];
     if (level === 0) delete this.overclock[modelId];
@@ -196,6 +211,7 @@ export class GameCore {
   repair(modelId: string): number {
     const fixed = this.faultyCountOf(modelId);
     delete this.faults[modelId];
+    if (fixed > 0) this.repairs += 1;
     return fixed;
   }
 
@@ -233,6 +249,7 @@ export class GameCore {
     if (!this.canRebirth(route)) return null;
     const gained = this.cablesFor(route);
     this.cables = this.cables.plus(gained);
+    this.totalCables = this.totalCables.plus(gained);
     this.rebirthCount += 1;
     this.resetRun();
     return gained;
@@ -261,6 +278,47 @@ export class GameCore {
   // ── 开发者模式 ─────────────────────────────────────────────
   // 只是给测试用的快捷操作，不参与正常玩法；关掉开关就没法调用。
 
+  // 组装给成就判断用的状态快照
+  achievementState(): AchievementState {
+    return {
+      manualMines: this.manualMines,
+      machineCount: MACHINE_MODELS.reduce((sum, model) => sum + this.countOf(model.id), 0),
+      builtMachines: this.builtMachines,
+      generatorCount: this.countOfCategory('generator'),
+      minerCount: this.countOfCategory('miner'),
+      maxTier: this.maxTier,
+      peakTier: this.peakTier,
+      overclockUsed: this.overclockUsed,
+      repairs: this.repairs,
+      gridCount: this.grids.length,
+      researchCount: this.researched.filter((tier) => tier >= RESEARCH_GATE_FROM_TIER).length,
+      rebirthCount: this.rebirthCount,
+      rebirthNodeCount: this.rebirthNodes.length,
+      storedEU: this.storedEU,
+      batteryCapacity: this.batteryCapacity(),
+      pollution: this.pollution,
+      maxPollution: this.maxPollution,
+      totalCoins: this.totalCoins,
+      totalEU: this.totalEU,
+      totalCables: this.totalCables,
+    };
+  }
+
+  achievedCount(): number {
+    return achievedCount(this.achieved);
+  }
+
+  // 每拍检查一次，第一次成立就记下时间（成就跨周目保留）
+  private checkAchievements(): void {
+    const state = this.achievementState();
+    for (const achievement of ACHIEVEMENTS) {
+      if (this.achieved[achievement.id] !== undefined) continue;
+      if (achievement.check(state)) {
+        this.achieved[achievement.id] = Math.floor(this.playSeconds);
+      }
+    }
+  }
+
   setDevMode(enabled: boolean): void {
     this.devMode = enabled;
   }
@@ -269,6 +327,7 @@ export class GameCore {
   devUnlockTo(tier: number): boolean {
     if (!this.devMode || !isValidTier(tier)) return false;
     this.maxTier = tier;
+    this.peakTier = Math.max(this.peakTier, tier);
     this.unlockedVeins = Array.from({ length: tier }, (_, index) => index);
     this.researched = Array.from({ length: tier }, (_, index) => index + 1);
     this.researchProgress = ZERO;
@@ -669,6 +728,7 @@ export class GameCore {
     const amount = C.manualMineAmount();
     this.ores[0] = this.ores[0]!.plus(amount);
     this.totalOre = this.totalOre.plus(amount);
+    this.manualMines += 1;
   }
 
   // 单价：基准成本 × 机型成本系数
@@ -712,6 +772,7 @@ export class GameCore {
       this.counts[model.id] = this.countOf(model.id) + 1;
       bought += 1;
     }
+    this.builtMachines += bought;
     return bought;
   }
 
@@ -731,6 +792,7 @@ export class GameCore {
     this.coins[index] = this.coins[index]!.minus(this.unlockCostOf(tier));
     this.maxTier = tier;
     this.unlockedVeins.push(tier - 1);
+    this.peakTier = Math.max(this.peakTier, tier);
     return true;
   }
 
@@ -821,6 +883,7 @@ export class GameCore {
     const pollutionMul = this.outputMultiplier();
     report.pollutionDelta = pollutionDelta;
     report.outputMultiplier = pollutionMul;
+    this.maxPollution = Decimal.max(this.maxPollution, this.pollution);
     const productive = ratioDec.times(pollutionMul);
 
     // 4) 采矿机产矿。超频提速，坏了的机器不算数
@@ -925,6 +988,7 @@ export class GameCore {
     report.euConsumed = effectiveDemand.times(dtSeconds).times(ratioDec);
     report.powerRatio = ratioDec.toNumber();
     this.lastReport = report;
+    this.checkAchievements();
     return report;
   }
 }

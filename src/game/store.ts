@@ -18,6 +18,7 @@ import {
   pollutionBandName,
 } from '../numeric/pollution';
 import { GRID_MODES, gridMode, type GridMode } from '../numeric/grid';
+import { ACHIEVEMENTS } from './achievements';
 import { REBIRTH_NODES, REBIRTH_ROOT, treeTotalCost, type RebirthEffectKind } from './rebirth';
 import {
   RESEARCH_GATE_FROM_TIER,
@@ -198,6 +199,22 @@ export interface RebirthStats {
   treeOwned: number;
 }
 
+// 成就：一行一条
+export interface AchievementRow {
+  id: string;
+  name: string;
+  desc: string;
+  achieved: boolean;
+  // 达成时间（游戏内时长），未达成是空串
+  at: string;
+}
+
+export interface AchievementStats {
+  rows: AchievementRow[];
+  done: number;
+  total: number;
+}
+
 export interface Snapshot {
   ores: ResourceRow[];
   coins: ResourceRow[];
@@ -215,6 +232,9 @@ export interface Snapshot {
   risk: RiskStats;
   research: ResearchStats;
   rebirth: RebirthStats;
+  achievements: AchievementStats;
+  // 累计统计（存档面板里显示）
+  stats: { label: string; value: string }[];
   // 开发者模式开关（设置页）
   devMode: boolean;
   nextTier: number | null;
@@ -459,6 +479,8 @@ function buildSnapshot(core: GameCore): Snapshot {
     risk: riskStats(core),
     research: researchStats(core),
     rebirth: rebirthStats(core),
+    achievements: achievementStats(core),
+    stats: statRows(core),
     devMode: core.devMode,
     nextTier,
     unlockCost: nextTier === null ? '—' : formatNumber(core.unlockCostOf(nextTier)),
@@ -669,6 +691,41 @@ function rebirthStats(core: GameCore): RebirthStats {
 function paymentUnit(tier: number): string {
   const paying = Math.max(1, tier - 1);
   return paying === 1 ? '铜币' : coinName(paying);
+}
+
+// 成就清单：只显示达成情况与达成时间，判断逻辑在 src/game/achievements.ts
+function achievementStats(core: GameCore): AchievementStats {
+  const rows = ACHIEVEMENTS.map((achievement) => {
+    const at = core.achieved[achievement.id];
+    return {
+      id: achievement.id,
+      name: achievement.name,
+      desc: achievement.desc,
+      achieved: at !== undefined,
+      at: at === undefined ? '' : formatDuration(at),
+    };
+  });
+  return { rows, done: rows.filter((row) => row.achieved).length, total: rows.length };
+}
+
+// 累计统计：跨周目累加的那些数
+function statRows(core: GameCore): { label: string; value: string }[] {
+  return [
+    { label: '已玩时长', value: formatDuration(core.playSeconds) },
+    { label: '最高电压', value: VOLTAGE_TIERS[core.peakTier - 1] ?? 'ULV' },
+    { label: '累计发电', value: `${formatNumber(core.totalEU)} EU` },
+    { label: '累计矿石', value: formatNumber(core.totalOre) },
+    { label: '累计产币', value: formatNumber(core.totalCoins) },
+    { label: '累计耗矿', value: formatNumber(core.totalOreSpent) },
+    { label: '累计建机', value: `${core.builtMachines} 台` },
+    { label: '手动挖矿', value: `${core.manualMines} 次` },
+    { label: '转生次数', value: `${core.rebirthCount} 次` },
+    { label: '累计线缆', value: `${formatNumber(core.totalCables)} 条` },
+    {
+      label: '成就',
+      value: `${core.achievedCount()} / ${ACHIEVEMENTS.length}`,
+    },
+  ];
 }
 
 // 单台机器的消耗与产出。发电机看「出力 / 烧矿 / 效率」，
