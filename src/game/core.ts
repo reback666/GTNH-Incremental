@@ -14,6 +14,7 @@ import {
   nodeOutputFactor,
   nodeVisPerSecond,
 } from '../numeric/arcane';
+import { corrosionPerSecond, suppressionPoints } from '../numeric/abyss';
 import { isValidOverclockLevel, overclockEnergyMultiplier, overclockSpeedMultiplier } from '../numeric/overclock';
 import { expectedFaults, sampleFaults } from '../numeric/fault';
 import { batteryCapacityEU, settleStorage } from '../numeric/storage';
@@ -103,6 +104,10 @@ export interface TickReport {
   essentiaUsed: Decimal;
   // 奥术宇宙：污染对灵气机器产出的倍率
   arcanePollutionFactor: Decimal;
+  // 深渊宇宙：本拍每台机器因污染损坏的概率，以及抑制器抵消掉的污染点数
+  corrosionPerSecond: Decimal;
+  suppression: Decimal;
+  corrosionFaults: number;
   // 污染：本拍净变化与产出倍率（关掉污染机制时倍率恒为 1）
   pollutionDelta: Decimal;
   outputMultiplier: Decimal;
@@ -590,6 +595,19 @@ export class GameCore {
     return nodeEssentiaDemand(nodes);
   }
 
+  // ── 深渊宇宙：腐蚀与抑制 ───────────────────────────────────
+
+  // 抑制器抵消掉的污染点数
+  suppression(): Decimal {
+    return suppressionPoints(this.runningTiers('abyss'));
+  }
+
+  // 这一拍每台机器因污染坏掉的概率（污染机制关掉时恒为 0）
+  corrosionPerSecond(): Decimal {
+    if (!this.pollutionEnabled) return ZERO;
+    return corrosionPerSecond(this.pollution, this.suppression());
+  }
+
   // 本拍机器要多少灵气（同一套耗电公式，只是换成灵气）
   visDemand(): Decimal {
     let demand = ZERO;
@@ -965,6 +983,8 @@ export class GameCore {
       } else if (model.category === 'research' && model.computeRole === 'produce') {
         // 研究站不直接耗电，它吃的是计算机产出的算力
         demand = demand.plus(this.computerEnergyDrain(model));
+      } else if (model.category === 'abyss') {
+        demand = demand.plus(this.purifierEnergyDrain(model));
       }
     }
     // 电网模式直接改耗电：稳定 +20%、波动 -30%、黑市 -50%
@@ -1008,6 +1028,7 @@ export class GameCore {
     //    平时走电网：富余电力存进电池，不够先放存量，放完才降载。
     //    奥术宇宙里机器吃的是灵气，电池不参与 —— 发电机照转，只是电没人用。
     const arcane = this.hasUniverse('arcane');
+    const abyss = this.hasUniverse('abyss');
     let ratioDec: Decimal;
     if (arcane) {
       const step = dec(String(dtSeconds));
@@ -1055,12 +1076,15 @@ export class GameCore {
     // 奥术宇宙里污染不是惩罚而是「燃料」：污染越高灵气机器功率越高，
     // 所以这一档直接换成灵气倍率（正常宇宙才走 -20% / -40% 那套）
     // 污染机制被关掉时这条也不生效（和普通宇宙的惩罚一个道理）
-    const arcaneMul = this.pollutionEnabled ? arcanePollutionFactor(this.pollution) : ONE;
+    // 奥术与深渊都让污染「往上推」产出，倍率共用一条；两个宇宙都拥有时只算一次
+    const drive = arcane || abyss;
+    const arcaneMul =
+      drive && this.pollutionEnabled ? arcanePollutionFactor(this.pollution) : ONE;
     report.arcanePollutionFactor = arcaneMul;
-    report.outputMultiplier = arcane ? arcaneMul : pollutionMul;
+    report.outputMultiplier = drive ? arcaneMul : pollutionMul;
     this.maxPollution = Decimal.max(this.maxPollution, this.pollution);
     const productive = ratioDec
-      .times(arcane ? arcaneMul : pollutionMul)
+      .times(drive ? arcaneMul : pollutionMul)
       .times(arcane ? dec(ARCANE_OUTPUT_FACTOR) : ONE);
 
     // 4) 采矿机产矿。超频提速，坏了的机器不算数
@@ -1151,6 +1175,30 @@ export class GameCore {
       }
     }
 
+    // 6b) 深渊宇宙的腐蚀：污染把机器啃坏（抑制器按等级抵消一部分污染点数）。
+    //     抑制器自己不算在被啃的名单里。
+    if (abyss) {
+      const suppression = this.suppression();
+      const corrosion = this.corrosionPerSecond();
+      report.suppression = suppression;
+      report.corrosionPerSecond = corrosion;
+      if (corrosion.gt(0)) {
+        for (const model of active) {
+          // 发电机与净化器也会被啃，所以这里不看能不能超频；抑制器自己不算
+          if (model.category === 'abyss') continue;
+          const healthy = this.workingCountOf(model.id);
+          if (healthy <= 0) continue;
+          const expected = corrosion.times(healthy).times(dtSeconds).toNumber();
+          const broke = Math.min(healthy, sampleFaults(expected, this.random));
+          if (broke > 0) {
+            this.faults[model.id] = this.faultyCountOf(model.id) + broke;
+            report.faultsGained += broke;
+            report.corrosionFaults += broke;
+          }
+        }
+      }
+    }
+
     // 7) 污染事件：中度污染偶尔"变异"给一笔奖励，重度污染可能工厂崩溃
     if (this.pollutionEnabled) {
       this.handlePollutionEvents(dtSeconds, report);
@@ -1191,6 +1239,9 @@ function emptyReport(): TickReport {
     essentiaProduced: ZERO,
     essentiaUsed: ZERO,
     arcanePollutionFactor: ONE,
+    corrosionPerSecond: ZERO,
+    suppression: ZERO,
+    corrosionFaults: 0,
     pollutionDelta: ZERO,
     outputMultiplier: ONE,
     outage: false,

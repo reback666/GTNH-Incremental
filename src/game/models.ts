@@ -17,7 +17,8 @@ export type MachineCategory =
   | 'storage'
   | 'purifier'
   | 'research'
-  | 'arcane';
+  | 'arcane'
+  | 'abyss';
 export type BlockKind = 'single' | 'multiblock';
 
 export interface MachineModel {
@@ -36,8 +37,8 @@ export interface MachineModel {
   costFactor: string;
   // 研究类专用：计算机产出算力，研究站消耗算力
   computeRole?: 'produce' | 'consume';
-  // 只有拥有对应平行宇宙才能建造（灵气节点要奥术宇宙）
-  requiresUniverse?: 'arcane';
+  // 只有拥有对应平行宇宙才能建造（灵气节点要奥术宇宙，腐蚀抑制器要深渊宇宙）
+  requiresUniverse?: 'arcane' | 'abyss';
   traits?: string[];
 }
 
@@ -213,6 +214,23 @@ const NODES: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
   };
 });
 
+// ── 腐蚀抑制器（深渊宇宙专属） ──────────────────────────────
+// 深渊宇宙里污染会腐蚀机器，这台设施按等级抵消一部分污染点数。
+const SUPPRESSORS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
+  const tier = index + 1;
+  return {
+    id: `s-${tier}`,
+    name: `${VOLTAGE_TIERS[index]} 腐蚀抑制器`,
+    category: 'abyss' as const,
+    block: 'single' as const,
+    tier,
+    outputFactor: '1',
+    costFactor: '1',
+    requiresUniverse: 'abyss' as const,
+    traits: ['抑制腐蚀'],
+  };
+});
+
 export const MACHINE_MODELS: MachineModel[] = [
   ...GENERATORS,
   ...MINERS,
@@ -222,6 +240,7 @@ export const MACHINE_MODELS: MachineModel[] = [
   ...COMPUTERS,
   ...LABS,
   ...NODES,
+  ...SUPPRESSORS,
 ];
 
 const BY_ID = new Map(MACHINE_MODELS.map((model) => [model.id, model]));

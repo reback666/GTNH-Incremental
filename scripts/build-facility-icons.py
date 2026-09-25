@@ -138,12 +138,31 @@ def node_face() -> Image.Image:
     return face
 
 
+def suppressor_face() -> Image.Image:
+    """16×16 的腐蚀抑制器图案：带铆钉的抗腐蚀护盾板。"""
+    face = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    px = face.load()
+    # 板身
+    for y in range(4, 13):
+        for x in range(3, 13):
+            edge = x in (3, 12) or y in (4, 12)
+            px[x, y] = OUTLINE if edge else BODY_DARK
+    # 中间的护盾标记（抗腐蚀）
+    for y in range(6, 11):
+        for x in range(6, 10):
+            px[x, y] = CHARGE
+    for x, y in ((5, 5), (10, 5), (5, 10), (10, 10)):
+        px[x, y] = BODY
+    return face
+
+
 def main() -> None:
     jar = (glob.glob(JAR_GLOB) or [""])[0]
     if not jar:
         raise SystemExit("找不到 GT5-Unofficial jar")
     faces = {"b": battery_face(), "p": purifier_face()}
     nodes = node_face()
+    suppressors = suppressor_face()
     with zipfile.ZipFile(jar) as archive:
         # 计算机的贴图是 5 帧的竖排条带，取最上面一格
         computer = Image.open(io.BytesIO(archive.read(COMPUTER_FACE))).convert("RGBA").crop(
@@ -185,6 +204,19 @@ def main() -> None:
             node.alpha_composite(nodes)
             node.resize((32, 32), Image.NEAREST).save(OUT_DIR / f"n-{tier}.png")
         print(f"{len(VOLTAGES)} 个灵气节点图标 ← 机壳 + 灵气结晶")
+
+        # 腐蚀抑制器：每一级都有（深渊宇宙专属），面片是自己画的护盾板
+        for tier in range(1, len(VOLTAGES) + 1):
+            voltage = VOLTAGES[tier - 1]
+            casing = Image.open(
+                io.BytesIO(
+                    archive.read(f"assets/gregtech/textures/blocks/iconsets/MACHINE_{voltage}_SIDE.png")
+                )
+            ).convert("RGBA")
+            suppressor = tint_casing(casing, tier)
+            suppressor.alpha_composite(suppressors)
+            suppressor.resize((32, 32), Image.NEAREST).save(OUT_DIR / f"s-{tier}.png")
+        print(f"{len(VOLTAGES)} 个腐蚀抑制器图标 ← 机壳 + 护盾板")
 
 
 

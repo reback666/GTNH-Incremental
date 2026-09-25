@@ -12,7 +12,8 @@ export type SpriteKind =
   | 'storage'
   | 'purifier'
   | 'research'
-  | 'arcane';
+  | 'arcane'
+  | 'abyss';
 
 export const SPRITE_GRID = 16;
 
@@ -158,6 +159,20 @@ const ARCANE: SpriteRect[] = [
   [10, 8, 1, 1, 'accent'],
 ];
 
+// 腐蚀抑制器：带铆钉的护盾板
+const ABYSS: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [3, 3, 10, 10, 'metalDark'],
+  [4, 4, 8, 8, 'metal'],
+  [5, 5, 6, 6, 'dark'],
+  [6, 6, 4, 4, 'oreDark'],
+  [7, 7, 2, 2, 'accent'],
+  [4, 4, 1, 1, 'bright'],
+  [11, 4, 1, 1, 'bright'],
+  [4, 11, 1, 1, 'bright'],
+  [11, 11, 1, 1, 'bright'],
+];
+
 export const SPRITES: Record<SpriteKind, SpriteRect[]> = {
   vein: VEIN,
   miner: MINER,
@@ -167,4 +182,5 @@ export const SPRITES: Record<SpriteKind, SpriteRect[]> = {
   purifier: PURIFIER,
   research: RESEARCH,
   arcane: ARCANE,
+  abyss: ABYSS,
 };

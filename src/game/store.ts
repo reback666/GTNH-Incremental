@@ -28,6 +28,7 @@ import {
   nodeVisPerSecond,
 } from '../numeric/arcane';
 import { PURIFY_PER_TIER_PER_SECOND, purifierMachineCoverage } from '../numeric/pollution';
+import { suppressionOfTier } from '../numeric/abyss';
 import { REBIRTH_NODES, REBIRTH_ROOT, treeTotalCost, type RebirthEffectKind } from './rebirth';
 import {
   RESEARCH_FROM_TIER,
@@ -84,6 +85,8 @@ export interface RiskStats {
   pollutionRaw: string;
   band: string;
   bandName: string;
+  // 污染在这个存档里是「燃料」而不是惩罚（奥术 / 深渊宇宙）
+  boosted: boolean;
   enabled: boolean;
   growth: string;
   purify: string;
@@ -263,6 +266,18 @@ export interface ArcaneStats {
   note: string;
 }
 
+// 深渊宇宙的读数：腐蚀速率与抑制器抵消的污染点数
+export interface AbyssStats {
+  active: boolean;
+  // 每台机器每分钟的损坏概率
+  corrosionPerMinute: string;
+  // 抑制器抵消掉的污染点数
+  suppression: string;
+  // 污染超出中性点、又没被抑制的部分
+  effective: string;
+  note: string;
+}
+
 export interface Snapshot {
   ores: ResourceRow[];
   coins: ResourceRow[];
@@ -283,6 +298,7 @@ export interface Snapshot {
   achievements: AchievementStats;
   universes: UniverseRow[];
   arcane: ArcaneStats;
+  abyss: AbyssStats;
   // 累计统计（存档面板里显示）
   stats: { label: string; value: string }[];
   // 开发者模式开关（设置页）
@@ -303,6 +319,7 @@ const COLUMN_ORDER: MachineKind[] = [
   'miner',
   'generator',
   'arcane',
+  'abyss',
   'machine',
   'storage',
   'purifier',
@@ -328,6 +345,10 @@ const COLUMN_META: Record<MachineKind, { title: string; hint: string }> = {
   arcane: {
     title: '灵气节点',
     hint: '只有奥术宇宙才能建造。节点从矿脉抽灵气，灵气是流量、不能囤积；源质（净化器压污染时的副产物）能把节点喂满，没有源质时只出一半。',
+  },
+  abyss: {
+    title: '腐蚀抑制器',
+    hint: '只有深渊宇宙才能建造。深渊宇宙里污染会把机器啃坏（随机停机、要手动维护），抑制器按等级抵消一部分污染点数，把损坏速率压回去。',
   },
 };
 
@@ -531,6 +552,7 @@ function buildSnapshot(core: GameCore): Snapshot {
     columns: COLUMN_ORDER.filter(
       (kind) =>
         (kind !== 'arcane' || core.hasUniverse('arcane')) &&
+        (kind !== 'abyss' || core.hasUniverse('abyss')) &&
         (kind !== 'research' || core.maxTier >= RESEARCH_FROM_TIER),
     ).map((kind) => machineColumn(core, kind)),
     maxTier: core.maxTier,
@@ -556,6 +578,7 @@ function buildSnapshot(core: GameCore): Snapshot {
     achievements: achievementStats(core),
     universes: universeRows(core),
     arcane: arcaneStats(core),
+    abyss: abyssStats(core),
     stats: statRows(core),
     devMode: core.devMode,
     nextTier,
@@ -579,13 +602,25 @@ function riskStats(core: GameCore): RiskStats {
   const purify = core.purifyPerSecond();
   const net = core.pollutionDeltaPerSecond();
   const mode = gridMode(core.grid);
+  // 奥术与深渊宇宙把污染从惩罚变成燃料，污染条上的说明也要跟着变
+  const boosted = core.hasUniverse('abyss') || core.hasUniverse('arcane');
+  const drivePercent = arcanePollutionFactor(core.pollution).minus(1).times(100);
+  const driveText = `${drivePercent.gte(0) ? '+' : ''}${formatNumber(drivePercent)}%`;
+  const bandName = !core.pollutionEnabled
+    ? '污染机制已关闭：不增长，也不产生任何影响'
+    : boosted
+      ? `${
+          core.pollution.gte(70) ? '重度污染' : core.pollution.gte(30) ? '中度污染' : '清洁'
+        }：产出 ${driveText}（30% 是中性点）${
+          core.pollution.gte(70) ? '，随时可能工厂崩溃' : ''
+        }`
+      : pollutionBandName(core.pollution);
   return {
     pollution: `${formatNumber(core.pollution, { significantDigits: 4 })}%`,
     pollutionRaw: core.pollution.toString(),
     band: pollutionBand(core.pollution),
-    bandName: core.pollutionEnabled
-      ? pollutionBandName(core.pollution)
-      : '污染机制已关闭：不增长，也不产生任何影响',
+    bandName,
+    boosted,
     enabled: core.pollutionEnabled,
     growth: `${formatNumber(growth, { significantDigits: 3 })}%/秒`,
     purify: `${formatNumber(purify, { significantDigits: 3 })}%/秒`,
@@ -863,6 +898,37 @@ function arcaneStats(core: GameCore): ArcaneStats {
 }
 
 // 单台机器的消耗与产出。发电机看「出力 / 烧矿 / 效率」，
+function abyssStats(core: GameCore): AbyssStats {
+  const active = core.hasUniverse('abyss');
+  const suppression = core.suppression();
+  const corrosion = core.corrosionPerSecond();
+  const effective = Decimal.max(
+    ZERO,
+    core.pollution.minus(30).minus(suppression),
+  );
+  const perMinute = formatNumber(corrosion.times(60).times(100), { significantDigits: 3 });
+
+  let note: string;
+  if (!active) {
+    note = '没有深渊宇宙：污染只按普通规则惩罚产出，机器不会因此损坏。';
+  } else if (core.pollutionEnabled === false) {
+    note = '污染机制已关闭：腐蚀也不生效。';
+  } else if (effective.lte(0)) {
+    note = '污染没超过中性点，或被抑制器完全抵消：机器不会被腐蚀。';
+  } else {
+    note = `污染超出中性点的部分还有 ${formatNumber(effective, { significantDigits: 3 })} 点没被抵消，机器正在被腐蚀。`;
+  }
+
+  return {
+    active,
+    corrosionPerMinute: `${perMinute}%/分钟`,
+    suppression: formatNumber(suppression, { significantDigits: 3 }),
+    effective: formatNumber(effective, { significantDigits: 3 }),
+    note,
+  };
+}
+
+// 单台机器的消耗与产出。发电机看「出力 / 烧矿 / 效率」，
 // 采矿机看「产矿 / 耗电」，制造机看「产币 / 耗电 / 吃矿」，存电装置看容量。
 // 超频档位不为 0 时，这里给的是超频后的单台数值。
 function singleStats(model: MachineModel, level = 0): { label: string; value: string }[] {
@@ -917,6 +983,12 @@ function singleStats(model: MachineModel, level = 0): { label: string; value: st
       { label: '吃源质', value: `${NODE_ESSENTIA_PER_SECOND}/秒（喂不满时只出一半）` },
     ];
   }
+  if (model.category === 'abyss') {
+    return [
+      { label: '抵消污染', value: `${formatNumber(suppressionOfTier(model.tier))} 点` },
+      { label: '耗电', value: `${formatNumber(machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }))} EU/t` },
+    ];
+  }
   const output = machineOutput({ baseOutput: C.BASE_MACHINE_OUTPUT, tier: model.tier }).times(
     model.outputFactor,
   );
@@ -956,6 +1028,8 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
     } else if (kind === 'arcane') {
       vis = vis.plus(nodeVisPerSecond(model.tier).times(core.workingCountOf(model.id)));
       essentia = essentia.plus(nodeEssentiaDemand(decInt(core.workingCountOf(model.id), 'count')));
+    } else if (kind === 'abyss') {
+      eu = eu.plus(core.purifierEnergyDrain(model));
     }
   }
   if (kind === 'miner') {
@@ -1004,6 +1078,12 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
     return [
       { label: '灵气产出', value: `${formatNumber(vis)}/秒` },
       { label: '源质需求', value: `${formatNumber(essentia, { significantDigits: 3 })}/秒` },
+    ];
+  }
+  if (kind === 'abyss') {
+    return [
+      { label: '抵消污染', value: `${formatNumber(core.suppression(), { significantDigits: 3 })} 点` },
+      { label: '耗电', value: `${formatNumber(eu)} EU/t` },
     ];
   }
   return [

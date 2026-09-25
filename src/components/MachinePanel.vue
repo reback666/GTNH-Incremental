@@ -91,6 +91,7 @@ const TAB_ICON: Record<MachineKind, string> = {
   purifier: 'p-3',
   research: 'x-7',
   arcane: 'n-1',
+  abyss: 's-1',
 };
 
 function tabIconId(kind: MachineKind): string {

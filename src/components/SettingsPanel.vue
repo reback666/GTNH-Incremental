@@ -61,10 +61,38 @@ const unlockTier = ref(1);
         </div>
       </dl>
       <p class="muted small" style="margin: 0">
-        中度污染会变异（{{ risk.mutationChance }}），重度污染会工厂崩溃（{{
-          risk.collapseChance
-        }}）。建净化器把污染压回 30% 以下。
+        <template v-if="risk.boosted">
+          污染在这个存档里是燃料：30% 是中性点，比它脏就增产、比它干净就减产。
+          重度污染仍然会工厂崩溃（{{ risk.collapseChance }}）
+          <template v-if="snap.abyss.active">，而且会腐蚀机器</template>。
+        </template>
+        <template v-else>
+          中度污染会变异（{{ risk.mutationChance }}），重度污染会工厂崩溃（{{
+            risk.collapseChance
+          }}）。建净化器把污染压回 30% 以下。
+        </template>
       </p>
+
+      <!-- 深渊宇宙：污染既推产出也腐蚀机器 -->
+      <template v-if="snap.abyss.active">
+        <dl class="stats">
+          <div class="stat">
+            <dt>污染对产出</dt>
+            <dd>{{ snap.arcane.pollutionFactor }}</dd>
+          </div>
+          <div class="stat">
+            <dt>抑制器抵消</dt>
+            <dd>{{ snap.abyss.suppression }} 点</dd>
+          </div>
+          <div class="stat">
+            <dt>腐蚀速率</dt>
+            <dd :class="{ danger: snap.abyss.effective !== '0' }">
+              {{ snap.abyss.corrosionPerMinute }}（每台）
+            </dd>
+          </div>
+        </dl>
+        <p class="muted small" style="margin: 6px 0 0">{{ snap.abyss.note }}</p>
+      </template>
     </div>
 
     <!-- ── 开发者模式 ─────────────────────────────────────────── -->
