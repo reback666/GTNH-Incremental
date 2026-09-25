@@ -397,12 +397,14 @@ h1 .small {
 .vein-btn {
   position: relative;
   width: 100%;
-  min-height: 140px;
+  min-height: 188px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  /* 留出原版光晕外扩的空间（光晕本身比图标大 2.25 倍） */
+  padding: 34px 0 18px;
   overflow: hidden;
   background: radial-gradient(circle at 50% 65%, #232b35 0%, #171c23 70%);
   border-color: #3a4553;
@@ -417,29 +419,97 @@ h1 .small {
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
 }
 
-.vein-img {
-  image-rendering: pixelated;
+/*
+  矿脉贴图：竖排帧条带 + steps() 逐帧切换，和 Minecraft 动画贴图同一套机制。
+  帧数与每帧时长来自原版贴图的 mcmeta，见 scripts/build-veins.py。
+*/
+.vein-stage {
+  position: relative;
   display: block;
+  width: 112px;
+  height: 112px;
+}
+
+.vein-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.vein-frames {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: calc(100% * var(--frames, 1));
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  animation: vein-frames var(--loop, 1s) steps(var(--frames, 1), end) infinite;
+}
+
+@keyframes vein-frames {
+  to {
+    transform: translateY(-100%);
+  }
 }
 
 /*
-  彩虹特殊渲染：GTNH 里无尽这类材料会叠一层 RainbowOverlay，色相随时间循环。
-  这里用 hue-rotate 做同样的事 —— 色相每 4 秒转一圈。
+  原版的特殊渲染：
+  无尽（InfinityRenderer）在图标外扩 10/16 的方形区域铺一层 #141414 的 HALO；
+  宇宙中子素（CosmicNeutroniumRenderer）用 8 帧的 HALO_FUZZY，白色 30% 透明。
 */
-@keyframes rainbow-cycle {
-  from {
-    filter: hue-rotate(0deg);
-  }
-  to {
-    filter: hue-rotate(360deg);
-  }
+.vein-halo {
+  position: absolute;
+  pointer-events: none;
+  image-rendering: pixelated;
 }
 
-.vein-img.rainbow {
-  animation: rainbow-cycle 4s linear infinite;
+.vein-halo-square {
+  left: -62.5%;
+  top: -62.5%;
+  width: 225%;
+  height: 225%;
+  background-color: #141414;
+  -webkit-mask-image: var(--icon);
+  mask-image: var(--icon);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+.vein-halo-fuzzy {
+  left: -62.5%;
+  top: -62.5%;
+  width: 231%;
+  height: 231%;
+  overflow: hidden;
+}
+
+.vein-halo-strip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: calc(100% * var(--frames, 1));
+  background-color: rgba(255, 255, 255, 0.302);
+  -webkit-mask-image: var(--icon);
+  mask-image: var(--icon);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  animation: vein-frames var(--loop, 1s) steps(var(--frames, 1), end) infinite;
+}
+
+/* 无尽那层 60% 透明度的脉动重影，缩放与偏移由脚本逐帧算出来 */
+.vein-echo {
+  position: absolute;
+  inset: 0;
+  opacity: 0.6;
+  pointer-events: none;
+  transform-origin: 0 0;
 }
 
 .vein-label {
+  position: relative;
   font-size: 13px;
   color: var(--muted);
   letter-spacing: 0.12em;

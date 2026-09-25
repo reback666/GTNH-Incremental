@@ -1,12 +1,66 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useGameStore } from '../game/store';
 import SpriteIcon from './SpriteIcon.vue';
-import { veinIconUrl } from '../game/veins';
-import { computed } from 'vue';
+import {
+  haloIconFrames,
+  haloIconLoopMs,
+  haloIconUrl,
+  veinIconUrl,
+  veinLoopMs,
+  veinTierInfo,
+} from '../game/veins';
 
 const store = useGameStore();
+const info = computed(() => veinTierInfo(store.snap.currentVein.tier));
 const veinUrl = computed(() => veinIconUrl(store.snap.currentVein.tier));
+
+// 贴图是竖排的帧条带，用 steps() 逐帧切换，和 Minecraft 的动画贴图一个机制
+const spriteStyle = computed(() => ({
+  '--frames': String(info.value?.frames ?? 1),
+  '--loop': `${info.value ? veinLoopMs(info.value) : 1000}ms`,
+  backgroundImage: veinUrl.value ? `url(${veinUrl.value})` : 'none',
+}));
+
+const haloStyle = computed(() => ({ '--icon': `url(${haloIconUrl('halo')})` }));
+const fuzzyStyle = computed(() => ({
+  '--icon': `url(${haloIconUrl('haloFuzzy')})`,
+  '--frames': String(haloIconFrames('haloFuzzy')),
+  '--loop': `${haloIconLoopMs('haloFuzzy')}ms`,
+}));
+
+const echoEl = ref<HTMLElement | null>(null);
+let pulseFrame = 0;
+
+function gaussian(): number {
+  const u = Math.random() || Number.EPSILON;
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
+}
+
+// 原版 InfinityRenderer.renderPulse：缩放 = 高斯随机 × 0.15 + 0.95，偏移取 (1 - 缩放) / 2
+function pulse() {
+  const el = echoEl.value;
+  if (el) {
+    const scale = gaussian() * 0.15 + 0.95;
+    const offset = (1 - scale) / 2;
+    el.style.transform = `translate(${offset * 100}%, ${offset * 100}%) scale(${scale})`;
+  }
+  pulseFrame = requestAnimationFrame(pulse);
+}
+
+watch(
+  () => info.value?.fx,
+  (fx) => {
+    if (pulseFrame) cancelAnimationFrame(pulseFrame);
+    pulseFrame = 0;
+    if (fx === 'halo') pulseFrame = requestAnimationFrame(pulse);
+  },
+  { immediate: true },
+);
+
+onBeforeUnmount(() => {
+  if (pulseFrame) cancelAnimationFrame(pulseFrame);
+});
 
 interface Burst {
   id: number;
@@ -94,19 +148,28 @@ function mine(event: MouseEvent) {
 
     <button class="vein-btn" type="button" @click="mine">
       <span class="vein-sprite" :class="{ shake: shaking, flash: flashing }">
-        <img
-          v-if="veinUrl"
-          class="vein-img"
-          :class="{ rainbow: store.snap.currentVein.rainbow }"
-          :src="veinUrl"
-          width="112"
-          height="112"
-          alt=""
-        />
-        <SpriteIcon v-else kind="vein" :size="112" />
+        <span class="vein-stage">
+          <span
+            v-if="info?.fx === 'fuzzy'"
+            class="vein-halo vein-halo-fuzzy"
+            :style="fuzzyStyle"
+          >
+            <span class="vein-halo-strip" />
+          </span>
+          <span v-if="info?.fx === 'halo'" class="vein-halo vein-halo-square" :style="haloStyle" />
+          <span class="vein-clip">
+            <span v-if="veinUrl" class="vein-frames" :style="spriteStyle" />
+            <SpriteIcon v-else kind="vein" :size="112" />
+          </span>
+          <span v-if="info?.fx === 'halo'" ref="echoEl" class="vein-echo">
+            <span class="vein-clip">
+              <span class="vein-frames" :style="spriteStyle" />
+            </span>
+          </span>
+        </span>
       </span>
       <span class="vein-label">
-        {{ store.snap.currentVein.name }} · {{ store.snap.currentVein.material }} —— 点击挖矿
+        {{ store.snap.currentVein.name }} · {{ info?.material }} —— 点击挖矿
       </span>
 
       <span
