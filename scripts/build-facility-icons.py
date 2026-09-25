@@ -24,7 +24,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from gtnh_tiers import paint_tier_bar, tint_casing
+from gtnh_tiers import tint_casing
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "src" / "assets" / "machines"
@@ -141,7 +141,6 @@ def main() -> None:
             for prefix, face in faces.items():
                 icon = casing.copy()
                 icon.alpha_composite(face)
-                icon = paint_tier_bar(icon, tier)
                 icon = icon.resize((32, 32), Image.NEAREST)
                 icon.save(OUT_DIR / f"{prefix}-{tier}.png")
             print(f"{voltage}: b-{tier} 存电装置 / p-{tier} 净化器 ← 机壳 MACHINE_{voltage}_SIDE")
@@ -149,7 +148,6 @@ def main() -> None:
                 for prefix, face in research_faces.items():
                     icon = casing.copy()
                     icon.alpha_composite(face)
-                    icon = paint_tier_bar(icon, tier)
                     icon = icon.resize((32, 32), Image.NEAREST)
                     icon.save(OUT_DIR / f"{prefix}-{tier}.png")
                 print(f"{voltage}: x-{tier} 计算机 / r-{tier} 研究站 ← GT 面片 + 机壳")

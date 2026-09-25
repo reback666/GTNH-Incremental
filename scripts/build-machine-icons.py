@@ -24,7 +24,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from gtnh_tiers import paint_tier_bar, tint_casing
+from gtnh_tiers import tint_casing
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "src" / "assets" / "machines"
@@ -75,7 +75,6 @@ def build(archive: zipfile.ZipFile, model_id: str, tier: int, face_path: str) ->
     )
     icon = tint_casing(casing, tier)
     icon.alpha_composite(face)
-    icon = paint_tier_bar(icon, tier)
     icon.resize((32, 32), Image.NEAREST).save(OUT_DIR / f"{model_id}.png")
 
 
