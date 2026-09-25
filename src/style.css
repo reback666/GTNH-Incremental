@@ -515,43 +515,32 @@ h1 .small {
   letter-spacing: 0.12em;
 }
 
-@keyframes vein-shake {
+/* 镐子敲上去：矿脉轻轻往下一沉再回弹，不做整体提亮（原来那版闪一下太扎眼） */
+@keyframes vein-settle {
   0%,
   100% {
     transform: none;
   }
-  25% {
-    transform: translate(-3px, 2px) rotate(-1deg);
+  30% {
+    transform: translateY(1.5px) scale(0.994);
   }
-  50% {
-    transform: translate(3px, -2px) rotate(1deg);
-  }
-  75% {
-    transform: translate(-2px, -2px) rotate(-0.5deg);
+  65% {
+    transform: translateY(-1px) scale(1.004);
   }
 }
 
 .vein-sprite.shake {
-  animation: vein-shake 0.26s ease-in-out;
-}
-
-/* 镐子敲上去的一瞬间：整体提亮 */
-.vein-sprite {
-  transition: filter 0.13s ease-out;
-}
-
-.vein-sprite.flash {
-  filter: brightness(1.9) saturate(1.3) drop-shadow(0 0 12px rgba(90, 210, 192, 0.55));
+  animation: vein-settle 0.34s ease-out;
 }
 
 /* 开采碎屑：朝四周飞散并旋转 */
 @keyframes chip-fly {
   0% {
-    opacity: 1;
+    opacity: 0.85;
     transform: translate(-50%, -50%) rotate(0deg) scale(1);
   }
   60% {
-    opacity: 0.9;
+    opacity: 0.7;
   }
   100% {
     opacity: 0;
@@ -564,17 +553,21 @@ h1 .small {
   position: absolute;
   pointer-events: none;
   border-radius: 1px;
-  animation: chip-fly 0.62s cubic-bezier(0.2, 0.7, 0.4, 1) forwards;
+  animation: chip-fly 0.72s cubic-bezier(0.25, 0.7, 0.4, 1) forwards;
 }
 
 @keyframes spark-up {
   0% {
-    opacity: 1;
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.9);
+  }
+  25% {
+    opacity: 0.9;
     transform: translate(-50%, 0) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -60px) scale(1.25);
+    transform: translate(-50%, -46px) scale(1.05);
   }
 }
 
@@ -583,29 +576,40 @@ h1 .small {
   pointer-events: none;
   font-weight: 700;
   color: #6ee7a8;
-  text-shadow: 0 0 8px rgba(110, 231, 168, 0.7);
-  animation: spark-up 0.9s ease-out forwards;
+  text-shadow: 0 0 6px rgba(110, 231, 168, 0.35);
+  animation: spark-up 1s ease-out forwards;
 }
 
+/* 敲击处散开的一团柔光：没有硬边、亮度也低，只在原地轻轻晕开 */
 @keyframes ripple-out {
   0% {
-    opacity: 0.6;
-    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  30% {
+    opacity: 0.55;
+    transform: translate(-50%, -50%) scale(0.9);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(2.6);
+    transform: translate(-50%, -50%) scale(1.3);
   }
 }
 
 .ripple {
   position: absolute;
-  width: 90px;
-  height: 90px;
+  width: 150px;
+  height: 150px;
   pointer-events: none;
   border-radius: 50%;
-  border: 2px solid var(--accent);
-  animation: ripple-out 0.55s ease-out forwards;
+  background: radial-gradient(
+    circle,
+    rgba(150, 226, 205, 0.32) 0%,
+    rgba(150, 226, 205, 0.14) 45%,
+    rgba(150, 226, 205, 0) 72%
+  );
+  filter: blur(7px);
+  animation: ripple-out 0.78s ease-out forwards;
 }
 
 /* ── 三个机器大类：点谁展开谁 ─────────────────────────────── */

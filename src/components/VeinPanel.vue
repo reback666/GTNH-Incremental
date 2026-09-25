@@ -83,7 +83,6 @@ const sparks = ref<Burst[]>([]);
 const ripples = ref<Burst[]>([]);
 const chips = ref<Chip[]>([]);
 const shaking = ref(false);
-const flashing = ref(false);
 let seq = 0;
 
 function mine(event: MouseEvent) {
@@ -100,14 +99,14 @@ function mine(event: MouseEvent) {
   // 开采碎屑：六片朝四周飞散
   const fresh: Chip[] = Array.from({ length: 6 }, (_, index) => {
     const angle = (Math.PI * 2 * index) / 6 + Math.random() * 0.6;
-    const distance = 26 + Math.random() * 30;
+    const distance = 20 + Math.random() * 22;
     return {
       id: seq++,
       x,
       y,
       dx: Math.cos(angle) * distance,
-      dy: Math.sin(angle) * distance - 12,
-      rot: (Math.random() - 0.5) * 540,
+      dy: Math.sin(angle) * distance - 9,
+      rot: (Math.random() - 0.5) * 300,
       size: 3 + Math.round(Math.random() * 3),
       color: CHIP_COLORS[index % CHIP_COLORS.length] as string,
     };
@@ -117,26 +116,21 @@ function mine(event: MouseEvent) {
 
   setTimeout(() => {
     sparks.value = sparks.value.filter((s) => s.id !== point.id);
-  }, 900);
+  }, 1050);
   setTimeout(() => {
     ripples.value = ripples.value.filter((s) => s.id !== point.id);
-  }, 560);
+  }, 820);
   setTimeout(() => {
     chips.value = chips.value.filter((chip) => !chipIds.has(chip.id));
-  }, 700);
+  }, 800);
 
-  // 重新触发抖动与打击闪光：先摘掉类再挂上
+  // 重新触发轻微的下沉回弹：先摘掉类再挂上
   shaking.value = false;
-  flashing.value = false;
   requestAnimationFrame(() => {
     shaking.value = true;
-    flashing.value = true;
     setTimeout(() => {
       shaking.value = false;
-    }, 280);
-    setTimeout(() => {
-      flashing.value = false;
-    }, 130);
+    }, 340);
   });
 }
 </script>
@@ -147,7 +141,7 @@ function mine(event: MouseEvent) {
     <p class="muted small">开局只有一座 T0 矿脉。先手挖攒矿，造出机器之后它就会自己转起来。</p>
 
     <button class="vein-btn" type="button" @click="mine">
-      <span class="vein-sprite" :class="{ shake: shaking, flash: flashing }">
+      <span class="vein-sprite" :class="{ shake: shaking }">
         <span class="vein-stage">
           <span
             v-if="info?.fx === 'fuzzy'"
