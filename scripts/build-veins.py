@@ -254,8 +254,8 @@ def build_destroy_strip() -> dict:
         strip.paste(stage, (0, index * height))
     # 文件名要和 vein-meta 里的键一致（界面用它找图），所以叫 destroy.png
     strip.save(FX_DIR / "destroy.png")
-    # 原版是按住不放逐渐裂开，这里一次点击放完整段，60ms 一级（共 0.6 秒）
-    frame_ms = 60
+    # 原版是按住不放逐渐裂开，这里一次点击放完整段，30ms 一级（共 0.3 秒）
+    frame_ms = 30
     print(f"destroy: {len(stages)} 级裂纹，每级 {frame_ms}ms，来源 原版 destroy_stage_0..9")
     return {
         "frames": len(stages),

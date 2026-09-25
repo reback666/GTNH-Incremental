@@ -129,16 +129,16 @@ function mine(event: MouseEvent) {
 
   setTimeout(() => {
     sparks.value = sparks.value.filter((s) => s.id !== point.id);
-  }, 1050);
+  }, 650);
   setTimeout(() => {
     ripples.value = ripples.value.filter((s) => s.id !== point.id);
-  }, 820);
+  }, 500);
   setTimeout(() => {
     hits.value = hits.value.filter((s) => s.id !== point.id);
-  }, 320);
+  }, 180);
   setTimeout(() => {
     chips.value = chips.value.filter((chip) => !chipIds.has(chip.id));
-  }, 800);
+  }, 500);
 
   // 重新触发轻微的下沉回弹：先摘掉类再挂上
   shaking.value = false;
@@ -146,7 +146,7 @@ function mine(event: MouseEvent) {
     shaking.value = true;
     setTimeout(() => {
       shaking.value = false;
-    }, 340);
+    }, 220);
   });
 }
 </script>

@@ -575,7 +575,7 @@ h1 .small {
 }
 
 .vein-sprite.shake {
-  animation: vein-settle 0.34s ease-out;
+  animation: vein-settle 0.2s ease-out;
 }
 
 /* 开采碎屑：朝四周飞散并旋转 */
@@ -601,7 +601,7 @@ h1 .small {
   position: absolute;
   pointer-events: none;
   border-radius: 1px;
-  animation: chip-fly 0.72s cubic-bezier(0.25, 0.7, 0.4, 1) forwards;
+  animation: chip-fly 0.42s cubic-bezier(0.25, 0.7, 0.4, 1) forwards;
 }
 
 @keyframes spark-up {
@@ -625,7 +625,7 @@ h1 .small {
   font-weight: 700;
   color: #6ee7a8;
   text-shadow: 0 0 6px rgba(110, 231, 168, 0.35);
-  animation: spark-up 1s ease-out forwards;
+  animation: spark-up 0.6s ease-out forwards;
 }
 
 /* 敲击处散开的一团柔光：没有硬边、亮度也低，只在原地轻轻晕开 */
@@ -657,7 +657,7 @@ h1 .small {
     rgba(150, 226, 205, 0) 72%
   );
   filter: blur(7px);
-  animation: ripple-out 0.78s ease-out forwards;
+  animation: ripple-out 0.42s ease-out forwards;
 }
 
 /* 镐子的落点：一个很小的亮点加四条短星芒，只亮落点附近，不做整幅提亮 */
@@ -693,7 +693,7 @@ h1 .small {
     rgba(150, 226, 205, 0) 72%
   );
   filter: blur(1.5px);
-  animation: hit-core 0.24s ease-out forwards;
+  animation: hit-core 0.14s ease-out forwards;
 }
 
 @keyframes hit-ray {
@@ -720,7 +720,7 @@ h1 .small {
   border-radius: 1px;
   background: linear-gradient(to top, rgba(210, 255, 240, 0.05), rgba(210, 255, 240, 0.8));
   transform-origin: 50% 100%;
-  animation: hit-ray 0.28s ease-out forwards;
+  animation: hit-ray 0.16s ease-out forwards;
 }
 
 /*
@@ -746,7 +746,7 @@ h1 .small {
   pointer-events: none;
   /* 里面是 10 帧竖排的条带，不裁的话会看到一整条 400px 的长方形 */
   overflow: hidden;
-  animation: crack-fade 0.22s linear 0.62s forwards;
+  animation: crack-fade 0.12s linear 0.31s forwards;
 }
 
 .crack-strip {

@@ -29,7 +29,7 @@ describe('矿脉贴图与特殊渲染', () => {
     expect(VEIN_FX_META.haloFuzzy?.frameDurationsMs).toHaveLength(8);
     // 挖矿裂纹用原版 10 级破坏贴图
     expect(VEIN_FX_META.destroy?.frames).toBe(10);
-    expect(fxIconLoopMs('destroy')).toBe(600);
+    expect(fxIconLoopMs('destroy')).toBe(300);
   });
 
   it('只有原版带特殊渲染的材料挂了特效', () => {
