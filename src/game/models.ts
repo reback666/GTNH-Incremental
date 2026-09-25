@@ -23,7 +23,7 @@ export interface MachineModel {
   id: string;
   name: string;
   category: MachineCategory;
-  // 单方块还是多方块。多方块产出高、效率高，但不能按需发电（见 traits）
+  // 单方块还是多方块。多方块产出与效率更高，成本系数也更高
   block: BlockKind;
   // 适用的电压等级（1 = ULV … 14 = MAX）
   tier: number;
@@ -55,30 +55,30 @@ const GENERATORS: MachineModel[] = [
   { id: 'g-hv-steam', name: '涡轮蒸汽轮机', category: 'generator', block: 'single', tier: 4, fuelEfficiency: '0.66', outputFactor: '1', costFactor: '0.85' },
   { id: 'g-hv-comb', name: '涡轮内燃发电机', category: 'generator', block: 'single', tier: 4, fuelEfficiency: '0.85', outputFactor: '1', costFactor: '1.15' },
   { id: 'g-hv-gas', name: '涡轮燃气轮机', category: 'generator', block: 'single', tier: 4, fuelEfficiency: '0.85', outputFactor: '1', costFactor: '1.15' },
-  { id: 'g-hv-mb-steam', name: '大型蒸汽涡轮', category: 'generator', block: 'multiblock', tier: 4, fuelEfficiency: '0.95', outputFactor: '4', costFactor: '4', traits: ['不按需发电', '需要维护'] },
+  { id: 'g-hv-mb-steam', name: '大型蒸汽涡轮', category: 'generator', block: 'multiblock', tier: 4, fuelEfficiency: '0.95', outputFactor: '4', costFactor: '4' },
 
   { id: 'g-ev-comb', name: '涡轮增压内燃发电机', category: 'generator', block: 'single', tier: 5, fuelEfficiency: '0.65', outputFactor: '1', costFactor: '1' },
   { id: 'g-ev-gas', name: '涡轮燃气轮机 II', category: 'generator', block: 'single', tier: 5, fuelEfficiency: '0.60', outputFactor: '1', costFactor: '1' },
   { id: 'g-ev-plasma', name: '等离子发电机 MK-I', category: 'generator', block: 'single', tier: 5, fuelEfficiency: '0.50', outputFactor: '1.2', costFactor: '1.3' },
-  { id: 'g-ev-mb-gas', name: '大型燃气涡轮', category: 'generator', block: 'multiblock', tier: 5, fuelEfficiency: '0.85', outputFactor: '4', costFactor: '4', traits: ['不按需发电', '需要维护'] },
+  { id: 'g-ev-mb-gas', name: '大型燃气涡轮', category: 'generator', block: 'multiblock', tier: 5, fuelEfficiency: '0.85', outputFactor: '4', costFactor: '4' },
 
   { id: 'g-iv-comb', name: '终极化学能释放者', category: 'generator', block: 'single', tier: 6, fuelEfficiency: '0.50', outputFactor: '1', costFactor: '0.9' },
   { id: 'g-iv-gas', name: '涡轮燃气轮机 III', category: 'generator', block: 'single', tier: 6, fuelEfficiency: '0.50', outputFactor: '1', costFactor: '0.9' },
   { id: 'g-iv-plasma', name: '等离子发电机 MK-II', category: 'generator', block: 'single', tier: 6, fuelEfficiency: '0.60', outputFactor: '1.2', costFactor: '1.3' },
-  { id: 'g-iv-mb-steam', name: '特大高压蒸汽涡轮', category: 'generator', block: 'multiblock', tier: 6, fuelEfficiency: '0.90', outputFactor: '4.5', costFactor: '4.5', traits: ['不按需发电', '需要维护'] },
+  { id: 'g-iv-mb-steam', name: '特大高压蒸汽涡轮', category: 'generator', block: 'multiblock', tier: 6, fuelEfficiency: '0.90', outputFactor: '4.5', costFactor: '4.5' },
 
-  { id: 'g-luv-mb-gas', name: '特大燃气涡轮', category: 'generator', block: 'multiblock', tier: 7, fuelEfficiency: '0.90', outputFactor: '4.5', costFactor: '4.5', traits: ['不按需发电', '需要维护'] },
-  { id: 'g-zpm-mb-plasma', name: '大型等离子涡轮', category: 'generator', block: 'multiblock', tier: 8, fuelEfficiency: '0.95', outputFactor: '5', costFactor: '5', traits: ['不按需发电', '需要维护'] },
-  { id: 'g-uv-mb-plasma', name: '特大等离子涡轮', category: 'generator', block: 'multiblock', tier: 9, fuelEfficiency: '0.95', outputFactor: '5.5', costFactor: '5.5', traits: ['不按需发电', '需要维护'] },
+  { id: 'g-luv-mb-gas', name: '特大燃气涡轮', category: 'generator', block: 'multiblock', tier: 7, fuelEfficiency: '0.90', outputFactor: '4.5', costFactor: '4.5' },
+  { id: 'g-zpm-mb-plasma', name: '大型等离子涡轮', category: 'generator', block: 'multiblock', tier: 8, fuelEfficiency: '0.95', outputFactor: '5', costFactor: '5' },
+  { id: 'g-uv-mb-plasma', name: '特大等离子涡轮', category: 'generator', block: 'multiblock', tier: 9, fuelEfficiency: '0.95', outputFactor: '5.5', costFactor: '5.5' },
 
   // GTNH 的单方块发电机只做到 UV，UHV 往后的电力全靠多方块。
   // 这四台照 GTNH 后期的多方块机器取（硅岩反应堆来自 goodgenerator，
   // 衰变 / 湮灭 / 黑洞发电机来自 tectech），数值延续上面的多方块阶梯往上走。
-  { id: 'g-uhv-mb-naquadah', name: '大型硅岩反应堆', category: 'generator', block: 'multiblock', tier: 10, fuelEfficiency: '0.96', outputFactor: '6.2', costFactor: '6.2', traits: ['不按需发电', '需要维护'] },
-  { id: 'g-uev-mb-decay', name: '衰变发电机', category: 'generator', block: 'multiblock', tier: 11, fuelEfficiency: '0.97', outputFactor: '6.5', costFactor: '6.5', traits: ['不按需发电', '需要维护'] },
-  { id: 'g-uiv-mb-dyson', name: '戴森云地面单元', category: 'generator', block: 'multiblock', tier: 12, fuelEfficiency: '0.99', outputFactor: '6.8', costFactor: '6.8', traits: ['不按需发电', '需要维护'] },
-  { id: 'g-uxv-mb-annihilation', name: '湮灭发电机', category: 'generator', block: 'multiblock', tier: 13, fuelEfficiency: '0.98', outputFactor: '7.4', costFactor: '7.4', traits: ['不按需发电', '需要维护'] },
-  { id: 'g-max-mb-blackhole', name: '黑洞发电机', category: 'generator', block: 'multiblock', tier: 14, fuelEfficiency: '0.99', outputFactor: '8', costFactor: '8', traits: ['不按需发电', '需要维护'] },
+  { id: 'g-uhv-mb-naquadah', name: '大型硅岩反应堆', category: 'generator', block: 'multiblock', tier: 10, fuelEfficiency: '0.96', outputFactor: '6.2', costFactor: '6.2' },
+  { id: 'g-uev-mb-decay', name: '衰变发电机', category: 'generator', block: 'multiblock', tier: 11, fuelEfficiency: '0.97', outputFactor: '6.5', costFactor: '6.5' },
+  { id: 'g-uiv-mb-dyson', name: '戴森云地面单元', category: 'generator', block: 'multiblock', tier: 12, fuelEfficiency: '0.99', outputFactor: '6.8', costFactor: '6.8' },
+  { id: 'g-uxv-mb-annihilation', name: '湮灭发电机', category: 'generator', block: 'multiblock', tier: 13, fuelEfficiency: '0.98', outputFactor: '7.4', costFactor: '7.4' },
+  { id: 'g-max-mb-blackhole', name: '黑洞发电机', category: 'generator', block: 'multiblock', tier: 14, fuelEfficiency: '0.99', outputFactor: '8', costFactor: '8' },
 ];
 
 // ── 采矿机 ──────────────────────────────────────────────────

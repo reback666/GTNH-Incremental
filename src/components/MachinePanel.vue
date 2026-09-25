@@ -147,9 +147,9 @@ function canBuy(model: MachineModelRow): boolean {
               @blur="hideTip"
             >
               <span class="model-label">{{ bar.model.name }}</span>
-              <span v-if="bar.model.block === 'multiblock'" class="badge mb" title="多方块：产出高，但不能按需发电、需要维护">多方块</span>
+              <span v-if="bar.model.block === 'multiblock'" class="badge mb" title="多方块：产出与效率更高，成本系数也更高">多方块</span>
               <span
-                v-for="trait in bar.model.traits.filter((t) => t !== '需要维护')"
+                v-for="trait in bar.model.traits"
                 :key="trait"
                 class="badge warn"
                 >{{ trait }}</span

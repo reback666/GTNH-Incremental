@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GameCore } from '../src/game/core';
 import { deserialize, serialize, type SaveData } from '../src/game/save';
-import { modelById, modelsOf } from '../src/game/models';
+import { MACHINE_MODELS, modelById, modelsOf } from '../src/game/models';
 import { dec } from '../src/numeric/decimal';
 import { MAX_TIER, MIN_TIER, VOLTAGE_TIERS } from '../src/numeric/voltage';
 
@@ -20,7 +20,13 @@ describe('游戏核心：ULV → LV 完整循环', () => {
     ]);
     const multiblocks = modelsOf('generator').filter((model) => model.block === 'multiblock');
     expect(multiblocks.length).toBeGreaterThan(0);
-    expect(multiblocks[0]!.traits).toContain('不按需发电');
+    expect(multiblocks[0]!.block).toBe('multiblock');
+
+    // 多方块现在没有任何缺点机制，界面上也不该再挂着「不按需发电 / 需要维护」这种假标注
+    const misleading = MACHINE_MODELS.filter((model) =>
+      (model.traits ?? []).some((trait) => trait === '不按需发电' || trait === '需要维护'),
+    );
+    expect(misleading.map((model) => model.id)).toEqual([]);
   });
 
   it('每一级电压都有发电机机型，且高档机型的出力倍率随等级不减', () => {
