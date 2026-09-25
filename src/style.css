@@ -182,6 +182,9 @@ button.big {
   border-bottom: 0;
 }
 
+/* 数量与合计两列都是右对齐的数字，表头必须跟着右对齐，否则文字会跑到列的另一端 */
+.detail-table th:nth-child(3),
+.detail-table th:nth-child(4),
 .detail-table .num-cell {
   text-align: right;
   font-variant-numeric: tabular-nums;
