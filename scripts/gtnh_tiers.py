@@ -4,10 +4,11 @@ GT 的机壳贴图（`iconsets/MACHINE_<电压>_SIDE.png`）本身是**灰度**�
 游戏里由 GT 在运行时按电压染色。
 本项目的图标是离线合成的，必须自己补上这一步，否则各等级只差亮度、分不清。
 
-注意力度：GTNH 里的机器本体其实是**深蓝灰金属**（wiki 上真实机器渲染图的主色是
-48,48,64 / 64,64,80 / 80,80,96），鲜艳的等级色主要出现在电缆、电路上。
-所以这里不是整块乘成饱和色，而是「金属底 + 等级色调」的淡染：
-每个通道至少保留 FLOOR 的原始亮度，剩下部分才按等级色偏移。
+注意力度：用户从游戏里截的图显示，GTNH 这些机器**本体几乎是黑色/深灰**
+（有效像素多为 32,32,32 / 20,20,20），等级颜色只出现在很小的部位上
+（LuV 有粉色 200,188,188、ZPM 有亮灰 140,140,140）。
+所以机身只做很轻的染色（TINT_STRENGTH），保留 GT 的深色金属观感；
+等级的可辨认度靠图标下缘那条等级色带（TIER_BAR_HEIGHT）来提供。
 
 配色取自 GTNH 中文 wiki「电力」页面里按等级上色的表（与 GT 自己的能量仓口贴图一致：
 MV 橙、HV 金），MAX 是彩虹。
@@ -18,8 +19,11 @@ from __future__ import annotations
 from PIL import Image
 
 # 淡染力度：0 = 完全保留金属灰，1 = 完全按等级色乘。
-# 取 0.45 是照着「机器是金属，等级色只是偏向」的实机观感定的。
-TINT_STRENGTH = 0.45
+# 取 0.2 是照着实机那种「黑机身、只透出一点色相」的观感定的。
+TINT_STRENGTH = 0.2
+
+# 图标下缘画一条等级色带，方便一眼分清等级
+TIER_BAR_HEIGHT = 3
 
 # tier（1 = ULV）→ 电压主色
 TIER_COLORS: dict[int, tuple[int, int, int]] = {
@@ -87,3 +91,19 @@ def tint_casing(casing: Image.Image, tier: int) -> Image.Image:
             else:
                 tinted.putpixel((x, y), _tint(pixel, color))
     return tinted
+
+
+def paint_tier_bar(icon: Image.Image, tier: int) -> Image.Image:
+    """在图标下缘画一条该等级的色带（MAX 用彩虹）。"""
+    painted = icon.copy()
+    width, height = painted.size
+    color = tier_color(tier)
+    for x in range(width):
+        if color is None:
+            index = min(len(MAX_RAINBOW) - 1, x * len(MAX_RAINBOW) // max(1, width))
+            shade = MAX_RAINBOW[index]
+        else:
+            shade = color
+        for y in range(height - TIER_BAR_HEIGHT, height):
+            painted.putpixel((x, y), (shade[0], shade[1], shade[2], 255))
+    return painted
