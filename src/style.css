@@ -1657,10 +1657,9 @@ h1 .small {
 /* 每个等级一条横杠：等级名 → 机器图标横排 → 数量 → 单价 → 建造按钮 */
 .tier-bar {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 7px 0;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
   border-top: 1px solid var(--line);
 }
 
@@ -1668,13 +1667,40 @@ h1 .small {
   border-top: 0;
 }
 
+/* 一个机型两行：第一行是机器本身与购买，第二行是超频 / 故障与出售 */
+.tier-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tier-line.second {
+  justify-content: flex-end;
+}
+
+/* 买 / 卖按钮组：两个数量按钮 + 一个「买」「卖」字标签 */
+.trade {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.trade .trade-label {
+  font-size: 12px;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+}
+
+.tier-line.second .trade .trade-label {
+  color: var(--muted);
+}
+
 /* 出售：退一半的价，配色压低一点，别和建造按钮抢注意力 */
 .sell-btn {
-  min-height: 32px;
-  padding: 0 8px;
   border-color: var(--line);
   color: var(--muted);
-  font-size: 12px;
 }
 
 .sell-btn:not(:disabled):hover {

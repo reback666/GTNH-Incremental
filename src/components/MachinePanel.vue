@@ -209,53 +209,67 @@ function canBuy(model: MachineModelRow): boolean {
 
           <!-- 一行一个机型：等级 → 机型名 → 机器图标横排 → 数量 → 单价 → 建造按钮 -->
           <div v-for="bar in bars" :key="bar.model.id" class="tier-bar">
-            <span class="tier-name">{{ bar.group.voltage }}</span>
+            <div class="tier-line">
+              <span class="tier-name">{{ bar.group.voltage }}</span>
 
-            <span
-              class="model-name"
-              tabindex="0"
-              @mouseenter="showTip($event, bar.model)"
-              @mouseleave="hideTip"
-              @focus="showTip($event, bar.model)"
-              @blur="hideTip"
-            >
-              <span class="model-label">{{ bar.model.name }}</span>
-              <span v-if="bar.model.block === 'multiblock'" class="badge mb" title="多方块：产出与效率更高，成本系数也更高">多方块</span>
               <span
-                v-for="trait in bar.model.traits"
-                :key="trait"
-                class="badge warn"
-                >{{ trait }}</span
+                class="model-name"
+                tabindex="0"
+                @mouseenter="showTip($event, bar.model)"
+                @mouseleave="hideTip"
+                @focus="showTip($event, bar.model)"
+                @blur="hideTip"
               >
-              <span v-if="!bar.model.researched" class="badge warn" title="要先在研究里解锁这一级机型">需研究</span>
-              <span
-                v-if="bar.model.visPowered"
-                class="badge magic"
-                title="魔法机器：不耗电，改吃灵气；产出是同价电力机型的 2.5 倍"
-                >魔法</span
-              >
-              <span
-                v-else-if="bar.model.needsUniverse"
-                class="badge warn"
-                title="要先在转生时选上对应的平行宇宙"
-                >需{{ bar.model.needsUniverse }}</span
-              >
-            </span>
+                <span class="model-label">{{ bar.model.name }}</span>
+                <span v-if="bar.model.block === 'multiblock'" class="badge mb" title="多方块：产出与效率更高，成本系数也更高">多方块</span>
+                <span
+                  v-for="trait in bar.model.traits"
+                  :key="trait"
+                  class="badge warn"
+                  >{{ trait }}</span
+                >
+                <span v-if="!bar.model.researched" class="badge warn" title="要先在研究里解锁这一级机型">需研究</span>
+                <span
+                  v-if="bar.model.visPowered"
+                  class="badge magic"
+                  title="魔法机器：不耗电，改吃灵气；产出是同价电力机型的 2.5 倍"
+                  >魔法</span
+                >
+                <span
+                  v-else-if="bar.model.needsUniverse"
+                  class="badge warn"
+                  title="要先在转生时选上对应的平行宇宙"
+                  >需{{ bar.model.needsUniverse }}</span
+                >
+              </span>
 
-            <div class="tier-icons">
-              <MachineIcon
-                v-for="index in cells(bar.model.icons)"
-                :key="index"
-                :model-id="bar.model.id"
-                :kind="column.kind"
-                :size="20"
-                class="icon-pop"
-              />
-              <span v-if="bar.model.overflow > 0" class="icon-overflow">+{{ bar.model.overflow }}</span>
+              <div class="tier-icons">
+                <MachineIcon
+                  v-for="index in cells(bar.model.icons)"
+                  :key="index"
+                  :model-id="bar.model.id"
+                  :kind="column.kind"
+                  :size="20"
+                  class="icon-pop"
+                />
+                <span v-if="bar.model.overflow > 0" class="icon-overflow">+{{ bar.model.overflow }}</span>
+              </div>
+
+              <span class="count">×{{ bar.model.count }}</span>
+              <span class="price">
+                <template v-if="payWith === 'coin'">{{ bar.model.price }} {{ bar.group.unit }}</template>
+                <template v-else>{{ bar.model.orePrice }} {{ bar.group.oreLabel }}</template>
+              </span>
+
+              <span class="trade">
+                <button :disabled="!canBuy(bar.model)" @click="store.buy(bar.model.id, 1, payWith)">1x</button>
+                <button :disabled="!canBuy(bar.model)" @click="store.buy(bar.model.id, 10, payWith)">10x</button>
+                <span class="trade-label">买</span>
+              </span>
             </div>
 
-            <span class="count">×{{ bar.model.count }}</span>
-            <span v-if="bar.model.overclockable" class="overclock">
+            <div class="tier-line second">
+              <span v-if="bar.model.overclockable" class="overclock">
               <span class="oc-label">超频</span>
               <button
                 class="oc-btn"
@@ -274,35 +288,33 @@ function canBuy(model: MachineModelRow): boolean {
               >
                 +
               </button>
-            </span>
-            <span v-if="bar.model.faulty > 0" class="fault">
-              故障 {{ bar.model.faulty }} 台
-              <button title="修理这台机型的所有故障机器" @click="store.repair(bar.model.id)">
-                维护
-              </button>
-            </span>
-            <span class="price">
-              <template v-if="payWith === 'coin'">{{ bar.model.price }} {{ bar.group.unit }}</template>
-              <template v-else>{{ bar.model.orePrice }} {{ bar.group.oreLabel }}</template>
-            </span>
-            <button :disabled="!canBuy(bar.model)" @click="store.buy(bar.model.id, 1, payWith)">×1</button>
-            <button :disabled="!canBuy(bar.model)" @click="store.buy(bar.model.id, 10, payWith)">×10</button>
-            <button
-              class="sell-btn"
-              :disabled="bar.model.count === 0"
-              :title="`卖回一台拿回 ${bar.model.refund}（单价的 50%）；卖出后重新买回来的价钱也会跟着降`"
-              @click="store.sell(bar.model.id, 1, payWith)"
-            >
-              卖
-            </button>
-            <button
-              class="sell-btn"
-              :disabled="bar.model.count === 0"
-              title="一次卖 10 台"
-              @click="store.sell(bar.model.id, 10, payWith)"
-            >
-              卖10
-            </button>
+              </span>
+              <span v-if="bar.model.faulty > 0" class="fault">
+                故障 {{ bar.model.faulty }} 台
+                <button title="修理这台机型的所有故障机器" @click="store.repair(bar.model.id)">
+                  维护
+                </button>
+              </span>
+              <span class="trade">
+                <button
+                  class="sell-btn"
+                  :disabled="bar.model.count === 0"
+                  :title="`卖回一台拿回 ${bar.model.refund}（单价的 50%）；卖出后重新买回来的价钱也会跟着降`"
+                  @click="store.sell(bar.model.id, 1, payWith)"
+                >
+                  1x
+                </button>
+                <button
+                  class="sell-btn"
+                  :disabled="bar.model.count === 0"
+                  title="一次卖 10 台"
+                  @click="store.sell(bar.model.id, 10, payWith)"
+                >
+                  10x
+                </button>
+                <span class="trade-label">卖</span>
+              </span>
+            </div>
           </div>
         </div>
       </div>
