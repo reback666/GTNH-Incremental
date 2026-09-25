@@ -3,7 +3,10 @@ import { createPinia, setActivePinia } from 'pinia';
 import { dec } from '../src/numeric/decimal';
 import {
   blastBonusPerUpgrade,
+  blastBonus,
   blastChances,
+  blastChanceTier,
+  blastNextBonus,
   collectChances,
   collectMultiplier,
   pickaxeIconTier,
@@ -41,6 +44,26 @@ describe('镐子的三条升级线', () => {
     expect(blastBonusPerUpgrade(14).toSignificantDigits(8).toString()).toBe('105413500');
   });
 
+  it('连锁爆破的加值在机会产生时就定死，跟之后升到多高电压无关', () => {
+    // 前两次机会来自 ULV、第 3~4 次来自 LV、第 5~6 次来自 MV……
+    expect(blastChanceTier(0)).toBe(1);
+    expect(blastChanceTier(1)).toBe(1);
+    expect(blastChanceTier(2)).toBe(2);
+    expect(blastChanceTier(5)).toBe(3);
+    // 同一批机会，在 MV 时点、还是攒到 MAX 再点，加的完全一样
+    for (const used of [0, 1, 2, 3, 4, 5]) {
+      expect(blastNextBonus(3, used).toString()).toBe(blastNextBonus(14, used).toString());
+    }
+    expect(blastNextBonus(14, 4).toSignificantDigits(6).toString()).toBe('5.19615'); // MV 给的那两次
+    // 用满时，总和 = 每个电压那两次机会的加值逐批加起来
+    expect(blastBonus(3, 6).toString()).toBe('16.39230484541326376116467804903523420166');
+    let total = dec('0');
+    for (let t = 1; t <= 14; t += 1) {
+      total = total.plus(blastBonusPerUpgrade(t).times(2));
+    }
+    expect(blastBonus(14, 28).toString()).toBe(total.toString());
+  });
+
   it('连锁采集每级翻倍：0 级 ×1、7 级 ×128', () => {
     expect(collectMultiplier(0).toString()).toBe('1');
     expect(collectMultiplier(1).toString()).toBe('2');
@@ -48,16 +71,16 @@ describe('镐子的三条升级线', () => {
   });
 
   it('结算顺序：先加连锁爆破，再乘连锁采集', () => {
-    // 4 级：基础 1 + 4 次 × 16 = 65，再 × 4（采集 2 级）
+    // 4 级用掉 4 次爆破机会：ULV 两次 +1、LV 两次 +2 = +6；再 × 4（采集 2 级）
     const output = pickaxeOutputPerClick({ tier: 4, blastUsed: 4, collectLevel: 2 });
-    expect(output.toString()).toBe('260');
-    // 若先乘后加会得到 384，这里确认不是那个顺序
-    expect(output.toString()).not.toBe('384');
+    expect(output.toString()).toBe('28');
+    // 若先乘后加会得到 10，这里确认不是那个顺序
+    expect(output.toString()).not.toBe('10');
   });
 
   it('MAX 用满全部机会时的产出', () => {
     const output = pickaxeOutputPerClick({ tier: 14, blastUsed: 28, collectLevel: 7 });
-    expect(output.toString()).toBe('377801998464');
+    expect(output.toSignificantDigits(12).toString()).toBe('32374252589.1');
   });
 
   it('图标配色按各自进度取：没升是 ULV 色，满级是 MAX 的彩虹', () => {
@@ -121,13 +144,19 @@ describe('游戏核心里的镐子', () => {
     expect(core.canUpgradePickaxe('vajra')).toBe(false);
   });
 
-  it('连锁爆破的加值随当前电压变强，不用攒机会', () => {
+  it('连锁爆破已经用掉的机会不会因为电压变高而增值', () => {
     const core = new GameCore();
     core.maxTier = 4;
-    core.upgradePickaxe('blast');
-    expect(core.pickaxeOutput().toString()).toBe('17'); // 1 + 16
+    core.upgradePickaxe('blast'); // 第 1 次机会来自 ULV，加值 +1
+    expect(core.pickaxeOutput().toString()).toBe('2');
     core.maxTier = 6;
-    expect(core.pickaxeOutput().toString()).toBe('217'); // 1 + 216
+    expect(core.pickaxeOutput().toString()).toBe('2'); // 还是 +1，没跟着电压涨
+    // 第 2 次机会也来自 ULV，还是 +1
+    core.upgradePickaxe('blast');
+    expect(core.pickaxeOutput().toString()).toBe('3');
+    // 第 3 次机会来自 LV，才按 LV 算：+2
+    core.upgradePickaxe('blast');
+    expect(core.pickaxeOutput().toString()).toBe('5');
   });
 
   it('转生之后镐子回到开局状态', () => {

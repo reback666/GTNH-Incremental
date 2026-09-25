@@ -39,16 +39,35 @@ export function blastChances(maxTier: number): number {
   return maxTier * BLAST_CHANCES_PER_TIER;
 }
 
-// 连锁爆破每次机会的加值：n^(n/2)
+// 连锁爆破每次机会的加值：n^(n/2)，n 是这次机会产生时的电压等级
 export function blastBonusPerUpgrade(tier: number): Decimal {
   assertTier(tier);
   return powFraction(decInt(tier, 'tier'), tier, 2);
 }
 
-// 连锁爆破的总加值 = 已用机会数 × 当前等级的加值
+// 第 index 次机会（从 0 数）是哪一级电压给的：每个电压给 2 次，所以 0/1 来自 ULV、2/3 来自 LV……
+export function blastChanceTier(index: number): number {
+  return Math.floor(index / BLAST_CHANCES_PER_TIER) + 1;
+}
+
+// 连锁爆破的总加值：把已用掉的机会按「产生时的电压」逐批加上去。
+// 加值在机会产生的那一刻就定死了，后来升到多高电压都不会变 ——
+// 所以攒到 MAX 再一口气点完，拿到的和逐级点掉完全一样。
 export function blastBonus(tier: number, used: number): Decimal {
-  if (used <= 0) return dec('0');
-  return blastBonusPerUpgrade(tier).times(used);
+  let sum = dec('0');
+  let remaining = Math.max(0, Math.floor(used));
+  for (let t = 1; t <= tier && remaining > 0; t += 1) {
+    const take = Math.min(remaining, BLAST_CHANCES_PER_TIER);
+    sum = sum.plus(blastBonusPerUpgrade(t).times(take));
+    remaining -= take;
+  }
+  return sum;
+}
+
+// 下一次升级（第 used+1 次机会）会加多少
+export function blastNextBonus(tier: number, used: number): Decimal {
+  const index = Math.max(0, Math.floor(used));
+  return blastBonusPerUpgrade(Math.min(tier, blastChanceTier(index)));
 }
 
 export function collectMultiplier(level: number): Decimal {

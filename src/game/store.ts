@@ -778,7 +778,7 @@ function pickaxeStats(core: GameCore): PickaxeStats {
     {
       id: 'blast',
       name: '连锁爆破',
-      hint: '每次点击额外加一笔矿石',
+      hint: '每次点击额外加一笔矿石，每笔的数值在机会产生时就按当时的电压定死',
       ...pickaxeLineText(core, 'blast'),
     },
   ];
