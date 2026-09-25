@@ -18,6 +18,7 @@ import {
   pollutionBandName,
 } from '../numeric/pollution';
 import { GRID_MODES, gridMode, type GridMode } from '../numeric/grid';
+import { REBIRTH_NODES, REBIRTH_ROOT, treeTotalCost, type RebirthEffectKind } from './rebirth';
 import {
   RESEARCH_GATE_FROM_TIER,
   computerComputePerSecond,
@@ -166,6 +167,37 @@ export interface ResearchStats {
   note: string;
 }
 
+// 永久加成树上的一个节点
+export interface RebirthNodeRow {
+  id: string;
+  layer: number;
+  x: number;
+  y: number;
+  name: string;
+  effectText: string;
+  cost: string;
+  requires: string[];
+  owned: boolean;
+  buyable: boolean;
+}
+
+export interface RebirthStats {
+  cables: string;
+  count: number;
+  runEU: string;
+  // 打到 MAX 现在能拿几条（还没到 MAX 是 —）
+  maxCables: string;
+  canRebirth: boolean;
+  riftPending: boolean;
+  riftClosed: boolean;
+  root: { name: string; x: number; y: number };
+  nodes: RebirthNodeRow[];
+  // 已经装上的加成汇总
+  bonuses: { label: string; value: string }[];
+  treeTotal: string;
+  treeOwned: number;
+}
+
 export interface Snapshot {
   ores: ResourceRow[];
   coins: ResourceRow[];
@@ -182,6 +214,7 @@ export interface Snapshot {
   power: PowerStats;
   risk: RiskStats;
   research: ResearchStats;
+  rebirth: RebirthStats;
   nextTier: number | null;
   unlockCost: string;
   canUnlock: boolean;
@@ -289,6 +322,24 @@ export const useGameStore = defineStore('game', {
       this.refresh();
       this.save();
     },
+    // 转生：走时空裂缝（固定 1 条）或打到 MAX（按公式结算）
+    rebirth(route: 'rift' | 'max'): string | null {
+      const gained = getCore().rebirth(route);
+      this.refresh();
+      this.save();
+      return gained === null ? null : formatNumber(gained);
+    },
+    declineRift(): void {
+      getCore().declineRift();
+      this.refresh();
+      this.save();
+    },
+    buyRebirthNode(id: string): boolean {
+      const ok = getCore().buyRebirthNode(id);
+      this.refresh();
+      this.save();
+      return ok;
+    },
     step(dtSeconds: number) {
       getCore().tick(dtSeconds);
       this.refresh();
@@ -369,6 +420,7 @@ function buildSnapshot(core: GameCore): Snapshot {
     power: powerStats(core),
     risk: riskStats(core),
     research: researchStats(core),
+    rebirth: rebirthStats(core),
     nextTier,
     unlockCost: nextTier === null ? '—' : formatNumber(core.unlockCostOf(nextTier)),
     canUnlock: nextTier !== null && core.canUnlock(nextTier),
@@ -517,6 +569,61 @@ function researchStats(core: GameCore): ResearchStats {
     percent,
     eta: target !== null && used.gt(0) ? formatDuration(remaining.div(used).toNumber()) : '—',
     note,
+  };
+}
+
+const EFFECT_LABEL: Record<RebirthEffectKind, string> = {
+  allMachineSpeed: '全机器速度',
+  minerSpeed: '采矿机速度',
+  machineSpeed: '制造机速度',
+  coinOutput: 'GT 币产出',
+  fuelEfficiency: '燃料效率',
+  researchSpeed: '研究速度',
+  computeOutput: '算力产出',
+  researchCost: '研究需求',
+};
+
+function effectText(kind: RebirthEffectKind, amount: string): string {
+  const percent = formatNumber(dec(amount).times(100));
+  const sign = kind === 'researchCost' ? '-' : '+';
+  return `${EFFECT_LABEL[kind]} ${sign}${percent}%`;
+}
+
+function rebirthStats(core: GameCore): RebirthStats {
+  const maxCables = core.maxRouteCables();
+  const owned = core.rebirthNodes;
+  return {
+    cables: formatNumber(core.cables),
+    count: core.rebirthCount,
+    runEU: formatNumber(core.runEU),
+    maxCables: maxCables === null ? '—' : formatNumber(maxCables),
+    canRebirth: core.canRebirth('max'),
+    riftPending: core.riftPending(),
+    riftClosed: core.riftOffered,
+    root: { ...REBIRTH_ROOT },
+    nodes: REBIRTH_NODES.map((node) => ({
+      id: node.id,
+      layer: node.layer,
+      x: node.x,
+      y: node.y,
+      name: node.name,
+      effectText: effectText(node.effect, node.amount),
+      cost: formatNumber(dec(node.cost)),
+      requires: [...node.requires],
+      owned: owned.includes(node.id),
+      buyable: core.canBuyRebirthNode(node.id),
+    })),
+    bonuses: (Object.keys(EFFECT_LABEL) as RebirthEffectKind[]).map((kind) => {
+      const total = REBIRTH_NODES.filter(
+        (node) => node.effect === kind && owned.includes(node.id),
+      ).reduce((sum, node) => sum.plus(dec(node.amount)), ZERO);
+      return {
+        label: EFFECT_LABEL[kind],
+        value: `${kind === 'researchCost' ? '-' : '+'}${formatNumber(total.times(100))}%`,
+      };
+    }),
+    treeTotal: formatNumber(treeTotalCost()),
+    treeOwned: owned.length,
   };
 }
 

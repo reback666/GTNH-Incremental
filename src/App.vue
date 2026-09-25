@@ -6,6 +6,7 @@ import MachinePanel from './components/MachinePanel.vue';
 import VeinPanel from './components/VeinPanel.vue';
 import TechTreePanel from './components/TechTreePanel.vue';
 import RiskPanel from './components/RiskPanel.vue';
+import RebirthPanel from './components/RebirthPanel.vue';
 
 const store = useGameStore();
 
@@ -25,6 +26,8 @@ onMounted(() => {
   <TechTreePanel />
 
   <RiskPanel />
+
+  <RebirthPanel />
 
   <section class="panel">
     <h2>存档</h2>

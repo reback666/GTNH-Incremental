@@ -8,7 +8,9 @@ import { convertCoins, paymentTier } from '../numeric/credit';
 import { isValidOverclockLevel, overclockEnergyMultiplier, overclockSpeedMultiplier } from '../numeric/overclock';
 import { expectedFaults, sampleFaults } from '../numeric/fault';
 import { batteryCapacityEU, settleStorage } from '../numeric/storage';
+import { rebirthCables } from '../numeric/rebirth';
 import {
+  RESEARCH_FROM_TIER,
   RESEARCH_GATE_FROM_TIER,
   computerComputePerSecond,
   computerEnergyEU,
@@ -45,6 +47,15 @@ import {
   type MachineCategory,
   type MachineModel,
 } from './models';
+import {
+  bonusMultiplier,
+  canBuyNode,
+  machineSpeedMultiplier,
+  minerSpeedMultiplier,
+  rebirthNodeById,
+  researchCostMultiplier,
+  type RebirthEffectKind,
+} from './rebirth';
 import * as C from './constants';
 
 // 机型 → 数值：出力带上机型倍率，烧矿速率带上机型的燃料效率。
@@ -53,14 +64,11 @@ function outputOf(model: MachineModel): Decimal {
   return generatorOutputEU(model.tier, model.outputFactor);
 }
 
-function fuelRateOf(model: MachineModel): Decimal {
-  return generatorFuelRate(model.tier, {
-    outputFactor: model.outputFactor,
-    efficiency: model.fuelEfficiency ?? generatorFuelEfficiency(model.tier),
-  });
-}
-
 export type MachineKind = MachineCategory;
+
+// 时空裂缝：本周目第一次到 LuV 时弹一次，选了转生就固定给这么多条线缆
+export const RIFT_FROM_TIER = RESEARCH_FROM_TIER;
+export const RIFT_CABLES = '1';
 
 // 支付方式：计划书第七章规定用 GT 币买；但开局没有任何产币机器，
 // 「手动挖矿攒矿石 → 造发电机和制造机」这条开局路径要求机器也能用矿石直接建造。
@@ -115,6 +123,15 @@ export class GameCore {
   grid: GridMode = DEFAULT_GRID;
   // 已解锁的电网。开局只有普通电网，其余的到等级后花对应等级的 GT 币解锁
   grids: GridMode[] = [DEFAULT_GRID];
+  // 转生：时空线缆余额、已完成的转生次数、已买下的永久加成节点
+  cables = ZERO;
+  rebirthCount = 0;
+  rebirthNodes: string[] = [];
+  // 本周目累计发电量（转生公式的输入，转生后归零）与历史累计
+  runEU = ZERO;
+  totalEU = ZERO;
+  // 本周目的时空裂缝是否已经处理过（弹过并选了转生 / 选了不转）
+  riftOffered = false;
   // 波动电网：还要断多久、距离下次判定过了多久
   outageSeconds = 0;
   outageTimer = 0;
@@ -182,6 +199,124 @@ export class GameCore {
 
   // ── 研究：算力与研究进度 ───────────────────────────────────
 
+  // ── 转生：时空裂缝、时空线缆与永久加成 ─────────────────────
+
+  // 本周目第一次到 LuV，裂缝还没处理过 —— 界面该弹窗了
+  riftPending(): boolean {
+    return !this.riftOffered && this.maxTier >= RIFT_FROM_TIER;
+  }
+
+  // 现在打到 MAX 能拿几条线缆（还没到 MAX 返回 null）
+  maxRouteCables(): Decimal | null {
+    if (this.maxTier < MAX_TIER) return null;
+    return rebirthCables({
+      totalEU: this.runEU,
+      maxTier: this.maxTier,
+      rebirthCount: this.rebirthCount,
+    });
+  }
+
+  canRebirth(route: 'rift' | 'max'): boolean {
+    if (route === 'rift') return this.riftPending();
+    return this.maxTier >= MAX_TIER;
+  }
+
+  cablesFor(route: 'rift' | 'max'): Decimal {
+    if (route === 'rift') return dec(RIFT_CABLES);
+    return this.maxRouteCables() ?? ZERO;
+  }
+
+  // 转生：拿线缆 → 重置本周目 → 保留线缆 / 加成 / 次数 / 累计统计
+  rebirth(route: 'rift' | 'max'): Decimal | null {
+    if (!this.canRebirth(route)) return null;
+    const gained = this.cablesFor(route);
+    this.cables = this.cables.plus(gained);
+    this.rebirthCount += 1;
+    this.resetRun();
+    return gained;
+  }
+
+  // 关掉裂缝窗口：本周目就只剩打到 MAX 一条路
+  declineRift(): boolean {
+    if (!this.riftPending()) return false;
+    this.riftOffered = true;
+    return true;
+  }
+
+  buyRebirthNode(id: string): boolean {
+    const node = rebirthNodeById(id);
+    if (!node || !canBuyNode(this.rebirthNodes, node, this.cables)) return false;
+    this.cables = this.cables.minus(dec(node.cost));
+    this.rebirthNodes.push(node.id);
+    return true;
+  }
+
+  canBuyRebirthNode(id: string): boolean {
+    const node = rebirthNodeById(id);
+    return node !== undefined && canBuyNode(this.rebirthNodes, node, this.cables);
+  }
+
+  private totalBonus(kind: RebirthEffectKind): Decimal {
+    return bonusMultiplier(this.rebirthNodes, kind);
+  }
+
+  minerSpeedBonus(): Decimal {
+    return minerSpeedMultiplier(this.rebirthNodes);
+  }
+
+  machineSpeedBonus(): Decimal {
+    return machineSpeedMultiplier(this.rebirthNodes);
+  }
+
+  coinOutputBonus(): Decimal {
+    return this.totalBonus('coinOutput');
+  }
+
+  fuelEfficiencyBonus(): Decimal {
+    return this.totalBonus('fuelEfficiency');
+  }
+
+  computeOutputBonus(): Decimal {
+    return this.totalBonus('computeOutput');
+  }
+
+  researchSpeedBonus(): Decimal {
+    return this.totalBonus('researchSpeed');
+  }
+
+  researchCostFactor(): Decimal {
+    return researchCostMultiplier(this.rebirthNodes);
+  }
+
+  // 把本周目的一切推回开局，只留跨周目的东西
+  private resetRun(): void {
+    this.ores = Array.from({ length: 14 }, () => ZERO);
+    this.coins = Array.from({ length: MAX_TIER }, () => ZERO);
+    this.counts = {};
+    this.overclock = {};
+    this.faults = {};
+    this.storedEU = ZERO;
+    this.pollution = ZERO;
+    this.siphoned = ZERO;
+    this.grid = DEFAULT_GRID;
+    this.grids = [DEFAULT_GRID];
+    this.outageSeconds = 0;
+    this.outageTimer = 0;
+    this.siphonTimer = 0;
+    this.mutationTimer = 0;
+    this.collapseTimer = 0;
+    this.maxTier = 1;
+    this.unlockedVeins = [0];
+    this.researchProgress = ZERO;
+    this.researched = Array.from(
+      { length: RESEARCH_GATE_FROM_TIER - 1 },
+      (_, index) => index + 1,
+    );
+    this.runEU = ZERO;
+    this.riftOffered = false;
+    this.lastReport = emptyReport();
+  }
+
   // 这一级的机型能不能造。ZPM 及以后要先研究出来
   isResearched(tier: number): boolean {
     return !needsResearch(tier) || this.researched.includes(tier);
@@ -201,9 +336,18 @@ export class GameCore {
     let total = ZERO;
     for (const model of modelsOf('research')) {
       if (model.computeRole !== 'produce' || model.tier > this.maxTier) continue;
-      total = total.plus(computerComputePerSecond(model.tier).times(this.workingCountOf(model.id)));
+      total = total.plus(
+        computerComputePerSecond(model.tier)
+          .times(this.computeOutputBonus())
+          .times(this.workingCountOf(model.id)),
+      );
     }
     return total;
+  }
+
+  // 解锁某一级机型需要的研究进度（含永久加成的减免）
+  researchRequiredFor(tier: number): Decimal {
+    return researchRequired(tier).times(this.researchCostFactor());
   }
 
   // 研究站想吃的算力总量（额定值）。没有研究目标时研究站空转，不打算力
@@ -238,6 +382,7 @@ export class GameCore {
   minerOutputPerSecond(model: MachineModel): Decimal {
     return minerOrePerSecond(model.tier)
       .times(overclockSpeedMultiplier(this.overclockOf(model.id)))
+      .times(this.minerSpeedBonus())
       .times(this.workingCountOf(model.id));
   }
 
@@ -254,6 +399,8 @@ export class GameCore {
       overclockLevel: this.overclockOf(model.id),
     })
       .times(model.outputFactor)
+      .times(this.machineSpeedBonus())
+      .times(this.coinOutputBonus())
       .times(this.workingCountOf(model.id));
   }
 
@@ -270,7 +417,18 @@ export class GameCore {
   }
 
   generatorFuelDrain(model: MachineModel): Decimal {
-    return fuelRateOf(model).times(this.countOf(model.id));
+    return this.generatorFuelRateOf(model).times(this.countOf(model.id));
+  }
+
+  // 单台发电机的烧矿速率。永久加成里的「燃料效率」直接乘在机型的效率上
+  generatorFuelRateOf(model: MachineModel): Decimal {
+    const efficiency = dec(model.fuelEfficiency ?? generatorFuelEfficiency(model.tier)).times(
+      this.fuelEfficiencyBonus(),
+    );
+    return generatorFuelRate(model.tier, {
+      outputFactor: model.outputFactor,
+      efficiency,
+    });
   }
 
   // 净化器不跑配方，和发电机一样不参与超频
@@ -671,11 +829,11 @@ export class GameCore {
     report.computeWasted = computeSettlement.wasted;
     const researchTarget = this.researchTargetTier();
     if (researchTarget !== null) {
-      const gain = researchGain(computeSettlement.used, dtSeconds);
+      const gain = researchGain(computeSettlement.used, dtSeconds).times(this.researchSpeedBonus());
       if (gain.gt(0)) {
         this.researchProgress = this.researchProgress.plus(gain);
         report.researchGained = gain;
-        const required = researchRequired(researchTarget);
+        const required = this.researchRequiredFor(researchTarget);
         if (this.researchProgress.gte(required)) {
           this.researchProgress = this.researchProgress.minus(required);
           this.researched.push(researchTarget);
@@ -711,6 +869,8 @@ export class GameCore {
     }
 
     this.playSeconds += dtSeconds;
+    this.runEU = this.runEU.plus(generated);
+    this.totalEU = this.totalEU.plus(generated);
     report.euGenerated = generated;
     report.euConsumed = effectiveDemand.times(dtSeconds).times(ratioDec);
     report.powerRatio = ratioDec.toNumber();

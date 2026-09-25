@@ -6,6 +6,8 @@ import { MACHINE_MODELS, modelById } from '../src/game/models';
 import { useGameStore } from '../src/game/store';
 import { getCore } from '../src/game/engine';
 import { dec } from '../src/numeric/decimal';
+import { rebirthCables } from '../src/numeric/rebirth';
+import { REBIRTH_NODES, treeTotalCost } from '../src/game/rebirth';
 
 // 计划书第七章资源四、第二十章第三阶段：ZPM 及以后的机型是硬墙，
 // 要靠计算机产算力、研究站推进研究进度才能解锁。
@@ -117,6 +119,179 @@ describe('第三阶段：研究硬墙', () => {
     expect(restored.researched).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(restored.researchTargetTier()).toBe(8);
     expect(restored.isResearched(8)).toBe(false);
+  });
+});
+
+// 计划书第五章：转生两条路 —— 打到 MAX 按公式结算，或第一次到 LuV 时穿时空裂缝。
+describe('第三阶段：转生与永久加成', () => {
+  it('到 LuV 会挂起时空裂缝，穿过去固定拿 1 条线缆并重开一轮', () => {
+    const core = new GameCore();
+    core.maxTier = 7;
+    expect(core.riftPending()).toBe(true);
+    core.counts['m-1'] = 5;
+    core.runEU = dec('1e30'); // 缝裂不看累计 EU，多高都只给固定数
+
+    expect(core.rebirth('rift')?.toString()).toBe('1');
+    expect(core.cables.toString()).toBe('1');
+    expect(core.rebirthCount).toBe(1);
+    expect(core.maxTier).toBe(1);
+    expect(core.counts).toEqual({});
+    expect(core.unlockedVeins).toEqual([0]);
+    expect(core.researched).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(core.runEU.toString()).toBe('0');
+    expect(core.riftPending()).toBe(false); // 新周目还没到 LuV
+  });
+
+  it('拒绝裂缝之后本周目只剩 MAX 一条路', () => {
+    const core = new GameCore();
+    core.maxTier = 7;
+    expect(core.declineRift()).toBe(true);
+    expect(core.riftPending()).toBe(false);
+    expect(core.canRebirth('rift')).toBe(false);
+    expect(core.rebirth('rift')).toBe(null);
+    expect(core.rebirthCount).toBe(0);
+  });
+
+  it('打到 MAX 按公式结算，没到 MAX 不能转生', () => {
+    const core = new GameCore();
+    core.maxTier = 14;
+    core.runEU = dec('1e24');
+    const expected = rebirthCables({ totalEU: '1e24', maxTier: 14, rebirthCount: 0 });
+    expect(core.cablesFor('max').toString()).toBe(expected.toString());
+    expect(core.rebirth('max')?.toString()).toBe(expected.toString());
+    expect(core.cables.toString()).toBe(expected.toString());
+    expect(core.rebirthCount).toBe(1);
+
+    const early = new GameCore();
+    early.maxTier = 13;
+    expect(early.canRebirth('max')).toBe(false);
+    expect(early.rebirth('max')).toBe(null);
+  });
+
+  it('转生只清本周目，线缆 / 加成 / 次数 / 累计统计都留下', () => {
+    const core = new GameCore();
+    core.maxTier = 14;
+    core.ores[0] = dec('100');
+    core.coins[3] = dec('5');
+    core.counts['m-1'] = 3;
+    core.overclock['m-1'] = 2;
+    core.faults['m-1'] = 1;
+    core.storedEU = dec('500');
+    core.pollution = dec('40');
+    core.grid = 'black';
+    core.grids = ['normal', 'black'];
+    core.siphoned = dec('9');
+    core.researchProgress = dec('500');
+    core.researched.push(8);
+    core.cables = dec('3');
+    core.rebirthNodes = ['speed-1'];
+    core.playSeconds = 1000;
+    core.totalOre = dec('77');
+    core.totalCoins = dec('88');
+    core.totalEU = dec('99');
+
+    core.rebirth('max');
+
+    // 本周目清空
+    expect(core.ores.every((ore) => ore.isZero())).toBe(true);
+    expect(core.coins.every((coin) => coin.isZero())).toBe(true);
+    expect(core.counts).toEqual({});
+    expect(core.overclock).toEqual({});
+    expect(core.faults).toEqual({});
+    expect(core.storedEU.toString()).toBe('0');
+    expect(core.pollution.toString()).toBe('0');
+    expect(core.grid).toBe('normal');
+    expect(core.grids).toEqual(['normal']);
+    expect(core.siphoned.toString()).toBe('0');
+    expect(core.researchProgress.toString()).toBe('0');
+    expect(core.researched).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(core.runEU.toString()).toBe('0');
+
+    // 跨周目的留下
+    expect(core.cables.gte(3)).toBe(true);
+    expect(core.rebirthNodes).toEqual(['speed-1']);
+    expect(core.rebirthCount).toBe(1);
+    expect(core.playSeconds).toBe(1000);
+    expect(core.totalOre.toString()).toBe('77');
+    expect(core.totalCoins.toString()).toBe('88');
+    expect(core.totalEU.toString()).toBe('99');
+  });
+
+  it('加成真的落到数值上：速度 / 算力 / 研究需求 / 燃料效率', () => {
+    const core = new GameCore();
+    core.counts['m-1'] = 1;
+    const miner = modelById('m-1');
+    // ULV 采矿机比 LV 慢一倍：16 秒一枚（计划书第四章）
+    expect(core.minerOutputPerSecond(miner).toString()).toBe('0.0625');
+
+    core.rebirthNodes.push('speed-1'); // 全机器速度 +4%
+    expect(core.minerOutputPerSecond(miner).toString()).toBe('0.065');
+
+    core.rebirthNodes.push('research-2b'); // 研究需求 -8%
+    expect(core.researchRequiredFor(8).toString()).toBe('920');
+
+    core.rebirthNodes.push('research-2a'); // 计算机算力 +8%
+    core.counts['x-7'] = 1;
+    core.maxTier = 7;
+    expect(core.computerComputeRated().toString()).toBe('1.08');
+
+    core.rebirthNodes.push('economy-2b'); // 发电机燃料效率 +5%
+    const generator = modelById('g-ulv');
+    const before = new GameCore().generatorFuelRateOf(generator);
+    expect(core.generatorFuelRateOf(generator).lt(before)).toBe(true);
+  });
+
+  it('加成树要先买内层、线缆够才能点亮', () => {
+    const core = new GameCore();
+    core.cables = dec('1');
+    expect(core.canBuyRebirthNode('speed-2a')).toBe(false); // 前置没买
+    expect(core.buyRebirthNode('speed-2a')).toBe(false);
+    expect(core.buyRebirthNode('speed-1')).toBe(true);
+    expect(core.cables.toString()).toBe('0');
+    expect(core.buyRebirthNode('speed-1')).toBe(false); // 已买过
+    expect(core.buyRebirthNode('speed-2a')).toBe(false); // 2 条，线缆不够
+    core.cables = dec('2');
+    expect(core.buyRebirthNode('speed-2a')).toBe(true);
+    expect(core.cables.toString()).toBe('0');
+    expect(treeTotalCost().toString()).toBe('51');
+    expect(REBIRTH_NODES.length).toBe(15);
+  });
+
+  it('存档往返保留转生状态', () => {
+    const core = new GameCore();
+    core.maxTier = 14;
+    core.cables = dec('5');
+    core.rebirthCount = 2;
+    core.rebirthNodes = ['speed-1', 'economy-1'];
+    core.runEU = dec('1.5e20');
+    core.totalEU = dec('9e20');
+    core.riftOffered = true;
+
+    const restored = deserialize(serialize(core));
+    expect(restored.cables.toString()).toBe('5');
+    expect(restored.rebirthCount).toBe(2);
+    expect(restored.rebirthNodes).toEqual(['speed-1', 'economy-1']);
+    expect(restored.runEU.toString()).toBe('150000000000000000000');
+    expect(restored.totalEU.toString()).toBe('900000000000000000000');
+    expect(restored.riftOffered).toBe(true);
+    expect(serialize(restored)).toEqual(serialize(core));
+  });
+
+  it('旧存档（v6）读进来时转生状态是空的，且不会立刻弹裂缝', () => {
+    const core = new GameCore();
+    core.maxTier = 8;
+    const legacy = { ...serialize(core), version: 6 } as Record<string, unknown>;
+    for (const key of ['cables', 'rebirthCount', 'rebirthNodes', 'runEU', 'totalEU', 'riftOffered']) {
+      delete legacy[key];
+    }
+
+    const restored = deserialize(legacy as never);
+    expect(restored.cables.toString()).toBe('0');
+    expect(restored.rebirthCount).toBe(0);
+    expect(restored.rebirthNodes).toEqual([]);
+    expect(restored.runEU.toString()).toBe('0');
+    expect(restored.riftOffered).toBe(true); // 已经在 LuV 以上，按「这个点早就过了」算
+    expect(restored.riftPending()).toBe(false);
   });
 });
 

@@ -2,7 +2,7 @@ import { dec, fromSaveString, toSaveString } from '../numeric/decimal';
 import { MAX_TIER } from '../numeric/voltage';
 import { DEFAULT_GRID } from '../numeric/grid';
 import { RESEARCH_GATE_FROM_TIER } from '../numeric/research';
-import { GameCore, type MachineKind } from './core';
+import { GameCore, RIFT_FROM_TIER, type MachineKind } from './core';
 import { baseModelOf } from './models';
 import { SAVE_KEY, SAVE_VERSION } from './constants';
 
@@ -28,6 +28,13 @@ export interface SaveData {
   // v6：研究进度与已研究出来的电压等级（ZPM 及以后要先研究）
   researchProgress?: string;
   researched?: number[];
+  // v7：转生：时空线缆、永久加成节点、转生次数、本周目累计 EU
+  cables?: string;
+  rebirthCount?: number;
+  rebirthNodes?: string[];
+  runEU?: string;
+  totalEU?: string;
+  riftOffered?: boolean;
   // v1 遗留字段：按电压等级存的数量，读到旧存档时用来迁移
   miners?: number[];
   generators?: number[];
@@ -55,6 +62,12 @@ export function serialize(core: GameCore): SaveData {
     grids: [...core.grids],
     researchProgress: toSaveString(core.researchProgress),
     researched: [...core.researched],
+    cables: toSaveString(core.cables),
+    rebirthCount: core.rebirthCount,
+    rebirthNodes: [...core.rebirthNodes],
+    runEU: toSaveString(core.runEU),
+    totalEU: toSaveString(core.totalEU),
+    riftOffered: core.riftOffered,
     siphoned: toSaveString(core.siphoned),
     maxTier: core.maxTier,
     unlockedVeins: [...core.unlockedVeins],
@@ -88,6 +101,14 @@ export function deserialize(data: SaveData): GameCore {
   core.researched = data.researched
     ? [...data.researched]
     : Array.from({ length: RESEARCH_GATE_FROM_TIER - 1 }, (_, index) => index + 1);
+  core.cables = fromSaveString(data.cables ?? '0');
+  core.rebirthCount = data.rebirthCount ?? 0;
+  core.rebirthNodes = [...(data.rebirthNodes ?? [])];
+  core.runEU = fromSaveString(data.runEU ?? '0');
+  core.totalEU = fromSaveString(data.totalEU ?? '0');
+  // v6 及以前没有裂缝：已经在 LuV 以上存档说明这一趟早就过了这个点，
+  // 默认按「已处理」算，免得读档就弹窗；下一周目会正常弹。
+  core.riftOffered = data.riftOffered ?? core.maxTier >= RIFT_FROM_TIER;
   core.playSeconds = data.playSeconds;
   core.totalOre = dec(data.totalOre ?? '0');
   core.totalCoins = dec(data.totalCoins ?? '0');
