@@ -60,16 +60,11 @@ function nodeClass(node: RebirthNodeRow) {
 
 <template>
   <section class="panel rebirth-page">
-    <div class="rebirth-head">
-      <div>
-        <h1>转生</h1>
-        <p class="muted small" style="margin: 4px 0 0">
-          转生会清空本周目的矿石、GT 币、机器、电压、矿脉、电网与研究进度，
-          只留下时空线缆、永久加成、转生次数和累计统计。
-        </p>
-      </div>
-      <button @click="emit('close')">回到工厂</button>
-    </div>
+    <h1>转生</h1>
+    <p class="muted small" style="margin: 4px 0 0">
+      转生会清空本周目的矿石、GT 币、机器、电压、矿脉、电网与研究进度，
+      只留下时空线缆、永久加成、转生次数和累计统计。
+    </p>
 
     <div class="power-row">
       <div class="power-box static">

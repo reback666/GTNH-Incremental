@@ -639,14 +639,7 @@ h1 .small {
   max-width: 760px;
 }
 
-.rebirth-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.rebirth-head h1 {
+.rebirth-page h1 {
   margin: 0;
   font-size: 20px;
 }
