@@ -24,6 +24,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from gtnh_tiers import tint_casing
+
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "src" / "assets" / "machines"
 
@@ -135,6 +137,7 @@ def main() -> None:
                     archive.read(f"assets/gregtech/textures/blocks/iconsets/MACHINE_{voltage}_SIDE.png")
                 )
             ).convert("RGBA")
+            casing = tint_casing(casing, tier)
             for prefix, face in faces.items():
                 icon = casing.copy()
                 icon.alpha_composite(face)
