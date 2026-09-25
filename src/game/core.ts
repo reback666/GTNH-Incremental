@@ -1,5 +1,5 @@
 import { Decimal, ONE, ZERO, dec } from '../numeric/decimal';
-import { MAX_TIER, VOLTAGE_TIERS } from '../numeric/voltage';
+import { MAX_TIER, VOLTAGE_TIERS, isValidTier } from '../numeric/voltage';
 import { machineCost } from '../numeric/cost';
 import { machineEnergy, machineOutput } from '../numeric/output';
 import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../numeric/generator';
@@ -132,6 +132,8 @@ export class GameCore {
   totalEU = ZERO;
   // 本周目的时空裂缝是否已经处理过（弹过并选了转生 / 选了不转）
   riftOffered = false;
+  // 开发者模式：设置页里的测试开关，开着时界面会露出测试用的快捷操作
+  devMode = false;
   // 波动电网：还要断多久、距离下次判定过了多久
   outageSeconds = 0;
   outageTimer = 0;
@@ -254,6 +256,54 @@ export class GameCore {
   canBuyRebirthNode(id: string): boolean {
     const node = rebirthNodeById(id);
     return node !== undefined && canBuyNode(this.rebirthNodes, node, this.cables);
+  }
+
+  // ── 开发者模式 ─────────────────────────────────────────────
+  // 只是给测试用的快捷操作，不参与正常玩法；关掉开关就没法调用。
+
+  setDevMode(enabled: boolean): void {
+    this.devMode = enabled;
+  }
+
+  // 直接把电压推到某一级：开放矿脉、把该级及以前的机型都标记成已研究
+  devUnlockTo(tier: number): boolean {
+    if (!this.devMode || !isValidTier(tier)) return false;
+    this.maxTier = tier;
+    this.unlockedVeins = Array.from({ length: tier }, (_, index) => index);
+    this.researched = Array.from({ length: tier }, (_, index) => index + 1);
+    this.researchProgress = ZERO;
+    return true;
+  }
+
+  // 每一级矿石与 GT 币各加一笔，方便直接测后面的机器
+  devGrantResources(amount = '1e12'): boolean {
+    if (!this.devMode) return false;
+    const grant = dec(amount);
+    this.ores = this.ores.map((held) => held.plus(grant));
+    this.coins = this.coins.map((held) => held.plus(grant));
+    return true;
+  }
+
+  devGrantCables(amount: string): boolean {
+    if (!this.devMode) return false;
+    this.cables = this.cables.plus(dec(amount));
+    return true;
+  }
+
+  // 快进：按给定的秒数跑一拍模拟
+  devAdvance(seconds: number): boolean {
+    if (!this.devMode || !(seconds > 0)) return false;
+    this.tick(seconds);
+    return true;
+  }
+
+  devClearMachines(): boolean {
+    if (!this.devMode) return false;
+    this.counts = {};
+    this.overclock = {};
+    this.faults = {};
+    this.storedEU = ZERO;
+    return true;
   }
 
   private totalBonus(kind: RebirthEffectKind): Decimal {

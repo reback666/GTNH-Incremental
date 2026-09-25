@@ -215,6 +215,8 @@ export interface Snapshot {
   risk: RiskStats;
   research: ResearchStats;
   rebirth: RebirthStats;
+  // 开发者模式开关（设置页）
+  devMode: boolean;
   nextTier: number | null;
   unlockCost: string;
   canUnlock: boolean;
@@ -322,6 +324,42 @@ export const useGameStore = defineStore('game', {
       this.refresh();
       this.save();
     },
+    // 开发者模式：只是测试用的开关，关着的时候下面这些快捷操作都不生效
+    setDevMode(enabled: boolean): void {
+      getCore().setDevMode(enabled);
+      this.refresh();
+      this.save();
+    },
+    devUnlockTo(tier: number): boolean {
+      const ok = getCore().devUnlockTo(tier);
+      this.refresh();
+      this.save();
+      return ok;
+    },
+    devGrantResources(amount = '1e12'): boolean {
+      const ok = getCore().devGrantResources(amount);
+      this.refresh();
+      this.save();
+      return ok;
+    },
+    devGrantCables(amount: string): boolean {
+      const ok = getCore().devGrantCables(amount);
+      this.refresh();
+      this.save();
+      return ok;
+    },
+    devAdvance(seconds: number): boolean {
+      const ok = getCore().devAdvance(seconds);
+      this.refresh();
+      this.save();
+      return ok;
+    },
+    devClearMachines(): boolean {
+      const ok = getCore().devClearMachines();
+      this.refresh();
+      this.save();
+      return ok;
+    },
     // 转生：走时空裂缝（固定 1 条）或打到 MAX（按公式结算）
     rebirth(route: 'rift' | 'max'): string | null {
       const gained = getCore().rebirth(route);
@@ -421,6 +459,7 @@ function buildSnapshot(core: GameCore): Snapshot {
     risk: riskStats(core),
     research: researchStats(core),
     rebirth: rebirthStats(core),
+    devMode: core.devMode,
     nextTier,
     unlockCost: nextTier === null ? '—' : formatNumber(core.unlockCostOf(nextTier)),
     canUnlock: nextTier !== null && core.canUnlock(nextTier),

@@ -35,6 +35,8 @@ export interface SaveData {
   runEU?: string;
   totalEU?: string;
   riftOffered?: boolean;
+  // v8：开发者模式开关
+  devMode?: boolean;
   // v1 遗留字段：按电压等级存的数量，读到旧存档时用来迁移
   miners?: number[];
   generators?: number[];
@@ -68,6 +70,7 @@ export function serialize(core: GameCore): SaveData {
     runEU: toSaveString(core.runEU),
     totalEU: toSaveString(core.totalEU),
     riftOffered: core.riftOffered,
+    devMode: core.devMode,
     siphoned: toSaveString(core.siphoned),
     maxTier: core.maxTier,
     unlockedVeins: [...core.unlockedVeins],
@@ -109,6 +112,7 @@ export function deserialize(data: SaveData): GameCore {
   // v6 及以前没有裂缝：已经在 LuV 以上存档说明这一趟早就过了这个点，
   // 默认按「已处理」算，免得读档就弹窗；下一周目会正常弹。
   core.riftOffered = data.riftOffered ?? core.maxTier >= RIFT_FROM_TIER;
+  core.devMode = data.devMode ?? false;
   core.playSeconds = data.playSeconds;
   core.totalOre = dec(data.totalOre ?? '0');
   core.totalCoins = dec(data.totalCoins ?? '0');

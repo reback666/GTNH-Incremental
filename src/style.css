@@ -644,6 +644,29 @@ h1 .small {
   font-size: 20px;
 }
 
+/* 开发者工具：一排测试用的快捷操作 */
+.dev-tools {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px dashed #4a5563;
+  border-radius: 8px;
+  background: rgba(88, 196, 163, 0.05);
+}
+
+.dev-tools .row:first-of-type {
+  border-top: none;
+}
+
+.dev-tools select {
+  font: inherit;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+}
+
 .rebirth-tree {
   position: relative;
   width: 660px;
