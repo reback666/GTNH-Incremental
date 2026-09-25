@@ -1,17 +1,21 @@
-import { ZERO, dec, toSaveString } from '../numeric/decimal';
+import { dec, toSaveString } from '../numeric/decimal';
 import { MAX_TIER } from '../numeric/voltage';
-import { GameCore } from './core';
+import { GameCore, type MachineKind } from './core';
+import { baseModelOf } from './models';
 import { SAVE_KEY, SAVE_VERSION } from './constants';
 
-// 计划书第十四章：存档 = Pinia store 序列化成 JSON，带版本号；
+// 计划书第十四章：存档 = 状态序列化成 JSON，带版本号；
 // 大数值一律以字符串存储 —— JSON.parse 只有 double 一种数字类型，超过 2^53 会在解析阶段丢精度。
 export interface SaveData {
   version: number;
   ores: string[];
   coins: string[];
-  miners: number[];
-  generators: number[];
-  machines: number[];
+  // v2：机型 id → 数量
+  counts?: Record<string, number>;
+  // v1 遗留字段：按电压等级存的数量，读到旧存档时用来迁移
+  miners?: number[];
+  generators?: number[];
+  machines?: number[];
   maxTier: number;
   unlockedVeins: number[];
   playSeconds: number;
@@ -25,9 +29,7 @@ export function serialize(core: GameCore): SaveData {
     version: SAVE_VERSION,
     ores: core.ores.map(toSaveString),
     coins: core.coins.map(toSaveString),
-    miners: [...core.miners],
-    generators: [...core.generators],
-    machines: [...core.machines],
+    counts: { ...core.counts },
     maxTier: core.maxTier,
     unlockedVeins: [...core.unlockedVeins],
     playSeconds: core.playSeconds,
@@ -38,15 +40,10 @@ export function serialize(core: GameCore): SaveData {
 }
 
 export function deserialize(data: SaveData): GameCore {
-  if (data.version !== SAVE_VERSION) {
-    throw new Error(`存档版本 ${data.version} 与当前版本 ${SAVE_VERSION} 不一致`);
-  }
   const core = new GameCore();
   core.ores = pad(data.ores, 14).map((text) => dec(text ?? '0'));
   core.coins = pad(data.coins, MAX_TIER).map((text) => dec(text ?? '0'));
-  core.miners = padNumbers(data.miners, MAX_TIER);
-  core.generators = padNumbers(data.generators, MAX_TIER);
-  core.machines = padNumbers(data.machines, MAX_TIER);
+  core.counts = data.counts ? { ...data.counts } : migrateFromV1(data);
   core.maxTier = data.maxTier;
   core.unlockedVeins = [...data.unlockedVeins];
   core.playSeconds = data.playSeconds;
@@ -54,6 +51,26 @@ export function deserialize(data: SaveData): GameCore {
   core.totalCoins = dec(data.totalCoins ?? '0');
   core.totalOreSpent = dec(data.totalOreSpent ?? '0');
   return core;
+}
+
+// v1 存档只记了「第几级有多少台」，没有机型概念。
+// 迁移时把数量挂到该等级的第一个机型上 —— 也就是当时的那种通用机器。
+function migrateFromV1(data: SaveData): Record<string, number> {
+  const counts: Record<string, number> = {};
+  const legacy: [MachineKind, number[] | undefined][] = [
+    ['miner', data.miners],
+    ['generator', data.generators],
+    ['machine', data.machines],
+  ];
+  for (const [category, list] of legacy) {
+    (list ?? []).forEach((count, index) => {
+      if (!count) return;
+      const tier = index + 1;
+      if (tier > MAX_TIER) return;
+      counts[baseModelOf(category, tier).id] = count;
+    });
+  }
+  return counts;
 }
 
 export function saveToStorage(core: GameCore): void {
@@ -66,7 +83,11 @@ export function loadFromStorage(): GameCore | null {
   const raw = localStorage.getItem(SAVE_KEY);
   if (!raw) return null;
   try {
-    return deserialize(JSON.parse(raw) as SaveData);
+    const data = JSON.parse(raw) as SaveData;
+    if (data.version !== 1 && data.version !== SAVE_VERSION) {
+      throw new Error(`存档版本 ${data.version} 无法识别`);
+    }
+    return deserialize(data);
   } catch (error) {
     console.warn('存档读取失败，已忽略：', error);
     return null;
@@ -85,13 +106,3 @@ function pad(list: string[] | undefined, length: number): (string | undefined)[]
   });
   return out;
 }
-
-function padNumbers(list: number[] | undefined, length: number): number[] {
-  const out = new Array(length).fill(0) as number[];
-  (list ?? []).forEach((value, index) => {
-    if (index < length) out[index] = value;
-  });
-  return out;
-}
-
-export { ZERO };

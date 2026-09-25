@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useGameStore, type MachineColumn, type MachineTierRow } from '../game/store';
+import { computed, ref } from 'vue';
+import {
+  useGameStore,
+  type MachineColumn,
+  type MachineModelRow,
+  type MachineTierGroup,
+} from '../game/store';
 import type { MachineKind, PayWith } from '../game/core';
 import SpriteIcon from './SpriteIcon.vue';
 
-defineProps<{ columns: MachineColumn[] }>();
+const props = defineProps<{ columns: MachineColumn[] }>();
 const store = useGameStore();
 
 // 最上方是三个大类，点谁就展开谁，另外两个挤压收起。
@@ -12,16 +17,31 @@ const active = ref<MachineKind>('miner');
 // 计划书第七章规定用 GT 币买；开局没有产币机器，所以再给一条用矿石建造的路子。
 const payWith = ref<PayWith>('coin');
 
+// 每个机型一条横杠，等级写在横杠上，所以不用再套一层分组
+interface Bar {
+  group: MachineTierGroup;
+  model: MachineModelRow;
+}
+
+const bars = computed<Bar[]>(() => {
+  const column = props.columns.find((item) => item.kind === active.value);
+  if (!column) return [];
+  const out: Bar[] = [];
+  for (const group of column.tiers) {
+    if (!group.unlocked) continue;
+    for (const model of group.models) out.push({ group, model });
+  }
+  return out;
+});
+
+const activeColumn = computed(() => props.columns.find((item) => item.kind === active.value) ?? null);
+
 function cells(count: number): number[] {
   return Array.from({ length: count }, (_, index) => index);
 }
 
-function unlockedTiers(column: MachineColumn): MachineTierRow[] {
-  return column.tiers.filter((row) => row.unlocked);
-}
-
-function canBuy(row: MachineTierRow): boolean {
-  return payWith.value === 'ore' ? row.oreAffordable : row.affordable;
+function canBuy(model: MachineModelRow): boolean {
+  return payWith.value === 'ore' ? model.oreAffordable : model.affordable;
 }
 </script>
 
@@ -42,12 +62,7 @@ function canBuy(row: MachineTierRow): boolean {
       </button>
     </div>
 
-    <div
-      v-for="column in columns"
-      :key="column.kind"
-      class="machine-body"
-      :class="{ collapsed: active !== column.kind }"
-    >
+    <div v-for="column in columns" :key="column.kind" class="machine-body" :class="{ collapsed: active !== column.kind }">
       <div class="inner">
         <div class="pad">
           <p class="muted small hint">{{ column.hint }}</p>
@@ -65,31 +80,43 @@ function canBuy(row: MachineTierRow): boolean {
             <button :class="{ primary: payWith === 'ore' }" @click="payWith = 'ore'">同级矿石</button>
           </div>
 
-          <!-- 每个电压等级一条横杠，机器图标从左往右排 -->
-          <div v-for="row in unlockedTiers(column)" :key="row.tier" class="tier-bar">
-            <span class="tier-name">{{ row.voltage }}</span>
+          <div v-if="activeColumn && activeColumn.count === 0" class="muted small" style="padding-top: 6px">
+            还没有建造任何{{ activeColumn.title }}。
+          </div>
+
+          <!-- 一行一个机型：等级 → 机型名 → 机器图标横排 → 数量 → 单价 → 建造按钮 -->
+          <div v-for="bar in bars" :key="bar.model.id" class="tier-bar">
+            <span class="tier-name">{{ bar.group.voltage }}</span>
+
+            <span class="model-name">
+              {{ bar.model.name }}
+              <span v-if="bar.model.block === 'multiblock'" class="badge mb" title="多方块：产出高，但不能按需发电、需要维护">多方块</span>
+              <span
+                v-for="trait in bar.model.traits.filter((t) => t !== '需要维护')"
+                :key="trait"
+                class="badge warn"
+                >{{ trait }}</span
+              >
+            </span>
+
             <div class="tier-icons">
               <SpriteIcon
-                v-for="index in cells(row.icons)"
+                v-for="index in cells(bar.model.icons)"
                 :key="index"
                 :kind="column.kind"
                 :size="20"
                 class="icon-pop"
               />
-              <span v-if="row.overflow > 0" class="icon-overflow">+{{ row.overflow }}</span>
-              <span v-if="row.icons === 0" class="muted small">还没建</span>
+              <span v-if="bar.model.overflow > 0" class="icon-overflow">+{{ bar.model.overflow }}</span>
             </div>
-            <span class="count">×{{ row.count }}</span>
+
+            <span class="count">×{{ bar.model.count }}</span>
             <span class="price">
-              <template v-if="payWith === 'coin'">{{ row.price }} {{ row.unit }}</template>
-              <template v-else>{{ row.orePrice }} {{ row.oreLabel }}</template>
+              <template v-if="payWith === 'coin'">{{ bar.model.price }} {{ bar.group.unit }}</template>
+              <template v-else>{{ bar.model.orePrice }} {{ bar.group.oreLabel }}</template>
             </span>
-            <button :disabled="!canBuy(row)" @click="store.buy(column.kind, row.tier, 1, payWith)">
-              ×1
-            </button>
-            <button :disabled="!canBuy(row)" @click="store.buy(column.kind, row.tier, 10, payWith)">
-              ×10
-            </button>
+            <button :disabled="!canBuy(bar.model)" @click="store.buy(bar.model.id, 1, payWith)">×1</button>
+            <button :disabled="!canBuy(bar.model)" @click="store.buy(bar.model.id, 10, payWith)">×10</button>
           </div>
         </div>
       </div>

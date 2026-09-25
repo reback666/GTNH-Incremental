@@ -26,10 +26,12 @@ export const DEFAULT_FUEL_EFFICIENCY = '0.65';
 export const ULV_ORE_ENERGY = '128';
 export const ORE_ENERGY_FACTOR = '2';
 
-// 发电机输出功率（EU/t）。
-export function generatorOutputEU(tier: number): Decimal {
+// 发电机输出功率（EU/t）。outputFactor 是机型倍率 —— 多方块明显高于同级单方块。
+export function generatorOutputEU(tier: number, outputFactor: DecimalInput = '1'): Decimal {
   assertTier(tier);
-  return dec(ULV_OUTPUT_EU_PER_TICK).times(pow(String(VOLTAGE_STEP_FOR_OUTPUT), tier - 1));
+  return dec(ULV_OUTPUT_EU_PER_TICK)
+    .times(pow(String(VOLTAGE_STEP_FOR_OUTPUT), tier - 1))
+    .times(dec(outputFactor));
 }
 
 // 该等级矿石的能量值（EU/枚）。
@@ -44,9 +46,21 @@ export function generatorFuelEfficiency(tier: number): Decimal {
   return dec(GENERATOR_FUEL_EFFICIENCY[tier] ?? DEFAULT_FUEL_EFFICIENCY);
 }
 
+export interface GeneratorFuelRateOptions {
+  // 机型产出倍率
+  outputFactor?: DecimalInput;
+  // 机型燃料效率；不传就取该等级的默认曲线
+  efficiency?: DecimalInput;
+  // 单枚矿石的能量值；不传就取本级矿石的默认值
+  oreEnergy?: DecimalInput;
+}
+
 // 燃料消耗速率（枚矿石/秒）。
-// 不传 oreEnergy 时按本级矿石的默认能量值计算。
-export function generatorFuelRate(tier: number, oreEnergy?: DecimalInput): Decimal {
-  const energy = oreEnergy === undefined ? oreEnergyValue(tier) : dec(oreEnergy);
-  return generatorOutputEU(tier).div(energy.times(generatorFuelEfficiency(tier)));
+export function generatorFuelRate(tier: number, options: GeneratorFuelRateOptions = {}): Decimal {
+  assertTier(tier);
+  const output = generatorOutputEU(tier, options.outputFactor ?? '1');
+  const energy = options.oreEnergy === undefined ? oreEnergyValue(tier) : dec(options.oreEnergy);
+  const efficiency =
+    options.efficiency === undefined ? generatorFuelEfficiency(tier) : dec(options.efficiency);
+  return output.div(energy.times(efficiency));
 }
