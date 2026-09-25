@@ -417,6 +417,28 @@ h1 .small {
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
 }
 
+.vein-img {
+  image-rendering: pixelated;
+  display: block;
+}
+
+/*
+  彩虹特殊渲染：GTNH 里无尽这类材料会叠一层 RainbowOverlay，色相随时间循环。
+  这里用 hue-rotate 做同样的事 —— 色相每 4 秒转一圈。
+*/
+@keyframes rainbow-cycle {
+  from {
+    filter: hue-rotate(0deg);
+  }
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
+.vein-img.rainbow {
+  animation: rainbow-cycle 4s linear infinite;
+}
+
 .vein-label {
   font-size: 13px;
   color: var(--muted);

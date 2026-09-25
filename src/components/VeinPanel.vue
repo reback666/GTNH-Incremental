@@ -2,8 +2,11 @@
 import { ref } from 'vue';
 import { useGameStore } from '../game/store';
 import SpriteIcon from './SpriteIcon.vue';
+import { veinIconUrl } from '../game/veins';
+import { computed } from 'vue';
 
 const store = useGameStore();
+const veinUrl = computed(() => veinIconUrl(store.snap.currentVein.tier));
 
 interface Burst {
   id: number;
@@ -91,9 +94,20 @@ function mine(event: MouseEvent) {
 
     <button class="vein-btn" type="button" @click="mine">
       <span class="vein-sprite" :class="{ shake: shaking, flash: flashing }">
-        <SpriteIcon kind="vein" :size="112" />
+        <img
+          v-if="veinUrl"
+          class="vein-img"
+          :class="{ rainbow: store.snap.currentVein.rainbow }"
+          :src="veinUrl"
+          width="112"
+          height="112"
+          alt=""
+        />
+        <SpriteIcon v-else kind="vein" :size="112" />
       </span>
-      <span class="vein-label">点击挖矿</span>
+      <span class="vein-label">
+        {{ store.snap.currentVein.name }} · {{ store.snap.currentVein.material }} —— 点击挖矿
+      </span>
 
       <span
         v-for="chip in chips"

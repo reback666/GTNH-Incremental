@@ -8,6 +8,7 @@ import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '.
 import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
 import { type GameCore, type MachineKind, type PayWith } from './core';
 import { modelsOf, type BlockKind, type MachineModel } from './models';
+import { veinTierInfo } from './veins';
 import { getCore, resetCore, setCore } from './engine';
 import * as C from './constants';
 import { clearStorage, loadFromStorage, saveToStorage } from './save';
@@ -107,6 +108,8 @@ export interface Snapshot {
   unlockCost: string;
   canUnlock: boolean;
   veins: number[];
+  // 当前最高等级的矿脉（界面中间那张图）
+  currentVein: { tier: number; name: string; material: string; rainbow: boolean };
 }
 
 // 每一级、每个机型最多画这么多个图标，再多就折叠成 +N。
@@ -238,6 +241,20 @@ function buildSnapshot(core: GameCore): Snapshot {
     unlockCost: nextTier === null ? '—' : formatNumber(core.unlockCostOf(nextTier)),
     canUnlock: nextTier !== null && core.canUnlock(nextTier),
     veins: [...core.unlockedVeins],
+    currentVein: currentVein(core),
+  };
+}
+
+function currentVein(core: GameCore): Snapshot['currentVein'] {
+  const oreTier = core.unlockedVeins.length
+    ? Math.max(...core.unlockedVeins)
+    : 0;
+  const info = veinTierInfo(oreTier);
+  return {
+    tier: oreTier,
+    name: oreName(oreTier),
+    material: info?.material ?? '未知',
+    rainbow: info?.rainbow ?? false,
   };
 }
 
