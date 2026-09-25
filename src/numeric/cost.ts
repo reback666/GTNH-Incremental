@@ -39,11 +39,15 @@ export function tierCostMultiplier(
 }
 
 // 已购数量带来的边际成本倍数：1.07^已购数量。
-export function marginalCostMultiplier(purchased: number): Decimal {
+// 工业宇宙的「并联折扣」会把增长系数降到 1.05，所以系数可以传进来。
+export function marginalCostMultiplier(
+  purchased: number,
+  growth: DecimalInput = MARGINAL_COST_GROWTH,
+): Decimal {
   if (!Number.isInteger(purchased) || purchased < 0) {
     throw new RangeError(`已购数量必须是非负整数，收到 ${purchased}`);
   }
-  return pow(MARGINAL_COST_GROWTH, purchased);
+  return dec(growth).pow(decInt(purchased, 'purchased'));
 }
 
 export interface MachineCostInput {
@@ -53,6 +57,8 @@ export interface MachineCostInput {
   tier: number;
   // 已购买数量（同机型累计）。
   purchased: number;
+  // 边际成本增长系数，默认 1.07；工业宇宙会传 1.05
+  growth?: DecimalInput;
   lateGame?: LateGameLogOptions;
 }
 
@@ -61,7 +67,7 @@ export interface MachineCostInput {
 export function machineCost(input: MachineCostInput): Decimal {
   return dec(input.baseCost)
     .times(tierCostMultiplier(input.tier, input.lateGame))
-    .times(marginalCostMultiplier(input.purchased))
+    .times(marginalCostMultiplier(input.purchased, input.growth ?? MARGINAL_COST_GROWTH))
     .floor();
 }
 

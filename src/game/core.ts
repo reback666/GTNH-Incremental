@@ -1,10 +1,11 @@
 import { Decimal, ONE, ZERO, dec } from '../numeric/decimal';
 import { MAX_TIER, VOLTAGE_TIERS, isValidTier } from '../numeric/voltage';
-import { machineCost } from '../numeric/cost';
+import { MARGINAL_COST_GROWTH, machineCost } from '../numeric/cost';
 import { machineEnergy, machineOutput } from '../numeric/output';
 import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../numeric/generator';
 import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
-import { convertCoins, paymentTier } from '../numeric/credit';
+import { coinValueInTier1, convertCoins, paymentTier } from '../numeric/credit';
+import { type UniverseId, universeById } from './universes';
 import { isValidOverclockLevel, overclockEnergyMultiplier, overclockSpeedMultiplier } from '../numeric/overclock';
 import { expectedFaults, sampleFaults } from '../numeric/fault';
 import { batteryCapacityEU, settleStorage } from '../numeric/storage';
@@ -135,6 +136,8 @@ export class GameCore {
   riftOffered = false;
   // 开发者模式：设置页里的测试开关，开着时界面会露出测试用的快捷操作
   devMode = false;
+  // 已经拥有的平行宇宙（转生时选一个，选过的永久叠加）
+  universes: UniverseId[] = [];
   // ── 累计统计与成就 ─────────────────────────────────────────
   // 历史最高电压等级（转生会重置本周目的 maxTier，但不重置这个）
   peakTier = 1;
@@ -219,6 +222,46 @@ export class GameCore {
 
   // ── 转生：时空裂缝、时空线缆与永久加成 ─────────────────────
 
+  // ── 平行宇宙 ───────────────────────────────────────────────
+
+  hasUniverse(id: UniverseId): boolean {
+    return this.universes.includes(id);
+  }
+
+  // 转生时选定一个宇宙，选过的会一直叠加
+  addUniverse(id: string): boolean {
+    const universe = universeById(id);
+    if (!universe || this.hasUniverse(universe.id)) return false;
+    this.universes.push(universe.id);
+    return true;
+  }
+
+  // 工业宇宙：同一机型的边际成本增长从 1.07^k 降到 1.05^k
+  marginalGrowth(): string {
+    return this.hasUniverse('industry') ? '1.05' : MARGINAL_COST_GROWTH;
+  }
+
+  // 工业宇宙：跨电压结算。把「不高于结算等级的币」按币值合并后统一扣款，
+  // 剩下的零头自动按 4:1 拆回低等级币（等价于 GTNH 的变压器 + 4 合 1 自动合成）。
+  private payAcrossTiers(price: Decimal, payTier: number): boolean {
+    const unit = coinValueInTier1(payTier);
+    let available = ZERO;
+    for (let tier = 1; tier <= payTier; tier += 1) {
+      available = available.plus(this.coins[tier - 1]!.times(coinValueInTier1(tier)));
+    }
+    const need = price.times(unit);
+    if (available.lt(need)) return false;
+
+    let remaining = available.minus(need);
+    for (let tier = payTier; tier >= 1; tier -= 1) {
+      const coinValue = coinValueInTier1(tier);
+      const count = remaining.div(coinValue).floor();
+      this.coins[tier - 1] = count;
+      remaining = remaining.minus(count.times(coinValue));
+    }
+    return true;
+  }
+
   // 本周目第一次到 LuV，裂缝还没处理过 —— 界面该弹窗了
   riftPending(): boolean {
     return !this.riftOffered && this.maxTier >= RIFT_FROM_TIER;
@@ -244,10 +287,11 @@ export class GameCore {
     return this.maxRouteCables() ?? ZERO;
   }
 
-  // 转生：拿线缆 → 重置本周目 → 保留线缆 / 加成 / 次数 / 累计统计
-  rebirth(route: 'rift' | 'max'): Decimal | null {
+  // 转生：拿线缆 → 选定平行宇宙 → 重置本周目 → 保留线缆 / 加成 / 宇宙 / 次数 / 累计统计
+  rebirth(route: 'rift' | 'max', universe?: string): Decimal | null {
     if (!this.canRebirth(route)) return null;
     const gained = this.cablesFor(route);
+    if (universe !== undefined) this.addUniverse(universe);
     this.cables = this.cables.plus(gained);
     this.totalCables = this.totalCables.plus(gained);
     this.rebirthCount += 1;
@@ -737,6 +781,7 @@ export class GameCore {
       baseCost: C.BASE_MACHINE_COST,
       tier: model.tier,
       purchased: this.countOf(model.id),
+      growth: this.marginalGrowth(),
     })
       .times(dec(model.costFactor))
       .floor();
@@ -755,20 +800,34 @@ export class GameCore {
     const price = this.priceOf(model, payWith);
     const index = payWith === 'ore' ? model.tier - 1 : paymentTier(model.tier) - 1;
     const wallet = payWith === 'ore' ? this.ores[index]! : this.coins[index]!;
+    if (payWith === 'coin' && this.hasUniverse('industry')) {
+      // 跨电压结算：看的是所有不高于结算等级的币合起来的价值
+      const payTier = paymentTier(model.tier);
+      let available = ZERO;
+      for (let tier = 1; tier <= payTier; tier += 1) {
+        available = available.plus(this.coins[tier - 1]!.times(coinValueInTier1(tier)));
+      }
+      return available.gte(price.times(coinValueInTier1(payTier)));
+    }
     return wallet.gte(price);
   }
 
   buy(model: MachineModel, count: number, payWith: PayWith = 'coin'): number {
     // 没研究出来的机型买不了 —— 硬墙挡在这里，不只是界面灰掉
     if (!this.isResearched(model.tier)) return 0;
+    const acrossTiers = payWith === 'coin' && this.hasUniverse('industry');
     let bought = 0;
     for (let i = 0; i < count; i += 1) {
       const price = this.priceOf(model, payWith);
       const index = payWith === 'ore' ? model.tier - 1 : paymentTier(model.tier) - 1;
       const wallet = payWith === 'ore' ? this.ores[index]! : this.coins[index]!;
-      if (wallet.lt(price)) break;
-      if (payWith === 'ore') this.ores[index] = wallet.minus(price);
-      else this.coins[index] = wallet.minus(price);
+      if (acrossTiers) {
+        if (!this.payAcrossTiers(price, paymentTier(model.tier))) break;
+      } else {
+        if (wallet.lt(price)) break;
+        if (payWith === 'ore') this.ores[index] = wallet.minus(price);
+        else this.coins[index] = wallet.minus(price);
+      }
       this.counts[model.id] = this.countOf(model.id) + 1;
       bought += 1;
     }

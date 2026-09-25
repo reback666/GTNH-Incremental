@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useGameStore, type RebirthNodeRow } from '../game/store';
 import { REBIRTH_NODES } from '../game/rebirth';
 
@@ -8,6 +8,23 @@ import { REBIRTH_NODES } from '../game/rebirth';
 const emit = defineEmits<{ close: [] }>();
 const store = useGameStore();
 const rebirth = computed(() => store.snap.rebirth);
+const universes = computed(() => store.snap.universes);
+// 本次转生要带上的宇宙（一次一个，已拥有的不能再选）
+const pickedUniverse = ref<string | null>(null);
+
+function pickUniverse(id: string, owned: boolean, implemented: boolean) {
+  if (owned || !implemented) return;
+  pickedUniverse.value = pickedUniverse.value === id ? null : id;
+}
+
+function doRebirth() {
+  store.rebirth('max', pickedUniverse.value ?? undefined);
+  pickedUniverse.value = null;
+}
+
+function doRiftRebirth() {
+  store.rebirth('rift', pickedUniverse.value ?? undefined);
+}
 
 interface Link {
   key: string;
@@ -97,7 +114,7 @@ function nodeClass(node: RebirthNodeRow) {
         class="big"
         :class="{ primary: rebirth.canRebirth }"
         :disabled="!rebirth.canRebirth"
-        @click="store.rebirth('max')"
+        @click="doRebirth"
       >
         转生
       </button>
@@ -105,6 +122,34 @@ function nodeClass(node: RebirthNodeRow) {
     <p v-if="rebirth.riftClosed && !rebirth.canRebirth" class="muted small" style="margin: 6px 0 0">
       本周目的时空裂缝已经关掉了，这一轮只剩打到 MAX。
     </p>
+
+    <h2 class="mt">平行宇宙</h2>
+    <p class="muted small" style="margin: 0 0 8px">
+      转生时可以带一个宇宙走，选过的永久叠加 —— 下一轮开始，核心规则就多一条。
+      这次不选也行，下次转生再选。
+    </p>
+    <div class="universe-list">
+      <button
+        v-for="universe in universes"
+        :key="universe.id"
+        type="button"
+        class="universe"
+        :class="{ picked: pickedUniverse === universe.id, owned: universe.owned, todo: !universe.implemented }"
+        :disabled="universe.owned || !universe.implemented"
+        @click="pickUniverse(universe.id, universe.owned, universe.implemented)"
+      >
+        <b>
+          {{ universe.name }}
+          <span v-if="universe.owned" class="tag-owned">已拥有</span>
+          <span v-else-if="!universe.implemented" class="tag-todo">未实现</span>
+          <span v-else-if="pickedUniverse === universe.id" class="tag-picked">本次选择</span>
+        </b>
+        <span class="muted small">{{ universe.summary }}</span>
+        <span v-for="effect in universe.effects" :key="effect" class="muted small effect">
+          · {{ effect }}
+        </span>
+      </button>
+    </div>
 
     <h2 class="mt">永久加成</h2>
     <p class="muted small" style="margin: 0 0 8px">

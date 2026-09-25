@@ -19,6 +19,7 @@ import {
 } from '../numeric/pollution';
 import { GRID_MODES, gridMode, type GridMode } from '../numeric/grid';
 import { ACHIEVEMENTS } from './achievements';
+import { UNIVERSES } from './universes';
 import { REBIRTH_NODES, REBIRTH_ROOT, treeTotalCost, type RebirthEffectKind } from './rebirth';
 import {
   RESEARCH_GATE_FROM_TIER,
@@ -215,6 +216,16 @@ export interface AchievementStats {
   total: number;
 }
 
+// 平行宇宙：转生时选一个，已拥有的标出来
+export interface UniverseRow {
+  id: string;
+  name: string;
+  summary: string;
+  effects: string[];
+  implemented: boolean;
+  owned: boolean;
+}
+
 export interface Snapshot {
   ores: ResourceRow[];
   coins: ResourceRow[];
@@ -233,6 +244,7 @@ export interface Snapshot {
   research: ResearchStats;
   rebirth: RebirthStats;
   achievements: AchievementStats;
+  universes: UniverseRow[];
   // 累计统计（存档面板里显示）
   stats: { label: string; value: string }[];
   // 开发者模式开关（设置页）
@@ -380,9 +392,9 @@ export const useGameStore = defineStore('game', {
       this.save();
       return ok;
     },
-    // 转生：走时空裂缝（固定 1 条）或打到 MAX（按公式结算）
-    rebirth(route: 'rift' | 'max'): string | null {
-      const gained = getCore().rebirth(route);
+    // 转生：走时空裂缝（固定 1 条）或打到 MAX（按公式结算）；可以顺带选一个平行宇宙
+    rebirth(route: 'rift' | 'max', universe?: string): string | null {
+      const gained = getCore().rebirth(route, universe);
       this.refresh();
       this.save();
       return gained === null ? null : formatNumber(gained);
@@ -480,6 +492,7 @@ function buildSnapshot(core: GameCore): Snapshot {
     research: researchStats(core),
     rebirth: rebirthStats(core),
     achievements: achievementStats(core),
+    universes: universeRows(core),
     stats: statRows(core),
     devMode: core.devMode,
     nextTier,
@@ -726,6 +739,18 @@ function statRows(core: GameCore): { label: string; value: string }[] {
       value: `${core.achievedCount()} / ${ACHIEVEMENTS.length}`,
     },
   ];
+}
+
+// 平行宇宙清单：转生页用来选这一个周目要带上的宇宙
+function universeRows(core: GameCore): UniverseRow[] {
+  return UNIVERSES.map((universe) => ({
+    id: universe.id,
+    name: universe.name,
+    summary: universe.summary,
+    effects: [...universe.effects],
+    implemented: universe.implemented,
+    owned: core.hasUniverse(universe.id),
+  }));
 }
 
 // 单台机器的消耗与产出。发电机看「出力 / 烧矿 / 效率」，
