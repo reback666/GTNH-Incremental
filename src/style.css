@@ -620,6 +620,13 @@ h1 .small {
 
 .overclock .oc-label {
   letter-spacing: 0.08em;
+  cursor: help;
+  outline: none;
+}
+
+.overclock .oc-label:hover,
+.overclock .oc-label:focus {
+  color: var(--accent);
 }
 
 .oc-btn {
@@ -1676,7 +1683,12 @@ h1 .small {
 }
 
 .tier-line.second {
-  justify-content: flex-end;
+  /* 超频在左（对齐机型名），故障在中间，卖的那组始终靠右 */
+  padding-left: 46px;
+}
+
+.tier-line.second .trade {
+  margin-left: auto;
 }
 
 /* 买 / 卖按钮组：两个数量按钮 + 一个「买」「卖」字标签 */

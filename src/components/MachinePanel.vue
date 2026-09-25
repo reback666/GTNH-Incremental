@@ -8,7 +8,12 @@ import {
   type MachineTierGroup,
 } from '../game/store';
 import type { MachineKind, PayWith } from '../game/core';
-import { MAX_OVERCLOCK_LEVEL as MAX_OC } from '../numeric/overclock';
+import {
+  MAX_OVERCLOCK_LEVEL as MAX_OC,
+  overclockEnergyMultiplier,
+  overclockSpeedMultiplier,
+} from '../numeric/overclock';
+import { formatNumber } from '../numeric/format';
 import MachineIcon from './MachineIcon.vue';
 import { pickaxeIconUrl } from '../game/pickaxe-icons';
 
@@ -80,6 +85,29 @@ function showTip(event: Event, model: MachineModelRow) {
 
 function hideTip() {
   tip.value = null;
+}
+
+// 悬停「超频」：这一档到底换来了多少速度、多花了多少电、故障率变多高
+function showOverclockTip(event: Event, model: MachineModelRow) {
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const level = model.overclock;
+  const speed = overclockSpeedMultiplier(level);
+  const energy = overclockEnergyMultiplier(level);
+  const lines = [
+    { label: '当前档位', value: `${level} / ${MAX_OC} 档` },
+    { label: '速度', value: `×${formatNumber(speed)}（+${level * 60}%）` },
+    { label: '耗电', value: `×${formatNumber(energy)}` },
+    { label: '故障率', value: model.faultHint },
+  ];
+  const width = 178;
+  const height = 36 + (lines.length + 1) * 19;
+  tip.value = {
+    name: `${model.name} 的超频`,
+    lines,
+    traits: ['每升一档：速度 +60%、耗电翻倍、故障率也跟着涨'],
+    x: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
+    y: rect.bottom + 8 + height > window.innerHeight ? rect.top - height - 6 : rect.bottom + 6,
+  };
 }
 
 // 悬停某个标签：列出这一类机器吃到的全部增益 / 减益
@@ -270,7 +298,16 @@ function canBuy(model: MachineModelRow): boolean {
 
             <div class="tier-line second">
               <span v-if="bar.model.overclockable" class="overclock">
-              <span class="oc-label">超频</span>
+              <span
+                class="oc-label"
+                tabindex="0"
+                title="每升一档：速度 +60%、耗电翻倍"
+                @mouseenter="showOverclockTip($event, bar.model)"
+                @mouseleave="hideTip"
+                @focus="showOverclockTip($event, bar.model)"
+                @blur="hideTip"
+                >超频</span
+              >
               <button
                 class="oc-btn"
                 :disabled="bar.model.overclock === 0"
