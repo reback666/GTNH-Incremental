@@ -1,0 +1,106 @@
+import { describe, expect, it } from 'vitest';
+import { GameCore } from '../src/game/core';
+import { deserialize, serialize } from '../src/game/save';
+import { modelById } from '../src/game/models';
+import {
+  essentiaFromPurify,
+  nodeEssentiaDemand,
+  nodeOutputFactor,
+  nodeVisPerSecond,
+} from '../src/numeric/arcane';
+import { dec } from '../src/numeric/decimal';
+
+// 奥术宇宙：机器改吃灵气，产量减半、故障归零；源质由净化器副产，用来把灵气节点喂满。
+describe('奥术宇宙', () => {
+  it('灵气产量与发电机同级同强度，节点每秒吃 1 源质', () => {
+    expect(nodeVisPerSecond(1).toString()).toBe('8');
+    expect(nodeVisPerSecond(8).toString()).toBe('131072'); // 8 × 4^7
+    expect(nodeEssentiaDemand('3').toString()).toBe('3');
+    // 净化 1%/秒 → 1000 源质/秒
+    expect(essentiaFromPurify('0.0036').toString()).toBe('3.6');
+  });
+
+  it('源质喂满出力翻倍，没有源质只出一半', () => {
+    expect(nodeOutputFactor('10', '10').toString()).toBe('1');
+    expect(nodeOutputFactor('5', '10').toString()).toBe('0.75');
+    expect(nodeOutputFactor('0', '10').toString()).toBe('0.5');
+    expect(nodeOutputFactor('0', '0').toString()).toBe('1');
+  });
+
+  it('灵气节点是奥术宇宙专属：没有宇宙时买不到', () => {
+    const core = new GameCore();
+    core.coins[0] = dec('1e9');
+    core.ores[0] = dec('1e9');
+    expect(core.buy(modelById('n-1'), 1, 'coin')).toBe(0);
+    expect(core.canAfford(modelById('n-1'))).toBe(false);
+
+    core.universes = ['arcane'];
+    expect(core.buy(modelById('n-1'), 1, 'coin')).toBe(1);
+  });
+
+  it('没有节点时机器停摆；有节点时机器吃灵气、产量减半', () => {
+    const core = new GameCore();
+    core.universes = ['arcane'];
+    core.ores[0] = dec('1000');
+    core.counts['c-1'] = 1;
+
+    // 一台 ULV 制造机要 8 灵气/秒，没节点 → 全停
+    let report = core.tick(1);
+    expect(report.powerRatio).toBe(0);
+    expect(core.coins[0]!.toString()).toBe('0');
+
+    // 建一台 ULV 灵气节点（8 灵气/秒）：没有源质 → 只出 4 → 只能跑到一半
+    core.counts['n-1'] = 1;
+    report = core.tick(1);
+    expect(report.visProduced.toString()).toBe('4');
+    expect(report.powerRatio).toBeCloseTo(0.5, 6);
+    // 产量 = 基础 1 × 降载 0.5 × 奥术系数 0.5
+    expect(core.coins[0]!.toString()).toBe('0.25');
+
+    // 补上源质库存 → 节点满出力，产量回到「减半后」的水平
+    core.essentia = dec('100');
+    core.coins[0] = dec('0');
+    report = core.tick(1);
+    expect(report.visProduced.toString()).toBe('8');
+    expect(report.powerRatio).toBe(1);
+    expect(core.coins[0]!.toString()).toBe('0.5');
+  });
+
+  it('净化器副产源质，够喂自己的同时还多出来', () => {
+    const core = new GameCore();
+    core.universes = ['arcane'];
+    core.maxTier = 3; // 净化器从 MV 起才有
+    core.counts['p-3'] = 1; // MV 净化器：净化 0.0036 %/秒
+    expect(core.purifyPerSecond().toString()).toBe('0.0036');
+
+    core.essentia = dec('0');
+    const report = core.tick(1);
+    // 每秒凝出 3.6 源质，节点需求 0 → 全部存起来
+    expect(report.essentiaProduced.toString()).toBe('3.6');
+    expect(core.essentia.toString()).toBe('3.6');
+  });
+
+  it('奥术宇宙里超频不会故障', () => {
+    const core = new GameCore();
+    core.universes = ['arcane'];
+    core.ores[0] = dec('1000');
+    core.maxTier = 1;
+    core.counts['m-1'] = 10;
+    core.counts['n-1'] = 20;
+    core.setOverclock('m-1', 3);
+    core.random = () => 0; // 平时这一拍必坏
+
+    core.tick(600);
+    expect(core.faults).toEqual({});
+  });
+
+  it('存档往返保留源质', () => {
+    const core = new GameCore();
+    core.universes = ['arcane'];
+    core.essentia = dec('123.5');
+    const restored = deserialize(serialize(core));
+    expect(restored.essentia.toString()).toBe('123.5');
+    expect(restored.universes).toEqual(['arcane']);
+    expect(serialize(restored)).toEqual(serialize(core));
+  });
+});

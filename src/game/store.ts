@@ -20,6 +20,7 @@ import {
 import { GRID_MODES, gridMode, type GridMode } from '../numeric/grid';
 import { ACHIEVEMENTS } from './achievements';
 import { UNIVERSES } from './universes';
+import { essentiaFromPurify } from '../numeric/arcane';
 import { REBIRTH_NODES, REBIRTH_ROOT, treeTotalCost, type RebirthEffectKind } from './rebirth';
 import {
   RESEARCH_GATE_FROM_TIER,
@@ -107,6 +108,10 @@ export interface MachineModelRow {
   traits: string[];
   // ZPM 及以后的机型要先研究出来才能建造
   researched: boolean;
+  // 是否已解锁（研究 + 所属平行宇宙都满足）；奥术宇宙的灵气节点要拥有奥术宇宙
+  unlocked: boolean;
+  // 需要哪个平行宇宙才能建造，没有需求时是空串
+  needsUniverse: string;
   // 单台的消耗与产出，鼠标移到机器名上时显示
   single: { label: string; value: string }[];
   count: number;
@@ -226,6 +231,20 @@ export interface UniverseRow {
   owned: boolean;
 }
 
+// 奥术宇宙的资源读数：灵气（流量）与源质（存量）
+export interface ArcaneStats {
+  active: boolean;
+  // 每秒产出 / 用掉的灵气
+  visProduced: string;
+  visUsed: string;
+  // 源质存量与每秒净变化
+  essentia: string;
+  essentiaNet: string;
+  essentiaPositive: boolean;
+  nodes: number;
+  note: string;
+}
+
 export interface Snapshot {
   ores: ResourceRow[];
   coins: ResourceRow[];
@@ -245,6 +264,7 @@ export interface Snapshot {
   rebirth: RebirthStats;
   achievements: AchievementStats;
   universes: UniverseRow[];
+  arcane: ArcaneStats;
   // 累计统计（存档面板里显示）
   stats: { label: string; value: string }[];
   // 开发者模式开关（设置页）
@@ -264,6 +284,7 @@ export const TIER_ICON_LIMIT = 24;
 const COLUMN_ORDER: MachineKind[] = [
   'miner',
   'generator',
+  'arcane',
   'machine',
   'storage',
   'purifier',
@@ -285,6 +306,10 @@ const COLUMN_META: Record<MachineKind, { title: string; hint: string }> = {
   research: {
     title: '研究',
     hint: '计算机把电力换成算力，研究站吃掉算力推进研究进度；进度满才解锁 ZPM 及以后的机型。算力是流量，用不掉就浪费。',
+  },
+  arcane: {
+    title: '灵气节点',
+    hint: '只有奥术宇宙才能建造。节点从矿脉抽灵气，灵气是流量、不能囤积；源质（净化器压污染时的副产物）能把节点喂满，没有源质时只出一半。',
   },
 };
 
@@ -493,6 +518,7 @@ function buildSnapshot(core: GameCore): Snapshot {
     rebirth: rebirthStats(core),
     achievements: achievementStats(core),
     universes: universeRows(core),
+    arcane: arcaneStats(core),
     stats: statRows(core),
     devMode: core.devMode,
     nextTier,
@@ -571,6 +597,9 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
           block: model.block,
           traits: model.traits ?? [],
           researched: core.isResearched(model.tier),
+          unlocked: core.isModelUnlocked(model),
+          needsUniverse:
+            model.requiresUniverse === 'arcane' && !core.hasUniverse('arcane') ? '奥术宇宙' : '',
           single: singleStats(model, level),
           count,
           overclock: level,
@@ -751,6 +780,40 @@ function universeRows(core: GameCore): UniverseRow[] {
     implemented: universe.implemented,
     owned: core.hasUniverse(universe.id),
   }));
+}
+
+// 奥术宇宙的灵气 / 源质读数
+function arcaneStats(core: GameCore): ArcaneStats {
+  const active = core.hasUniverse('arcane');
+  const report = core.lastReport;
+  const nodes = modelsOf('arcane').reduce((sum, model) => sum + core.countOf(model.id), 0);
+  const demand = core.nodeEssentiaDemandRated();
+  const produced = core.hasUniverse('arcane')
+    ? essentiaFromPurify(core.purifyPerSecond())
+    : ZERO;
+  const essentiaNet = produced.minus(demand);
+
+  let note: string;
+  if (!active) {
+    note = '没有奥术宇宙：灵气节点造不了，机器照常吃电。';
+  } else if (nodes === 0) {
+    note = '还没有灵气节点：机器没灵气可用，全厂停摆。';
+  } else if (essentiaNet.gte(0)) {
+    note = '源质够用，灵气节点满出力。';
+  } else {
+    note = '源质不够：灵气节点按比例降出力（最低 50%），多建净化器。';
+  }
+
+  return {
+    active,
+    visProduced: `${formatNumber(report.visProduced)}/秒`,
+    visUsed: `${formatNumber(report.visUsed)}/秒`,
+    essentia: formatNumber(core.essentia),
+    essentiaNet: `${essentiaNet.gte(0) ? '+' : ''}${formatNumber(essentiaNet, { significantDigits: 3 })}/秒`,
+    essentiaPositive: essentiaNet.gte(0),
+    nodes,
+    note,
+  };
 }
 
 // 单台机器的消耗与产出。发电机看「出力 / 烧矿 / 效率」，

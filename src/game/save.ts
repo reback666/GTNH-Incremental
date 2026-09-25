@@ -48,6 +48,8 @@ export interface SaveData {
   achieved?: Record<string, number>;
   // v10：已拥有的平行宇宙
   universes?: string[];
+  // v11：奥术宇宙的源质存量
+  essentia?: string;
   // v1 遗留字段：按电压等级存的数量，读到旧存档时用来迁移
   miners?: number[];
   generators?: number[];
@@ -91,6 +93,7 @@ export function serialize(core: GameCore): SaveData {
     totalCables: toSaveString(core.totalCables),
     achieved: { ...core.achieved },
     universes: [...core.universes],
+    essentia: toSaveString(core.essentia),
     siphoned: toSaveString(core.siphoned),
     maxTier: core.maxTier,
     unlockedVeins: [...core.unlockedVeins],
@@ -142,6 +145,7 @@ export function deserialize(data: SaveData): GameCore {
   core.totalCables = fromSaveString(data.totalCables ?? '0');
   core.achieved = { ...(data.achieved ?? {}) };
   core.universes = [...((data.universes ?? []) as GameCore['universes'])];
+  core.essentia = fromSaveString(data.essentia ?? '0');
   core.playSeconds = data.playSeconds;
   core.totalOre = dec(data.totalOre ?? '0');
   core.totalCoins = dec(data.totalCoins ?? '0');

@@ -79,6 +79,7 @@ const TAB_ICON: Record<MachineKind, string> = {
   storage: 'b-3',
   purifier: 'p-3',
   research: 'x-7',
+  arcane: 'n-1',
 };
 
 function tabIconId(kind: MachineKind): string {
@@ -90,8 +91,8 @@ function cells(count: number): number[] {
 }
 
 function canBuy(model: MachineModelRow): boolean {
-  // 还没研究出来的机型（ZPM 及以后）不能建造，灰掉按钮
-  return model.researched && (payWith.value === 'ore' ? model.oreAffordable : model.affordable);
+  // 还没研究出来、或者缺对应平行宇宙的机型不能建造，灰掉按钮
+  return model.unlocked && (payWith.value === 'ore' ? model.oreAffordable : model.affordable);
 }
 </script>
 
@@ -155,6 +156,12 @@ function canBuy(model: MachineModelRow): boolean {
                 >{{ trait }}</span
               >
               <span v-if="!bar.model.researched" class="badge warn" title="要先在研究里解锁这一级机型">需研究</span>
+              <span
+                v-else-if="bar.model.needsUniverse"
+                class="badge warn"
+                title="要先在转生时选上对应的平行宇宙"
+                >需{{ bar.model.needsUniverse }}</span
+              >
             </span>
 
             <div class="tier-icons">

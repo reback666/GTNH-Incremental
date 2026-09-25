@@ -16,7 +16,8 @@ export type MachineCategory =
   | 'machine'
   | 'storage'
   | 'purifier'
-  | 'research';
+  | 'research'
+  | 'arcane';
 export type BlockKind = 'single' | 'multiblock';
 
 export interface MachineModel {
@@ -35,6 +36,8 @@ export interface MachineModel {
   costFactor: string;
   // 研究类专用：计算机产出算力，研究站消耗算力
   computeRole?: 'produce' | 'consume';
+  // 只有拥有对应平行宇宙才能建造（灵气节点要奥术宇宙）
+  requiresUniverse?: 'arcane';
   traits?: string[];
 }
 
@@ -192,6 +195,24 @@ const LABS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
   };
 }).filter((model) => model.tier >= RESEARCH_FROM_TIER);
 
+// ── 灵气节点（奥术宇宙专属） ────────────────────────────────
+// 奥术宇宙里机器改吃灵气，灵气由这台设施从矿脉抽出来。
+// 它不烧矿：代价体现在宇宙层面（全厂产量 -50%），不体现在燃料上。
+const NODES: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
+  const tier = index + 1;
+  return {
+    id: `n-${tier}`,
+    name: `${VOLTAGE_TIERS[index]} 灵气节点`,
+    category: 'arcane' as const,
+    block: 'single' as const,
+    tier,
+    outputFactor: '1',
+    costFactor: '1',
+    requiresUniverse: 'arcane' as const,
+    traits: ['产出灵气'],
+  };
+});
+
 export const MACHINE_MODELS: MachineModel[] = [
   ...GENERATORS,
   ...MINERS,
@@ -200,6 +221,7 @@ export const MACHINE_MODELS: MachineModel[] = [
   ...PURIFIERS,
   ...COMPUTERS,
   ...LABS,
+  ...NODES,
 ];
 
 const BY_ID = new Map(MACHINE_MODELS.map((model) => [model.id, model]));

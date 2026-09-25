@@ -136,6 +136,30 @@ function togglePower(key: PowerKey) {
       电力不足，所有机器都在降载运行。加发电机，或先停掉一些机器。
     </p>
 
+    <!-- ── 奥术宇宙：灵气与源质 ─────────────────────────────── -->
+    <template v-if="snap.arcane.active">
+      <h2 class="mt">灵气（奥术宇宙）</h2>
+      <dl class="stats">
+        <div class="stat">
+          <dt>灵气产出</dt>
+          <dd>{{ snap.arcane.visProduced }}</dd>
+        </div>
+        <div class="stat">
+          <dt>灵气消耗</dt>
+          <dd>{{ snap.arcane.visUsed }}</dd>
+        </div>
+        <div class="stat">
+          <dt>源质存量</dt>
+          <dd>{{ snap.arcane.essentia }}</dd>
+        </div>
+        <div class="stat">
+          <dt>源质净变化</dt>
+          <dd :class="{ danger: !snap.arcane.essentiaPositive }">{{ snap.arcane.essentiaNet }}</dd>
+        </div>
+      </dl>
+      <p class="muted small" style="margin: 6px 0 0">{{ snap.arcane.note }}</p>
+    </template>
+
     <!-- ── 第四行：研究 ─────────────────────────────────────── -->
     <h2 class="mt">研究</h2>
     <dl class="stats">

@@ -6,6 +6,13 @@ import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '.
 import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
 import { coinValueInTier1, convertCoins, paymentTier } from '../numeric/credit';
 import { type UniverseId, universeById } from './universes';
+import {
+  ARCANE_OUTPUT_FACTOR,
+  essentiaFromPurify,
+  nodeEssentiaDemand,
+  nodeOutputFactor,
+  nodeVisPerSecond,
+} from '../numeric/arcane';
 import { isValidOverclockLevel, overclockEnergyMultiplier, overclockSpeedMultiplier } from '../numeric/overclock';
 import { expectedFaults, sampleFaults } from '../numeric/fault';
 import { batteryCapacityEU, settleStorage } from '../numeric/storage';
@@ -88,6 +95,11 @@ export interface TickReport {
   // 本拍推进的研究进度，以及是否刚好研究完成（值是刚解锁的电压等级）
   researchGained: Decimal;
   researchUnlocked: number | null;
+  // 奥术宇宙：本拍的灵气产出 / 实际用掉，以及源质的产出 / 消耗
+  visProduced: Decimal;
+  visUsed: Decimal;
+  essentiaProduced: Decimal;
+  essentiaUsed: Decimal;
   // 污染：本拍净变化与产出倍率（关掉污染机制时倍率恒为 1）
   pollutionDelta: Decimal;
   outputMultiplier: Decimal;
@@ -138,6 +150,8 @@ export class GameCore {
   devMode = false;
   // 已经拥有的平行宇宙（转生时选一个，选过的永久叠加）
   universes: UniverseId[] = [];
+  // 奥术宇宙的源质存量（净化器副产，喂给灵气节点）
+  essentia = ZERO;
   // ── 累计统计与成就 ─────────────────────────────────────────
   // 历史最高电压等级（转生会重置本周目的 maxTier，但不重置这个）
   peakTier = 1;
@@ -475,6 +489,15 @@ export class GameCore {
     return !needsResearch(tier) || this.researched.includes(tier);
   }
 
+  // 机型能不能造：除了研究，还要看它是不是要求某个平行宇宙（灵气节点要奥术宇宙）
+  isModelUnlocked(model: MachineModel): boolean {
+    if (!this.isResearched(model.tier)) return false;
+    if (model.requiresUniverse !== undefined && !this.hasUniverse(model.requiresUniverse)) {
+      return false;
+    }
+    return true;
+  }
+
   // 当前研究目标：已解锁电压里最低的那个还没研究出来的等级。
   // 没有目标（还没到 ZPM，或目标都研究完了）时返回 null
   researchTargetTier(): number | null {
@@ -516,6 +539,45 @@ export class GameCore {
 
   computerEnergyDrain(model: MachineModel): Decimal {
     return computerEnergyEU(model.tier).times(this.workingCountOf(model.id));
+  }
+
+  // ── 奥术宇宙：灵气与源质 ───────────────────────────────────
+
+  // 灵气节点的额定灵气产量（灵气/秒）
+  nodeVisRated(): Decimal {
+    let total = ZERO;
+    for (const model of modelsOf('arcane')) {
+      if (model.tier > this.maxTier) continue;
+      const count = this.workingCountOf(model.id);
+      if (count <= 0) continue;
+      total = total.plus(nodeVisPerSecond(model.tier).times(count));
+    }
+    return total;
+  }
+
+  // 灵气节点想吃的源质总量（单位/秒）
+  nodeEssentiaDemandRated(): Decimal {
+    let nodes = ZERO;
+    for (const model of modelsOf('arcane')) {
+      if (model.tier > this.maxTier) continue;
+      nodes = nodes.plus(this.workingCountOf(model.id));
+    }
+    return nodeEssentiaDemand(nodes);
+  }
+
+  // 本拍机器要多少灵气（同一套耗电公式，只是换成灵气）
+  visDemand(): Decimal {
+    let demand = ZERO;
+    for (const model of MACHINE_MODELS) {
+      if (model.tier > this.maxTier || this.countOf(model.id) === 0) continue;
+      if (model.category === 'miner') demand = demand.plus(this.minerEnergyDrain(model));
+      else if (model.category === 'machine') demand = demand.plus(this.machineEnergyDrain(model));
+      else if (model.category === 'purifier') demand = demand.plus(this.purifierEnergyDrain(model));
+      else if (model.category === 'research' && model.computeRole === 'produce') {
+        demand = demand.plus(this.computerEnergyDrain(model));
+      }
+    }
+    return demand.times(gridEnergyMultiplier(this.grid));
   }
 
   // 存电装置的总容量（EU）
@@ -796,7 +858,7 @@ export class GameCore {
   }
 
   canAfford(model: MachineModel, payWith: PayWith = 'coin'): boolean {
-    if (!this.isResearched(model.tier)) return false;
+    if (!this.isModelUnlocked(model)) return false;
     const price = this.priceOf(model, payWith);
     const index = payWith === 'ore' ? model.tier - 1 : paymentTier(model.tier) - 1;
     const wallet = payWith === 'ore' ? this.ores[index]! : this.coins[index]!;
@@ -814,7 +876,7 @@ export class GameCore {
 
   buy(model: MachineModel, count: number, payWith: PayWith = 'coin'): number {
     // 没研究出来的机型买不了 —— 硬墙挡在这里，不只是界面灰掉
-    if (!this.isResearched(model.tier)) return 0;
+    if (!this.isModelUnlocked(model)) return 0;
     const acrossTiers = payWith === 'coin' && this.hasUniverse('industry');
     let bought = 0;
     for (let i = 0; i < count; i += 1) {
@@ -917,22 +979,46 @@ export class GameCore {
     }
     const effectiveDemand = report.outage ? ZERO : demand;
 
-    // 4) 再过存电装置：富余电力存起来，发电不够先放存量，放完还不够才降载
-    const settlement = settleStorage({
-      stored: this.storedEU,
-      capacity: this.batteryCapacity(),
-      net: generated.minus(effectiveDemand),
-      dtSeconds,
-    });
-    this.storedEU = settlement.stored;
-    const needEU = effectiveDemand.times(dtSeconds);
-    const ratioDec = report.outage
-      ? ZERO
-      : needEU.lte(0)
-        ? ONE
-        : Decimal.max(0, Decimal.min(ONE, needEU.minus(settlement.shortfall).div(needEU)));
-    report.euCharged = settlement.charged;
-    report.euDischarged = settlement.discharged;
+    // 4) 供电结算。
+    //    平时走电网：富余电力存进电池，不够先放存量，放完才降载。
+    //    奥术宇宙里机器吃的是灵气，电池不参与 —— 发电机照转，只是电没人用。
+    const arcane = this.hasUniverse('arcane');
+    let ratioDec: Decimal;
+    if (arcane) {
+      const step = dec(String(dtSeconds));
+      const essentiaProduced = essentiaFromPurify(this.purifyPerSecond()).times(step);
+      const essentiaNeed = this.nodeEssentiaDemandRated().times(step);
+      const essentiaUsed = Decimal.min(essentiaNeed, this.essentia.plus(essentiaProduced));
+      this.essentia = this.essentia.plus(essentiaProduced).minus(essentiaUsed);
+      report.essentiaProduced = essentiaProduced;
+      report.essentiaUsed = essentiaUsed;
+
+      const factor = nodeOutputFactor(essentiaUsed, essentiaNeed);
+      const vis = this.nodeVisRated().times(factor);
+      report.visProduced = vis;
+      report.visUsed = Decimal.min(vis, effectiveDemand);
+      ratioDec = report.outage
+        ? ZERO
+        : effectiveDemand.lte(0)
+          ? ONE
+          : Decimal.min(ONE, vis.div(effectiveDemand));
+    } else {
+      const settlement = settleStorage({
+        stored: this.storedEU,
+        capacity: this.batteryCapacity(),
+        net: generated.minus(effectiveDemand),
+        dtSeconds,
+      });
+      this.storedEU = settlement.stored;
+      const needEU = effectiveDemand.times(dtSeconds);
+      ratioDec = report.outage
+        ? ZERO
+        : needEU.lte(0)
+          ? ONE
+          : Decimal.max(0, Decimal.min(ONE, needEU.minus(settlement.shortfall).div(needEU)));
+      report.euCharged = settlement.charged;
+      report.euDischarged = settlement.discharged;
+    }
 
     // 污染：边污染边被净化器压，产出按污染档位打折
     const pollutionDelta = this.pollutionDeltaPerSecond();
@@ -943,7 +1029,9 @@ export class GameCore {
     report.pollutionDelta = pollutionDelta;
     report.outputMultiplier = pollutionMul;
     this.maxPollution = Decimal.max(this.maxPollution, this.pollution);
-    const productive = ratioDec.times(pollutionMul);
+    const productive = ratioDec
+      .times(pollutionMul)
+      .times(arcane ? dec(ARCANE_OUTPUT_FACTOR) : ONE);
 
     // 4) 采矿机产矿。超频提速，坏了的机器不算数
     //
@@ -1014,16 +1102,22 @@ export class GameCore {
       }
     }
 
-    // 6) 超频机器的故障判定：档位越高越容易坏，坏掉的下一拍开始停机
-    for (const model of active) {
-      const level = this.overclockOf(model.id);
-      if (level === 0 || !canOverclock(model)) continue;
-      const healthy = this.workingCountOf(model.id);
-      if (healthy <= 0) continue;
-      const broke = Math.min(healthy, sampleFaults(expectedFaults(level, healthy, dtSeconds), this.random));
-      if (broke > 0) {
-        this.faults[model.id] = this.faultyCountOf(model.id) + broke;
-        report.faultsGained += broke;
+    // 6) 超频机器的故障判定：档位越高越容易坏，坏掉的下一拍开始停机。
+    //    奥术宇宙的机器由灵气驱动，不会故障 —— 所以那个宇宙可以放心拉满超频。
+    if (!arcane) {
+      for (const model of active) {
+        const level = this.overclockOf(model.id);
+        if (level === 0 || !canOverclock(model)) continue;
+        const healthy = this.workingCountOf(model.id);
+        if (healthy <= 0) continue;
+        const broke = Math.min(
+          healthy,
+          sampleFaults(expectedFaults(level, healthy, dtSeconds), this.random),
+        );
+        if (broke > 0) {
+          this.faults[model.id] = this.faultyCountOf(model.id) + broke;
+          report.faultsGained += broke;
+        }
       }
     }
 
@@ -1062,6 +1156,10 @@ function emptyReport(): TickReport {
     computeWasted: ZERO,
     researchGained: ZERO,
     researchUnlocked: null,
+    visProduced: ZERO,
+    visUsed: ZERO,
+    essentiaProduced: ZERO,
+    essentiaUsed: ZERO,
     pollutionDelta: ZERO,
     outputMultiplier: ONE,
     outage: false,

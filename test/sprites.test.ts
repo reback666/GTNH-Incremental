@@ -20,6 +20,7 @@ describe('像素图标', () => {
 
   it('每一个类别图标都有内容', () => {
     expect(Object.keys(SPRITES).sort()).toEqual([
+      'arcane',
       'generator',
       'machine',
       'miner',

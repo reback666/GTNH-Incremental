@@ -88,7 +88,7 @@ describe('平行宇宙', () => {
     expect(industryPrice.div(plainPrice).lt('0.5')).toBe(true);
   });
 
-  it('宇宙目录：四个宇宙各有一句话说明，只有工业宇宙是已实现', () => {
+  it('宇宙目录：四个宇宙各有一句话说明，工业与奥术已实现', () => {
     expect(UNIVERSES.map((universe) => universe.id)).toEqual([
       'industry',
       'arcane',
@@ -101,6 +101,7 @@ describe('平行宇宙', () => {
     }
     expect(UNIVERSES.filter((universe) => universe.implemented).map((universe) => universe.id)).toEqual([
       'industry',
+      'arcane',
     ]);
     expect(universeById('industry')?.name).toBe('工业宇宙');
     expect(universeById('nope')).toBeUndefined();

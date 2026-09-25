@@ -67,6 +67,8 @@ BODY_DARK = (96, 104, 118, 255)
 FULL = (250, 205, 90, 255)
 CHARGE = (120, 224, 160, 255)
 EMPTY = (58, 64, 74, 255)
+AURA = (150, 110, 210, 255)
+AURA_LIGHT = (216, 190, 255, 255)
 
 
 def battery_face() -> Image.Image:
@@ -118,11 +120,30 @@ def purifier_face() -> Image.Image:
     return face
 
 
+def node_face() -> Image.Image:
+    """16×16 的灵气节点图案：底座 + 悬浮的灵气结晶。"""
+    face = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    px = face.load()
+    # 底座
+    for x in range(4, 12):
+        px[x, 12] = OUTLINE
+        px[x, 11] = BODY_DARK
+    # 悬浮结晶（上窄下宽的菱形）
+    rows = [(7, 9), (6, 10), (6, 10), (6, 10), (7, 9)]
+    for index, (left, right) in enumerate(rows):
+        for x in range(left, right):
+            px[x, 3 + index] = AURA
+    for x, y in ((7, 4), (7, 5), (8, 3)):
+        px[x, y] = AURA_LIGHT
+    return face
+
+
 def main() -> None:
     jar = (glob.glob(JAR_GLOB) or [""])[0]
     if not jar:
         raise SystemExit("找不到 GT5-Unofficial jar")
     faces = {"b": battery_face(), "p": purifier_face()}
+    nodes = node_face()
     with zipfile.ZipFile(jar) as archive:
         # 计算机的贴图是 5 帧的竖排条带，取最上面一格
         computer = Image.open(io.BytesIO(archive.read(COMPUTER_FACE))).convert("RGBA").crop(
@@ -151,6 +172,19 @@ def main() -> None:
                     icon = icon.resize((32, 32), Image.NEAREST)
                     icon.save(OUT_DIR / f"{prefix}-{tier}.png")
                 print(f"{voltage}: x-{tier} 计算机 / r-{tier} 研究站 ← GT 面片 + 机壳")
+
+        # 灵气节点：每一级都有（奥术宇宙专属），面片是自己画的灵气结晶
+        for tier in range(1, len(VOLTAGES) + 1):
+            voltage = VOLTAGES[tier - 1]
+            casing = Image.open(
+                io.BytesIO(
+                    archive.read(f"assets/gregtech/textures/blocks/iconsets/MACHINE_{voltage}_SIDE.png")
+                )
+            ).convert("RGBA")
+            node = tint_casing(casing, tier)
+            node.alpha_composite(nodes)
+            node.resize((32, 32), Image.NEAREST).save(OUT_DIR / f"n-{tier}.png")
+        print(f"{len(VOLTAGES)} 个灵气节点图标 ← 机壳 + 灵气结晶")
 
 
 

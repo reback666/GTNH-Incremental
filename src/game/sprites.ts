@@ -11,7 +11,8 @@ export type SpriteKind =
   | 'machine'
   | 'storage'
   | 'purifier'
-  | 'research';
+  | 'research'
+  | 'arcane';
 
 export const SPRITE_GRID = 16;
 
@@ -142,6 +143,21 @@ const RESEARCH: SpriteRect[] = [
   [5, 12, 6, 1, 'stoneLight'],
 ];
 
+// 灵气：底座 + 悬浮的灵气结晶
+const ARCANE: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [4, 11, 8, 2, 'metalDark'],
+  [6, 9, 4, 2, 'metal'],
+  [7, 3, 2, 3, 'accent'],
+  [6, 4, 4, 4, 'ore'],
+  [5, 6, 6, 3, 'oreDark'],
+  [7, 6, 2, 2, 'bright'],
+  [6, 2, 1, 1, 'bright'],
+  [9, 3, 1, 1, 'bright'],
+  [5, 8, 1, 1, 'accent'],
+  [10, 8, 1, 1, 'accent'],
+];
+
 export const SPRITES: Record<SpriteKind, SpriteRect[]> = {
   vein: VEIN,
   miner: MINER,
@@ -150,4 +166,5 @@ export const SPRITES: Record<SpriteKind, SpriteRect[]> = {
   storage: STORAGE,
   purifier: PURIFIER,
   research: RESEARCH,
+  arcane: ARCANE,
 };

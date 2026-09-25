@@ -310,6 +310,10 @@ describe('界面购买入口', () => {
     core.ores = core.ores.map(() => dec('1e30'));
     core.researched = Array.from({ length: 14 }, (_, index) => index + 1);
 
+    // 灵气节点是奥术宇宙专属：没有宇宙时买不到，选上之后才买得到
+    expect(store.buy('n-1', 1, 'coin')).toBe(0);
+    core.universes = ['arcane'];
+
     const failed = MACHINE_MODELS.filter((model) => store.buy(model.id, 1, 'coin') !== 1).map(
       (model) => model.id,
     );
