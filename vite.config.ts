@@ -1,10 +1,20 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 
+// 构build时间戳：单文件产物会发给别人玩，界面上标出来才能确认手上是哪个版本。
+function buildStamp(): string {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
 // 计划书第十四章：网页游戏，构建用 Vite，产物要能直接发链接。
 export default defineConfig({
   plugins: [vue()],
   base: './',
+  define: {
+    __BUILD_STAMP__: JSON.stringify(buildStamp()),
+  },
   build: {
     outDir: 'dist',
     target: 'es2022',
