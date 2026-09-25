@@ -62,15 +62,47 @@ describe('平行宇宙', () => {
     expect(walletValue(core).toString()).toBe('1000');
   });
 
-  it('工业宇宙：跨电压结算会把零钱按 4:1 归整到允许的最高币种', () => {
+  it('工业宇宙：跨电压结算先用本级币，不够才动低一级的', () => {
+    // 买 3 级机器按 2 级（LV）币结算，首台价格 8000 枚 LV 币
+    const lvOnly = new GameCore();
+    lvOnly.maxTier = 3;
+    lvOnly.addUniverse('industry');
+    lvOnly.coins[0] = dec('100000'); // 只有 ULV 币时照旧能买：按 4:1 顶钱
+    expect(lvOnly.buy(modelById('c-3'), 1)).toBe(1);
+    expect(lvOnly.coins[0]!.toString()).toBe('68000');
+    expect(lvOnly.coins[1]!.toString()).toBe('0');
+
+    const enough = new GameCore();
+    enough.maxTier = 3;
+    enough.addUniverse('industry');
+    enough.coins[1] = dec('10000'); // 本级币够：只扣本级，低级币一枚都不动
+    enough.coins[0] = dec('5000');
+    expect(enough.buy(modelById('c-3'), 1)).toBe(1);
+    expect(enough.coins[1]!.toString()).toBe('2000');
+    expect(enough.coins[0]!.toString()).toBe('5000');
+
+    const short = new GameCore();
+    short.maxTier = 3;
+    short.addUniverse('industry');
+    short.coins[1] = dec('1000'); // 本级不够：先扣光本级，再用低级币补
+    short.coins[0] = dec('40000');
+    expect(short.buy(modelById('c-3'), 1)).toBe(1);
+    expect(short.coins[1]!.toString()).toBe('0');
+    expect(short.coins[0]!.toString()).toBe('12000');
+  });
+
+  it('工业宇宙：零钱也付得掉，不会因为凑整而白拿机器', () => {
     const core = new GameCore();
     core.maxTier = 3;
-    core.coins[0] = dec('100000');
     core.addUniverse('industry');
-    // 买 3 级机器按 2 级币结算：零钱归整成 2 级币，1 级币只剩不足 4 枚
-    expect(core.buy(modelById('c-3'), 1)).toBe(1);
-    expect(core.coins[0]!.lt(4)).toBe(true);
-    expect(walletValue(core).toString()).toBe('68000');
+    const model = modelById('c-3');
+    const priceValue = core.coinPriceOf(model).times(coinValueInTier1(2));
+    // 本级差一点点，靠低级币的零头补齐
+    core.coins[1] = dec('7999.5');
+    core.coins[0] = dec('2');
+    const before = walletValue(core);
+    expect(core.buy(model, 1)).toBe(1);
+    expect(walletValue(core).toString()).toBe(before.minus(priceValue).toString());
   });
 
   it('工业宇宙：并联折扣让同一机型的边际成本更低', () => {

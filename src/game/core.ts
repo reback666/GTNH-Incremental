@@ -309,12 +309,18 @@ export class GameCore {
     const need = price.times(unit);
     if (available.lt(need)) return false;
 
-    let remaining = available.minus(need);
-    for (let tier = payTier; tier >= 1; tier -= 1) {
+    // 从高等级往低等级扣：先用本级结算币，不够再动低一级的，而不是把钱包整体规整
+    // （规整会把玩家的低等级币吞掉换成高等级币，看起来就像「先扣了 4 倍的上一级币」）。
+    let remaining = need;
+    for (let tier = payTier; tier >= 1 && remaining.gt(0); tier -= 1) {
       const coinValue = coinValueInTier1(tier);
-      const count = remaining.div(coinValue).floor();
-      this.coins[tier - 1] = count;
-      remaining = remaining.minus(count.times(coinValue));
+      const have = this.coins[tier - 1]!;
+      const haveValue = have.times(coinValue);
+      if (haveValue.lte(0)) continue;
+      // 按价值扣，允许扣到小数枚 —— 机器产出的币本来就是小数，硬凑整会留下付不掉的零头
+      const takeValue = Decimal.min(haveValue, remaining);
+      this.coins[tier - 1] = have.minus(takeValue.div(coinValue));
+      remaining = remaining.minus(takeValue);
     }
     return true;
   }
