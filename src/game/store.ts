@@ -38,11 +38,13 @@ import {
   researchRemaining,
   researchRequired,
 } from '../numeric/research';
-import { type GameCore, type MachineKind, type PayWith } from './core';
+import { type GameCore, type MachineKind, type PayWith, type TickReport } from './core';
 import { canOverclock, modelsOf, type BlockKind, type MachineModel } from './models';
 import { getCore, resetCore, setCore } from './engine';
 import * as C from './constants';
 import { clearStorage, loadFromStorage, saveToStorage } from './save';
+import { buildStamp, stateSnapshot } from './diagnostics';
+import { errorText, logEntries, logEvent, onLogChange, setLogGameSeconds } from './log';
 
 export interface ResourceRow {
   tier: number;
@@ -313,6 +315,15 @@ export interface Snapshot {
 // 每一级、每个机型最多画这么多个图标，再多就折叠成 +N。
 export const TIER_ICON_LIMIT = 24;
 
+// 模拟连续崩这么多拍就停下来，并在日志里写明已暂停
+const CRASH_STREAK_LIMIT = 5;
+
+const POLLUTION_BAND_NAME = {
+  clean: '清洁',
+  mutating: '中度污染',
+  critical: '重度污染',
+} as const;
+
 // 机器面板的标签顺序。购买、统计、显示都走这一份，避免各写一遍漏类别
 const COLUMN_ORDER: MachineKind[] = [
   'miner',
@@ -357,9 +368,18 @@ export const useGameStore = defineStore('game', {
     running: false,
     // 成就列表收起来没有（纯界面状态，不进存档）
     achievementsCollapsed: false,
+    // 模拟连续出错时暂停（纯运行时状态，不进存档；刷新页面即可恢复）
+    simulationPaused: false,
+    crashStreak: 0,
+    // 日志里的错误条数，以及玩家已经看过的条数（设置页按钮上的小红点用它）
+    logErrors: 0,
+    seenErrors: 0,
+    // 上一拍的关键状态，用来只在「状态变了」的时候记一笔日志
+    phase: { maxTier: 1, band: 'clean', powerShort: false, riftPending: false },
   }),
   getters: {
     snap: (state): Snapshot => state.snapshot ?? buildSnapshot(getCore()),
+    unseenLogErrors: (state): number => Math.max(0, state.logErrors - state.seenErrors),
   },
   actions: {
     toggleAchievements(): void {
@@ -368,10 +388,24 @@ export const useGameStore = defineStore('game', {
     boot() {
       const loaded = loadFromStorage();
       if (loaded) setCore(loaded);
+      logEvent('info', 'app.boot', `启动游戏（构建 ${buildStamp()}）`);
+      this.phase.maxTier = getCore().maxTier;
+      // 日志变了就刷新错误条数：设置页按钮上的小红点靠它
+      onLogChange(() => this.syncLogErrors());
+      this.syncLogErrors();
       this.refresh();
     },
+    syncLogErrors(): void {
+      this.logErrors = logEntries().filter((entry) => entry.level === 'error').length;
+    },
+    // 玩家翻到日志面板就算看过了
+    markLogSeen(): void {
+      this.seenErrors = this.logErrors;
+    },
     refresh() {
-      this.snapshot = buildSnapshot(getCore());
+      const core = getCore();
+      setLogGameSeconds(core.playSeconds);
+      this.snapshot = buildSnapshot(core);
     },
     manualMine() {
       getCore().manualMine();
@@ -380,14 +414,20 @@ export const useGameStore = defineStore('game', {
     buy(modelId: string, count: number, payWith: PayWith = 'coin'): number {
       const core = getCore();
       const model = findModel(modelId);
-      const bought = model ? core.buy(model, count, payWith) : 0;
+      if (!model) {
+        // 界面上点了没反应时，这一条能说明是「找不到机型」而不是「钱不够」
+        logEvent('warn', 'buy.missing', `找不到机型 ${modelId}，这次建造被跳过`);
+        return 0;
+      }
+      const bought = core.buy(model, count, payWith);
       this.refresh();
       this.save();
       return bought;
     },
     unlock(): boolean {
       const core = getCore();
-      const ok = core.unlock(core.maxTier + 1);
+      const target = core.maxTier + 1;
+      const ok = core.unlock(target);
       this.refresh();
       this.save();
       return ok;
@@ -484,6 +524,13 @@ export const useGameStore = defineStore('game', {
     // 转生：走时空裂缝（固定 1 条）或打到 MAX（按公式结算）；可以顺带选一个平行宇宙
     rebirth(route: 'rift' | 'max', universe?: string): string | null {
       const gained = getCore().rebirth(route, universe);
+      if (gained !== null) {
+        logEvent(
+          'info',
+          'rebirth.done',
+          `转生完成（${route === 'rift' ? '时空裂缝' : '打到 MAX'}），获得 ${gained.toString()} 条时空线缆`,
+        );
+      }
       this.refresh();
       this.save();
       return gained === null ? null : formatNumber(gained);
@@ -500,13 +547,39 @@ export const useGameStore = defineStore('game', {
       return ok;
     },
     step(dtSeconds: number) {
-      getCore().tick(dtSeconds);
+      const core = getCore();
+      try {
+        const report = core.tick(dtSeconds);
+        this.crashStreak = 0;
+        this.watch(core, report);
+      } catch (error) {
+        this.crashStreak += 1;
+        // 连崩到上限就停下模拟：推不动的游戏继续空转会一直刷屏，
+        // 而日志里已经有现场，玩家刷新页面就能重来
+        if (this.crashStreak === 1 || this.crashStreak === CRASH_STREAK_LIMIT) {
+          logEvent(
+            'error',
+            'tick.crash',
+            `模拟运算出错（连续第 ${this.crashStreak} 次）`,
+            [errorText(error), ...stateSnapshot(core)].join('\n'),
+          );
+        }
+        if (this.crashStreak >= CRASH_STREAK_LIMIT && !this.simulationPaused) {
+          this.simulationPaused = true;
+          logEvent(
+            'error',
+            'tick.paused',
+            '连续出错，模拟已暂停：把日志发给作者后刷新页面即可重新开始',
+          );
+        }
+      }
       this.refresh();
     },
     save() {
       saveToStorage(getCore());
     },
     reset() {
+      logEvent('info', 'save.reset', '重开一局（本地存档已清除）');
       clearStorage();
       resetCore();
       this.refresh();
@@ -515,12 +588,58 @@ export const useGameStore = defineStore('game', {
       if (this.running) return;
       this.running = true;
       // 计划书第十四章：数值运算 1 Hz，界面刷新 20 Hz。
-      setInterval(() => this.step(C.SIM_STEP_MS / 1000), C.SIM_STEP_MS);
+      setInterval(() => {
+        if (this.simulationPaused) return;
+        this.step(C.SIM_STEP_MS / 1000);
+      }, C.SIM_STEP_MS);
       setInterval(() => {
         if (this.snapshot === null) this.refresh();
       }, C.UI_REFRESH_MS);
       setInterval(() => this.save(), 10_000);
       window.addEventListener('beforeunload', () => this.save());
+    },
+    // 关键状态变化各记一笔：玩家来问「产出为什么不对」时，
+    // 「什么时候断电的、什么时候进重度污染的」比最后一刻的数值更能说明问题
+    watch(core: GameCore, report: TickReport): void {
+      const phase = this.phase;
+      if (core.maxTier !== phase.maxTier) {
+        phase.maxTier = core.maxTier;
+        logEvent('info', 'voltage.unlock', `电压上限变为 ${VOLTAGE_TIERS[core.maxTier - 1]}`);
+      }
+      if (report.researchUnlocked !== null) {
+        logEvent(
+          'info',
+          'research.done',
+          `研究完成：${VOLTAGE_TIERS[report.researchUnlocked - 1]} 的机型可以建造了`,
+        );
+      }
+      const band = core.pollutionEnabled ? pollutionBand(core.pollution) : 'clean';
+      if (band !== phase.band) {
+        logEvent(
+          band === 'clean' ? 'info' : 'warn',
+          'pollution.band',
+          `污染进入${POLLUTION_BAND_NAME[band]}（${formatNumber(core.pollution)}%）`,
+        );
+        phase.band = band;
+      }
+      const short = report.powerRatio < 1;
+      if (short !== phase.powerShort) {
+        logEvent(
+          short ? 'warn' : 'info',
+          'power.ratio',
+          short ? '电力不足，产出开始降载' : '供电恢复正常',
+          `供电比 ${(report.powerRatio * 100).toFixed(0)}%`,
+        );
+        phase.powerShort = short;
+      }
+      if (report.collapses > 0) {
+        logEvent('warn', 'pollution.collapse', '工厂崩溃：污染摧毁了一台机器');
+      }
+      const rift = core.riftPending();
+      if (rift !== phase.riftPending) {
+        phase.riftPending = rift;
+        if (rift) logEvent('info', 'rebirth.rift', '时空裂缝出现（本周目第一次到 LuV）');
+      }
     },
   },
 });

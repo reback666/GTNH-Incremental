@@ -606,6 +606,22 @@ h1 .small {
   box-shadow: 0 0 0 4px rgba(88, 196, 163, 0.12);
 }
 
+/* 这一页有新东西要看（设置页里出现了错误日志） */
+.page-dot {
+  position: relative;
+}
+
+.page-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 0 2px rgba(18, 22, 28, 0.9);
+}
+
 /* 换页过渡：先淡出上一页，再淡入下一页 */
 .page-enter-active,
 .page-leave-active {
@@ -782,6 +798,117 @@ h1 .small {
   border: 1px dashed #4a5563;
   border-radius: 8px;
   background: rgba(88, 196, 163, 0.05);
+}
+
+/* ── 日志（反馈问题时交给作者的材料） ─────────────────────── */
+.log-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #141920;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.log-item {
+  padding: 4px 0;
+  border-bottom: 1px solid #222a34;
+  font-size: 12px;
+}
+
+.log-item:last-child {
+  border-bottom: 0;
+}
+
+.log-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.log-time {
+  flex: none;
+  color: #6d7a89;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-tag {
+  flex: none;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.log-text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.log-item.warn .log-tag {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.log-item.warn .log-text {
+  color: #e8c88a;
+}
+
+.log-item.error .log-tag {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.log-item.error .log-text {
+  color: #f0a09e;
+}
+
+.log-detail summary {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.log-detail pre {
+  margin: 4px 0 2px;
+  padding: 6px 8px;
+  max-height: 200px;
+  overflow: auto;
+  background: #0f141a;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.log-alert {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  background: rgba(217, 82, 79, 0.14);
+  color: #f0a09e;
+  font-size: 13px;
+}
+
+.log-fallback {
+  width: 100%;
+  height: 160px;
+  margin-top: 8px;
+  padding: 8px;
+  background: #141920;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font: 12px/1.5 ui-monospace, 'Consolas', monospace;
+  resize: vertical;
 }
 
 .dev-tools .row:first-of-type {

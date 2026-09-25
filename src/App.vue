@@ -11,6 +11,7 @@ import RebirthPage from './components/RebirthPage.vue';
 import RiftDialog from './components/RiftDialog.vue';
 import PageNav from './components/PageNav.vue';
 import AchievementPanel from './components/AchievementPanel.vue';
+import LogPanel from './components/LogPanel.vue';
 
 const store = useGameStore();
 // 工厂的内容分三页，右边点页码换页；转生是独立页面，不在页码里
@@ -22,6 +23,10 @@ const PAGES = [
 const page = ref(1);
 const view = ref<'factory' | 'rebirth'>('factory');
 const rebirth = computed(() => store.snap.rebirth);
+// 设置页上有没看过的错误记录时，页码按钮上挂一个小红点
+const pages = computed(() =>
+  PAGES.map((item) => ({ ...item, badge: item.id === 3 && store.unseenLogErrors > 0 })),
+);
 
 function goTo(target: number) {
   if (page.value === target) return;
@@ -40,7 +45,7 @@ onMounted(() => {
   <RebirthPage v-if="view === 'rebirth'" @close="view = 'factory'" />
 
   <template v-else>
-    <PageNav :page="page" :pages="PAGES" @change="goTo" />
+    <PageNav :page="page" :pages="pages" @change="goTo" />
 
     <Transition name="page" mode="out-in">
       <div :key="page" class="page-body">
@@ -103,6 +108,7 @@ onMounted(() => {
               <button @click="store.reset()">重置</button>
             </div>
           </section>
+          <LogPanel />
         </template>
       </div>
     </Transition>

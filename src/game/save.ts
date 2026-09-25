@@ -5,6 +5,7 @@ import { RESEARCH_GATE_FROM_TIER } from '../numeric/research';
 import { GameCore, RIFT_FROM_TIER, type MachineKind } from './core';
 import { baseModelOf } from './models';
 import { SAVE_KEY, SAVE_VERSION } from './constants';
+import { errorText, logEvent } from './log';
 
 // 计划书第十四章：存档 = 状态序列化成 JSON，带版本号；
 // 大数值一律以字符串存储 —— JSON.parse 只有 double 一种数字类型，超过 2^53 会在解析阶段丢精度。
@@ -179,20 +180,56 @@ function migrateFromV1(data: SaveData): Record<string, number> {
 
 export function saveToStorage(core: GameCore): void {
   if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(SAVE_KEY, JSON.stringify(serialize(core)));
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(serialize(core)));
+    if (writeFailureLogged) {
+      writeFailureLogged = false;
+      logEvent('info', 'save.write', '存档恢复正常，能写进去了');
+    }
+  } catch (error) {
+    // 配额满、隐私模式、被策略禁掉都会抛。存档每 10 秒写一次，
+    // 所以只在「第一次失败」和「恢复后再次失败」时记录，不刷屏。
+    if (!writeFailureLogged) {
+      writeFailureLogged = true;
+      logEvent(
+        'warn',
+        'save.write',
+        '存档写入失败：这一局的进度可能在关掉页面后丢失',
+        errorText(error),
+      );
+    }
+  }
 }
 
 export function loadFromStorage(): GameCore | null {
   if (typeof localStorage === 'undefined') return null;
-  const raw = localStorage.getItem(SAVE_KEY);
-  if (!raw) return null;
+  let raw: string | null;
+  try {
+    raw = localStorage.getItem(SAVE_KEY);
+  } catch (error) {
+    logEvent('warn', 'save.read', '读不到本地存储，按新开局开始', errorText(error));
+    return null;
+  }
+  if (!raw) {
+    logEvent('info', 'save.read', '本地没有存档，按新开局开始');
+    return null;
+  }
   try {
     const data = JSON.parse(raw) as SaveData;
     if (!Number.isInteger(data.version) || data.version < 1 || data.version > SAVE_VERSION) {
       throw new Error(`存档版本 ${data.version} 无法识别`);
     }
-    return deserialize(data);
+    const core = deserialize(data);
+    logEvent('info', 'save.read', `读取存档成功（存档版本 ${data.version}）`);
+    return core;
   } catch (error) {
+    // 旧存档没被删掉：下次修好了还能读回来，所以日志里要写清楚
+    logEvent(
+      'error',
+      'save.read',
+      '存档读取失败，这次按新开局开始（旧存档仍在本地，没有被删除）',
+      errorText(error),
+    );
     console.warn('存档读取失败，已忽略：', error);
     return null;
   }
@@ -210,3 +247,6 @@ function pad(list: string[] | undefined, length: number): (string | undefined)[]
   });
   return out;
 }
+
+// 存档写失败的日志只记一次，避免每 10 秒刷一条
+let writeFailureLogged = false;
