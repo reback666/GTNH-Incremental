@@ -15,8 +15,6 @@ const BASE_OUTPUT = '1'; // tier-1 机器每秒产出的 tier-1 币（作者定�
 const BASE_ENERGY = '8'; // tier-1 制造机的耗电，EU/t（1A × ULV）
 const COIN_FACTOR = 4; // 币值 4 合 1
 const MACHINES_PER_TIER = 50; // 作者定：每级买满 50 台再进下一级
-// 默认「稳定电网」的耗电加成（计划书第六章）：稳定不冒险，代价是耗电 +20%
-const GRID_ENERGY_MULTIPLIER = '1.2';
 
 // 币值：1 枚 tier-n 币 = 4^(n-1) 枚 tier-1 币
 const coinValue = (tier: number): Decimal => pow(String(COIN_FACTOR), tier - 1);
@@ -73,9 +71,8 @@ function run(machinesPerTier: number): RunResult {
   const totalSeconds = bootstrap.plus(perTier.times(MAX_TIER - 1));
 
   // 最高一级（MAX）的电力与矿石需求
-  const perMachineEnergy = machineEnergy({ baseEnergy: BASE_ENERGY, tier: MAX_TIER }).times(
-    GRID_ENERGY_MULTIPLIER,
-  );
+  // 电网不参与：开局接的是普通电网，耗电不打折也不加价（计划书第六章）
+  const perMachineEnergy = machineEnergy({ baseEnergy: BASE_ENERGY, tier: MAX_TIER });
   const peakEnergyPerTier = perMachineEnergy.times(machinesPerTier);
   const genOutput = generatorOutputEU(MAX_TIER);
   const generatorsPerTier = peakEnergyPerTier.div(genOutput);
@@ -216,7 +213,7 @@ lines.push('');
 lines.push(`按每级 ${target.machinesPerTier} 台算，最高一级（MAX）的制造机会消耗：`);
 lines.push('');
 lines.push(
-  `- 单台 MAX 制造机耗电 **${fmt(machineEnergy({ baseEnergy: BASE_ENERGY, tier: MAX_TIER }))} EU/t**（默认稳定电网再 ×${GRID_ENERGY_MULTIPLIER}）`,
+  `- 单台 MAX 制造机耗电 **${fmt(machineEnergy({ baseEnergy: BASE_ENERGY, tier: MAX_TIER }))} EU/t**`,
 );
 lines.push(`- ${target.machinesPerTier} 台合计 **${fmt(target.peakEnergyPerTier)} EU/t**`);
 lines.push(`- 需要 **${fmt(target.generatorsPerTier)} 台 MAX 发电机**（单台 ${fmt(generatorOutputEU(MAX_TIER))} EU/t）`);

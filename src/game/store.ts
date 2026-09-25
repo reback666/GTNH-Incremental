@@ -17,7 +17,7 @@ import {
   pollutionBand,
   pollutionBandName,
 } from '../numeric/pollution';
-import { GRID_MODES, gridMode, type GridMode } from '../numeric/grid';
+import { GRID_MODES, gridMode, isGridUnlocked, type GridMode } from '../numeric/grid';
 import { type GameCore, type MachineKind, type PayWith } from './core';
 import { canOverclock, modelsOf, type BlockKind, type MachineModel } from './models';
 import { getCore, resetCore, setCore } from './engine';
@@ -74,7 +74,13 @@ export interface RiskStats {
   grid: GridMode;
   gridName: string;
   gridSummary: string;
-  gridModes: { id: GridMode; name: string; summary: string }[];
+  gridModes: {
+    id: GridMode;
+    name: string;
+    summary: string;
+    unlocked: boolean;
+    unlockLabel: string;
+  }[];
   outage: boolean;
   siphoned: string;
 }
@@ -352,6 +358,8 @@ function riskStats(core: GameCore): RiskStats {
       id: item.id,
       name: item.name,
       summary: item.summary,
+      unlocked: isGridUnlocked(item.id, core.maxTier),
+      unlockLabel: `${VOLTAGE_TIERS[item.unlockTier - 1] ?? '?'} 解锁`,
     })),
     outage: core.outageSeconds > 0,
     siphoned: formatNumber(core.siphoned),

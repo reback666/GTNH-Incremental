@@ -20,12 +20,12 @@ import {
 } from '../numeric/pollution';
 import {
   DEFAULT_GRID,
-  OUTAGE_CHANCE,
-  OUTAGE_CHECK_SECONDS,
-  OUTAGE_SECONDS,
   SIPHON_CHECK_SECONDS,
   SIPHON_RATIO,
   gridEnergyMultiplier,
+  gridOutageRule,
+  gridMode,
+  isGridUnlocked,
   type GridMode,
 } from '../numeric/grid';
 import {
@@ -215,12 +215,16 @@ export class GameCore {
 
   // ── 污染与电网 ─────────────────────────────────────────────
 
-  setGrid(mode: GridMode): void {
+  // 换电网：只有解锁过的才能接。返回是否切换成功
+  setGrid(mode: GridMode): boolean {
+    if (!isGridUnlocked(mode, this.maxTier)) return false;
+    if (this.grid === mode) return true;
     this.grid = mode;
     // 换电网等于重新接线：断电立刻结束，计时从头开始
     this.outageSeconds = 0;
     this.outageTimer = 0;
     this.siphonTimer = 0;
+    return true;
   }
 
   setPollutionEnabled(enabled: boolean): void {
@@ -459,16 +463,17 @@ export class GameCore {
       generated = generated.plus(this.generatorOutputRated(model).times(dtSeconds).times(ratio));
     }
 
-    // 3) 电网事件：波动电网可能断电，断电期间机器全停（不产也不耗）
+    // 3) 电网事件：普通/波动电网都可能断电，断电期间机器全停（不产也不耗）
+    const outageRule = gridOutageRule(this.grid);
     if (this.outageSeconds > 0) {
       this.outageSeconds = Math.max(0, this.outageSeconds - dtSeconds);
       report.outage = true;
-    } else if (this.grid === 'volatile') {
+    } else if (outageRule) {
       this.outageTimer += dtSeconds;
-      if (this.outageTimer >= OUTAGE_CHECK_SECONDS) {
-        this.outageTimer -= OUTAGE_CHECK_SECONDS;
-        if (this.random() < OUTAGE_CHANCE) {
-          this.outageSeconds = OUTAGE_SECONDS;
+      if (this.outageTimer >= outageRule.checkSeconds) {
+        this.outageTimer -= outageRule.checkSeconds;
+        if (this.random() < outageRule.chance) {
+          this.outageSeconds = outageRule.outageSeconds;
           report.outage = true;
         }
       }

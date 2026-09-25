@@ -45,10 +45,11 @@ describe('污染数值', () => {
     expect(purifyPerSecond([{ tier: 3, count: 50 }]).toString()).toBe('0.18');
   });
 
-  it('电网耗电倍率：稳定 1.2、波动 0.7、黑市 0.5', () => {
-    expect(gridEnergyMultiplier('stable').toString()).toBe('1.2');
-    expect(gridEnergyMultiplier('volatile').toString()).toBe('0.7');
-    expect(gridEnergyMultiplier('black').toString()).toBe('0.5');
+  it('电网耗电倍率：普通 1、稳定 1.08、波动 0.9、黑市 0.85', () => {
+    expect(gridEnergyMultiplier('normal').toString()).toBe('1');
+    expect(gridEnergyMultiplier('stable').toString()).toBe('1.08');
+    expect(gridEnergyMultiplier('volatile').toString()).toBe('0.9');
+    expect(gridEnergyMultiplier('black').toString()).toBe('0.85');
   });
 });
 
@@ -109,15 +110,47 @@ describe('污染在模拟里的效果', () => {
 });
 
 describe('电网模式在模拟里的效果', () => {
-  it('稳定电网耗电最高、黑市最低', () => {
-    const used = (mode: 'stable' | 'volatile' | 'black'): number => {
+  it('开局只有普通电网，其余按电压等级解锁', () => {
+    const core = new GameCore();
+    expect(core.grid).toBe('normal');
+    expect(core.setGrid('stable')).toBe(false); // LV 才解锁
+    core.maxTier = 2;
+    expect(core.setGrid('stable')).toBe(true);
+    expect(core.setGrid('volatile')).toBe(false); // MV 才解锁
+    core.maxTier = 3;
+    expect(core.setGrid('volatile')).toBe(true);
+    expect(core.setGrid('black')).toBe(false); // HV 才解锁
+    core.maxTier = 4;
+    expect(core.setGrid('black')).toBe(true);
+  });
+
+  it('普通电网不省电也不加价', () => {
+    const used = (mode: 'normal' | 'stable' | 'volatile' | 'black'): number => {
       const core = factory();
+      core.maxTier = 4; // 黑市电网要 HV 才解锁
       core.setGrid(mode);
       core.tick(1);
       return core.lastReport.euConsumed.toNumber();
     };
-    expect(used('stable')).toBeGreaterThan(used('volatile'));
+    expect(used('normal')).toBeGreaterThan(used('volatile'));
+    expect(used('stable')).toBeGreaterThan(used('normal'));
     expect(used('volatile')).toBeGreaterThan(used('black'));
+    // 各档之间的差距都在 10% 上下，不该压过机器数量
+    expect(used('stable') / used('normal')).toBeLessThan(1.1);
+    expect(used('normal') / used('volatile')).toBeLessThan(1.15);
+  });
+
+  it('普通电网有小概率断电，稳定电网绝不断电', () => {
+    const normal = factory();
+    normal.random = () => 0; // 判定必中
+    normal.tick(300);
+    expect(normal.lastReport.outage).toBe(true);
+
+    const stable = factory();
+    stable.setGrid('stable');
+    stable.random = () => 0;
+    stable.tick(300);
+    expect(stable.lastReport.outage).toBe(false);
   });
 
   it('波动电网断电：机器全停', () => {
@@ -133,6 +166,7 @@ describe('电网模式在模拟里的效果', () => {
   it('黑市电网每分钟薅走一种币的 1%', () => {
     // 用一台机器都没有的干净存档，避免产出干扰判断
     const core = new GameCore();
+    core.maxTier = 4;
     core.setGrid('black');
     core.coins[2] = dec('1000');
     core.random = () => 0;

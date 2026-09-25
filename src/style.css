@@ -638,6 +638,20 @@ h1 .small {
   background: rgba(88, 196, 163, 0.12);
 }
 
+.grid-mode.locked {
+  opacity: 0.5;
+}
+
+.grid-mode .lock {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+  border: 1px solid #3a4553;
+}
+
 /* 镐子敲上去：矿脉轻轻往下一沉再回弹，不做整体提亮（原来那版闪一下太扎眼） */
 @keyframes vein-settle {
   0%,

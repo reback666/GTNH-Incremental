@@ -37,8 +37,7 @@ describe('游戏核心：ULV → LV 完整循环', () => {
   it('ULV 制造机每秒产出 1 枚币', () => {
     const core = new GameCore();
     core.ores[0] = dec('1000');
-    // 默认是「稳定电网」（耗电 +20%），所以发电要留出余量
-    core.counts[ULV_GENERATOR] = 2;
+    core.counts[ULV_GENERATOR] = 1;
     core.counts[ULV_MACHINE] = 1;
     core.tick(1);
     expect(core.coins[0]!.toString()).toBe('1');
@@ -68,10 +67,10 @@ describe('游戏核心：ULV → LV 完整循环', () => {
     core.counts[ULV_MACHINE] = 1;
     const report = core.tick(1);
     expect(report.powerRatio).toBeLessThan(1);
-    // 稳定电网把需求抬到 14 × 1.2 = 16.8 EU/t，1 台 ULV 发电机只够 8/16.8
-    expect(report.powerRatio).toBeGreaterThan(0.4);
-    expect(Number(core.coins[0]!.toString())).toBeLessThan(0.5);
-    expect(Number(core.coins[0]!.toString())).toBeGreaterThan(0.4);
+    // 开局接的是普通电网（耗电不打折），1 台 ULV 发电机只够 8/14
+    expect(report.powerRatio).toBeGreaterThan(0.5);
+    expect(Number(core.coins[0]!.toString())).toBeLessThan(1);
+    expect(Number(core.coins[0]!.toString())).toBeGreaterThan(0.5);
   });
 
   it('没有矿石当燃料时，发电机发不出电，整个工厂停摆', () => {

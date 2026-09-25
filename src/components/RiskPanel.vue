@@ -67,10 +67,14 @@ const risk = computed(() => store.snap.risk);
         :key="mode.id"
         type="button"
         class="grid-mode"
-        :class="{ active: risk.grid === mode.id }"
+        :class="{ active: risk.grid === mode.id, locked: !mode.unlocked }"
+        :disabled="!mode.unlocked"
         @click="store.setGrid(mode.id)"
       >
-        <b>{{ mode.name }}</b>
+        <b>
+          {{ mode.name }}
+          <span v-if="!mode.unlocked" class="lock">{{ mode.unlockLabel }}</span>
+        </b>
         <span class="muted small">{{ mode.summary }}</span>
       </button>
     </div>
