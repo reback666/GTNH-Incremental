@@ -93,6 +93,10 @@ GTNH（GregTech: New Horizons）主题的增量 / 放置游戏：从超低压 UL
 黑洞发电机（MAX），并加了一条门禁测试：每一级电压都必须有发电机机型、
 且高档机型的出力倍率不低于低档。
 
+多方块机器的图标改用 GTNH 中文 wiki 上的**整机渲染图**（`src/assets/multiblocks/`
+存原图，`python scripts/build-multiblock-icons.py` 生成 32×32 图标），
+不再用「机壳 + 单方块面片」拼。11 台多方块发电机各自一张，两两比对无重复。
+
 ## 5. 接下来：第三阶段（终局与转生）
 
 按 `plan.txt` 第二十章，第三阶段要做的是「解锁至 MAX、转生系统、平行宇宙、硬墙、成就」。

@@ -1,4 +1,4 @@
-"""生成设施（存电装置、净化器、计算机、研究站）与后期多方块发电机的图标。
+"""生成设施（存电装置、净化器、计算机、研究站）的图标。
 
 和机器图标同一套做法：底层是 GT 的 MACHINE_<电压>_SIDE 机壳，上面叠一个自画的图案。
 图案是本项目自己画的像素画（GT 的储电箱、净化器贴图不在开发包里），
@@ -7,12 +7,12 @@
 计算机与研究站用的是 GT 自己的面片（EM_COMPUTER、OVERLAY_FRONT_RESEARCH_COMPLETER），
 只有一个型号所以直接取第一帧。
 
-UHV 及以后的四级发电机就是 GTNH 后期的多方块发电机（硅岩反应堆、衰变 / 湮灭 /
-黑洞发电机），面片同样取自开发包，多帧的取第一帧。
+多方块机器的图标不在这里生成：它们是整套结构，用的是 wiki 上的整机图，
+见 scripts/build-multiblock-icons.py。
 
 用法：python scripts/build-facility-icons.py
 产物：src/assets/machines/b-<等级>.png（存电装置）、p-<等级>.png（净化器）、
-      x-<等级>.png（计算机）、r-<等级>.png（研究站）、以及四级后期发电机的图标
+      x-<等级>.png（计算机）、r-<等级>.png（研究站）
 """
 
 from __future__ import annotations
@@ -58,21 +58,6 @@ RESEARCH_FROM_TIER = 7
 # 这两张是 GT 自带的面片，直接贴在机壳上
 COMPUTER_FACE = "assets/gregtech/textures/blocks/iconsets/EM_COMPUTER.png"
 LAB_FACE = "assets/gregtech/textures/blocks/iconsets/OVERLAY_FRONT_RESEARCH_COMPLETER.png"
-
-# 后期多方块发电机：等级、机型 id、GT 面片。
-#
-# GTNH 的多方块发电机图标一律是「机壳 + iconsets/LARGETURBINE_*.png」的涡轮面片
-# （既有图标反推结果：HV=ST1、EV=ADVGAS1、IV=SS1、LuV=TU1、ZPM=NEW1、UV=TI1）。
-# 这套面片有 6 个家族 × 9 种叶型，所以每一台都能挑一张互不重复的：
-# 叶型 5 在六个家族里都是同一张占位图，避开它。
-LATE_GENERATORS = [
-    (10, "g-uhv-mb-naquadah", "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_SS9.png"),
-    (11, "g-uev-mb-decay", "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW9.png"),
-    # 戴森云原来直接复用了 UV 的 TI1，两张图一模一样，这里换成 TU9
-    (12, "g-uiv-mb-dyson", "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_TU9.png"),
-    (13, "g-uxv-mb-annihilation", "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_ADVGAS9.png"),
-    (14, "g-max-mb-blackhole", "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_TI9.png"),
-]
 
 OUTLINE = (24, 27, 34, 255)
 BODY = (168, 176, 190, 255)
@@ -164,21 +149,6 @@ def main() -> None:
                     icon.save(OUT_DIR / f"{prefix}-{tier}.png")
                 print(f"{voltage}: x-{tier} 计算机 / r-{tier} 研究站 ← GT 面片 + 机壳")
 
-        # 后期多方块发电机：面片可能有多帧，取最上面一格
-        for tier, model_id, face_path in LATE_GENERATORS:
-            voltage = VOLTAGES[tier - 1]
-            casing = Image.open(
-                io.BytesIO(
-                    archive.read(f"assets/gregtech/textures/blocks/iconsets/MACHINE_{voltage}_SIDE.png")
-                )
-            ).convert("RGBA")
-            face = (
-                Image.open(io.BytesIO(archive.read(face_path))).convert("RGBA").crop((0, 0, 16, 16))
-            )
-            icon = casing.copy()
-            icon.alpha_composite(face)
-            icon.resize((32, 32), Image.NEAREST).save(OUT_DIR / f"{model_id}.png")
-            print(f"{voltage}: {model_id} ← {face_path.rsplit('/', 1)[-1]} + 机壳")
 
 
 if __name__ == "__main__":

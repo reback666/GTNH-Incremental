@@ -35,18 +35,14 @@ GT 的机器不是一张整图，而是「**机壳 + 功能面片**」两层叠�
 | 各级内燃发电机 | `iconsets/DIESEL_GENERATOR_TOP.png` |
 | 各级燃气轮机 | `iconsets/GAS_TURBINE_SIDE.png` |
 | 各级等离子发电机 | 等离子发电机没有独立贴图，暂借 `basicmachines/chemical_reactor/OVERLAY_FRONT.png` |
-| 多方块发电机 | `iconsets/LARGETURBINE_<ST/SS/TU/TI/ADVGAS/NEW>_ACTIVE1.png`，取 16×64 竖条的最上一格 |
 | 各级采矿机 | `basicmachines/miner/OVERLAY_FRONT.png` |
 | 各级制造机 | `basicmachines/macerator/OVERLAY_FRONT.png` |
 | 各级计算机 | `iconsets/EM_COMPUTER.png` 的最上一格（原图是 5 帧竖排条带） |
 | 各级研究站 | `iconsets/OVERLAY_FRONT_RESEARCH_COMPLETER.png` |
-| 大型硅岩反应堆（UHV） | `iconsets/LARGETURBINE_SS9.png` |
-| 衰变发电机（UEV） | `iconsets/LARGETURBINE_NEW9.png` |
-| 戴森云地面单元（UIV） | `iconsets/LARGETURBINE_TU9.png` |
-| 湮灭发电机（UXV） | `iconsets/LARGETURBINE_ADVGAS9.png` |
-| 黑洞发电机（MAX） | `iconsets/LARGETURBINE_TI9.png` |
 
 机壳按机型的电压等级取，所以同一面片在不同等级下颜色不同、能区分开。
+
+**多方块机器不在这张表里** —— 它们是整套结构，图标直接用 wiki 上的整机渲染图，见下一节。
 
 ## 已知不足
 
@@ -113,18 +109,41 @@ T12 海珀珍没有原版贴图可用（它的材质定义在 GT++，颜色取�
 
 生成脚本：`python scripts/build-facility-icons.py`，开放等级与 `models.ts`、`numeric/research.ts` 对齐。
 
-UHV 及以后的四级发电机也在这个脚本里生成：GTNH 的单方块发电机只做到 UV，
-这几级照 GTNH 后期的多方块机器取名字（硅岩反应堆来自 goodgenerator，衰变 / 湮灭 /
-黑洞来自 tectech），图标沿用多方块发电机那一套「机壳 + `LARGETURBINE_*` 涡轮面片」。
+## 多方块机器图标（wiki 整机图）
 
-面片是从既有图标反推出来的：GTNH 的多方块发电机图标 = `MACHINE_<电压>_SIDE` 机壳 +
-`LARGETURBINE_<家族><叶型><帧>.png` 的最上一格，6 个家族 × 9 种叶型足够让每台机器
-都拿到一张互不重复的面片（叶型 5 在六个家族里都是同一张占位图，避开）。
-所以「大型硅岩反应堆」这类不是涡轮的机器，图标看起来也是涡轮面孔 ——
-这是为了和既有发电机图标保持一致的取舍。
+多方块机器在 GTNH 里是**整套结构**，用单方块的「机壳 + 面片」拼出来不像它本来的样子。
+所以这类机器的图标改成直接裁用 GTNH 中文 wiki 上的整机渲染图（透明底，多为 256×256）：
 
-已知不足：GT 的 `MACHINE_UEV_SIDE` 与 `MACHINE_UXV_SIDE` 两张机壳几乎一样
-（256 个像素里只差 20 个）。这两级的面片色差很大（暗板岩 vs 深红），所以图标仍然好认。
+```
+素材：src/assets/multiblocks/<机型 id>.png（wiki 原图；过大的先缩到 512 长边）
+产物：src/assets/machines/<机型 id>.png（32×32，裁掉透明边后按比例缩放）
+脚本：python scripts/build-multiblock-icons.py
+```
+
+| 机型 | wiki 文件 |
+|---|---|
+| 大型蒸汽涡轮（HV） | `大型蒸汽涡轮.png` |
+| 大型燃气涡轮（EV） | `大型燃气涡轮.png` |
+| 特大高压蒸汽涡轮（IV） | `特大高压蒸汽涡轮.png` |
+| 特大燃气涡轮（LuV） | `特大燃气涡轮.png` |
+| 大型等离子涡轮（ZPM） | `大型等离子涡轮.png` |
+| 特大等离子涡轮（UV） | `特大等离子涡轮.png` |
+| 大型硅岩反应堆（UHV） | `大型硅岩反应堆.png` |
+| 衰变发电机（UEV） | `衰变发电机.png` |
+| 戴森云地面单元（UIV） | `戴森云地面单元.png` |
+| 湮灭发电机（UXV） | `湮灭发电机.png` |
+| 黑洞发电机（MAX） | `亚稳态黑洞遏制场结构导出.png` |
+
+取图说明：
+
+· 中文 wiki 的条目名和图片名都按上面写，图片走 `api.php?action=query&prop=imageinfo` 拿原始 URL
+· 「黑洞发电机」在 wiki 上没有同名条目，「亚稳态黑洞遏制场」是同一套黑洞机器的结构图，
+  暂借来做图标
+· 衰变发电机与湮灭发电机两张原图都是 TecTech 的深蓝结构，缩到 32×32 后差异不大
+  （1024 个像素里差 119 个）—— 面板上有机器名，能区分；想更醒目可以换图
+
+已知不足：整机图是渲染图，不是像素画，缩到 32×32 后是柔和的缩略图，
+和单方块机型的像素风图标不是一种画法。
 
 重新生成：`python scripts/build-veins.py`（默认从 gradle 缓存里找 jar，可用 `--jar` 指定）。
 它会重写 `src/assets/veins/t*.png`、`fx/*.png` 与 `src/game/vein-meta.ts`。
