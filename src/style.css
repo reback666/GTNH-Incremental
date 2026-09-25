@@ -715,6 +715,24 @@ h1 .small {
   gap: 6px;
 }
 
+.ach-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.ach-head h2 {
+  margin: 0;
+}
+
+.ach-toggle {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
 .achievement {
   display: flex;
   align-items: baseline;

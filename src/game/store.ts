@@ -355,11 +355,16 @@ export const useGameStore = defineStore('game', {
   state: () => ({
     snapshot: null as Snapshot | null,
     running: false,
+    // 成就列表收起来没有（纯界面状态，不进存档）
+    achievementsCollapsed: false,
   }),
   getters: {
     snap: (state): Snapshot => state.snapshot ?? buildSnapshot(getCore()),
   },
   actions: {
+    toggleAchievements(): void {
+      this.achievementsCollapsed = !this.achievementsCollapsed;
+    },
     boot() {
       const loaded = loadFromStorage();
       if (loaded) setCore(loaded);

@@ -55,7 +55,6 @@ onMounted(() => {
         <template v-else-if="page === 2">
           <TechTreePanel />
           <GridPanel />
-          <AchievementPanel />
           <section class="panel">
             <div class="row">
               <div class="name">
@@ -78,6 +77,7 @@ onMounted(() => {
               </button>
             </div>
           </section>
+          <AchievementPanel />
         </template>
 
         <!-- 第 3 页：设置与存档 -->
