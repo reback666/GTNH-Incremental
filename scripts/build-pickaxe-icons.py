@@ -1,0 +1,94 @@
+"""生成镐子（金刚杵）的 14 级图标：GT 的金刚杵贴图按电压配色上色。
+
+素材：GT5-Unofficial 的 assets/gregtech/textures/items/gt.Tool_Vajra.png（16×16，
+原图是金头红柄）。图标本身是彩色的，直接淡染（机器那套 tint_casing）几乎看不出差别，
+所以这里先按感知亮度转成明暗，再乘上该等级的电压色 —— 形状与层次保留，色相换成电压色。
+
+配色表复用 scripts/gtnh_tiers.py（与机器图标同一套），MAX 用横向彩虹。
+
+用法：python scripts/build-pickaxe-icons.py
+产物：src/assets/pickaxe/v-<等级>.png（32×32，最近邻放大，与机器图标同规格）
+"""
+
+from __future__ import annotations
+
+import glob
+import sys
+from pathlib import Path
+
+from PIL import Image
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from gtnh_tiers import MAX_RAINBOW, tier_color  # noqa: E402
+
+ROOT = Path(__file__).resolve().parent.parent
+OUT_DIR = ROOT / "src" / "assets" / "pickaxe"
+
+JAR_GLOB = str(
+    Path.home()
+    / ".gradle/caches/modules-2/files-2.1/com.github.GTNewHorizons/GT5-Unofficial/*/*/GT5-Unofficial-*-dev.jar"
+)
+
+SOURCE = "assets/gregtech/textures/items/gt.Tool_Vajra.png"
+MAX_TIER = 14
+SCALE = 2
+
+# 明暗下限：原图的暗红柄亮度只有 0.19，直接用会把柄压成黑色，看不出形状。
+SHADE_FLOOR = 0.45
+
+
+def luma(pixel: tuple[int, int, int, int]) -> float:
+    return (0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]) / 255
+
+
+def tint_tool(source: Image.Image, tier: int) -> Image.Image:
+    image = source.convert("RGBA")
+    width, height = image.size
+    tinted = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    color = tier_color(tier)
+
+    for y in range(height):
+        for x in range(width):
+            pixel = image.getpixel((x, y))
+            if pixel[3] == 0:
+                continue
+            shade = SHADE_FLOOR + (1 - SHADE_FLOOR) * luma(pixel)
+            if color is None:
+                index = min(len(MAX_RAINBOW) - 1, x * len(MAX_RAINBOW) // max(1, width))
+                base = MAX_RAINBOW[index]
+            else:
+                base = color
+            tinted.putpixel(
+                (x, y),
+                (round(base[0] * shade), round(base[1] * shade), round(base[2] * shade), pixel[3]),
+            )
+    return tinted.resize((width * SCALE, height * SCALE), Image.NEAREST)
+
+
+def find_jar() -> Path:
+    matches = sorted(glob.glob(JAR_GLOB))
+    if not matches:
+        raise SystemExit(f"没找到 GTNH 开发包：{JAR_GLOB}")
+    return Path(matches[-1])
+
+
+def main() -> None:
+    import zipfile
+
+    jar = find_jar()
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    with zipfile.ZipFile(jar) as archive:
+        import io
+
+        source = Image.open(io.BytesIO(archive.read(SOURCE)))
+        for tier in range(1, MAX_TIER + 1):
+            icon = tint_tool(source, tier)
+            icon.save(OUT_DIR / f"v-{tier}.png")
+
+    print(f"已写入 {MAX_TIER} 张金刚杵图标到 {OUT_DIR}")
+
+
+if __name__ == "__main__":
+    main()

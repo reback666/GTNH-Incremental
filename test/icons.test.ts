@@ -46,4 +46,23 @@ describe('机型图标', () => {
       expect(hashes.size, `${prefix} 系列的图标数`).toBe(14);
     }
   });
+
+  it('镐子有 14 张 32×32 图标，且按电压色两两不同', () => {
+    const dir = path.join(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '..',
+      'src',
+      'assets',
+      'pickaxe',
+    );
+    const hashes = new Set<string>();
+    for (let tier = 1; tier <= 14; tier += 1) {
+      const file = path.join(dir, `v-${tier}.png`);
+      expect(existsSync(file), `缺 v-${tier}.png`).toBe(true);
+      const bytes = readFileSync(file);
+      expect(pngSize(bytes), `v-${tier} 尺寸`).toBe('32x32');
+      hashes.add(createHash('md5').update(bytes).digest('hex'));
+    }
+    expect(hashes.size, '金刚杵图标数').toBe(14);
+  });
 });

@@ -515,6 +515,101 @@ h1 .small {
   letter-spacing: 0.12em;
 }
 
+/* ── 镐子（手动开采的三条升级线） ───────────────────────── */
+.pickaxe {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.pickaxe-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.pickaxe-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.pickaxe-icon img {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+.pickaxe-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pickaxe-output {
+  font-size: 14px;
+  color: var(--accent);
+}
+
+.pickaxe-locked {
+  font-size: 12px;
+  color: var(--warn);
+}
+
+.pickaxe-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pickaxe-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.pickaxe-line-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.pickaxe-line-name {
+  font-size: 13px;
+}
+
+.pickaxe-line-effect {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.pickaxe-line-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.pickaxe-upgrade {
+  min-height: 32px;
+  padding: 0 14px;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* 机型行里的超频档位与故障维护 */
 .overclock {
   display: inline-flex;

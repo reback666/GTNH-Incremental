@@ -53,6 +53,10 @@ export interface SaveData {
   essentia?: string;
   // v12：下次转生要带的平行宇宙（选择本身，转生时才生效）
   pendingUniverse?: string | null;
+  // v13：镐子的三条升级线（金刚杵等级、连锁采集等级、连锁爆破已用机会数）
+  pickaxeVajra?: number;
+  pickaxeCollect?: number;
+  pickaxeBlast?: number;
   // v1 遗留字段：按电压等级存的数量，读到旧存档时用来迁移
   miners?: number[];
   generators?: number[];
@@ -98,6 +102,9 @@ export function serialize(core: GameCore): SaveData {
     universes: [...core.universes],
     essentia: toSaveString(core.essentia),
     pendingUniverse: core.pendingUniverse,
+    pickaxeVajra: core.pickaxeVajra,
+    pickaxeCollect: core.pickaxeCollect,
+    pickaxeBlast: core.pickaxeBlast,
     siphoned: toSaveString(core.siphoned),
     maxTier: core.maxTier,
     unlockedVeins: [...core.unlockedVeins],
@@ -151,6 +158,9 @@ export function deserialize(data: SaveData): GameCore {
   core.universes = [...((data.universes ?? []) as GameCore['universes'])];
   core.essentia = fromSaveString(data.essentia ?? '0');
   core.pendingUniverse = (data.pendingUniverse ?? null) as GameCore['pendingUniverse'];
+  core.pickaxeVajra = data.pickaxeVajra ?? 0;
+  core.pickaxeCollect = data.pickaxeCollect ?? 0;
+  core.pickaxeBlast = data.pickaxeBlast ?? 0;
   core.playSeconds = data.playSeconds;
   core.totalOre = dec(data.totalOre ?? '0');
   core.totalCoins = dec(data.totalCoins ?? '0');

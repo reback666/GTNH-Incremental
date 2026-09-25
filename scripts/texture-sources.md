@@ -136,6 +136,20 @@ T12 海珀珍没有原版贴图可用（它的材质定义在 GT++，颜色取�
 
 生成脚本：`python scripts/build-facility-icons.py`，开放等级与 `models.ts`、`numeric/research.ts` 对齐。
 
+## 镐子图标（金刚杵）
+
+`src/assets/pickaxe/v-<等级>.png` 是同一把金刚杵在 14 个电压下的样子：
+
+```
+素材：assets/gregtech/textures/items/gt.Tool_Vajra.png（GT 的金刚杵，16×16，原图是金头红柄）
+脚本：python scripts/build-pickaxe-icons.py
+产物：32×32，14 张；预览图 docs/pickaxe-tiers.png
+```
+
+原图本身是彩色的，机器那套淡染（`TINT_STRENGTH = 0.2`）用在它身上几乎看不出等级差别，
+所以这里先按感知亮度把原图转成明暗，再乘上该等级的电压色（暗部有 0.45 的亮度保底，
+否则原图里那截暗红柄会糊成黑块）。配色同样取自 `gtnh_tiers.py`，MAX 也是横向彩虹。
+
 ## 多方块机器图标（wiki 整机图）
 
 多方块机器在 GTNH 里是**整套结构**，用单方块的「机壳 + 面片」拼出来不像它本来的样子。

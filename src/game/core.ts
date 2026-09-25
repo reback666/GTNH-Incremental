@@ -23,6 +23,14 @@ import { expectedFaults, sampleFaults } from '../numeric/fault';
 import { batteryCapacityEU, settleStorage } from '../numeric/storage';
 import { rebirthCables } from '../numeric/rebirth';
 import {
+  type PickaxeLine,
+  blastChances,
+  collectChances,
+  pickaxeOutputPerClick,
+  vajraChances,
+  vajraMaxLevel,
+} from '../numeric/pickaxe';
+import {
   RESEARCH_FROM_TIER,
   RESEARCH_GATE_FROM_TIER,
   computerComputePerSecond,
@@ -165,6 +173,11 @@ export class GameCore {
   pendingUniverse: UniverseId | null = null;
   // 奥术宇宙的源质存量（净化器副产，喂给灵气节点）
   essentia = ZERO;
+  // ── 镐子（手动开采） ───────────────────────────────────────
+  // 金刚杵等级 = 镐子能挖的矿脉等级；连锁采集等级；连锁爆破已用掉的机会数
+  pickaxeVajra = 0;
+  pickaxeCollect = 0;
+  pickaxeBlast = 0;
   // ── 累计统计与成就 ─────────────────────────────────────────
   // 历史最高电压等级（转生会重置本周目的 maxTier，但不重置这个）
   peakTier = 1;
@@ -519,6 +532,9 @@ export class GameCore {
     this.collapseTimer = 0;
     this.maxTier = 1;
     this.unlockedVeins = [0];
+    this.pickaxeVajra = 0;
+    this.pickaxeCollect = 0;
+    this.pickaxeBlast = 0;
     this.researchProgress = ZERO;
     this.researched = Array.from(
       { length: RESEARCH_GATE_FROM_TIER - 1 },
@@ -889,10 +905,73 @@ export class GameCore {
   // ── 玩家操作 ───────────────────────────────────────────────
 
   manualMine(): void {
-    const amount = C.manualMineAmount();
-    this.ores[0] = this.ores[0]!.plus(amount);
-    this.totalOre = this.totalOre.plus(amount);
+    // 手动挖矿就是「手动版采矿机」：作用在当前能挖到的那座矿脉上，
+    // 产量按矿脉规则均分给它能产的全部矿种（见计划书第四章）。
+    const total = this.pickaxeOutput();
+    const veinTier = this.pickaxeVeinTier();
+    const kinds = veinTier + 1;
+    const share = total.div(kinds);
+    for (let oreTier = 0; oreTier <= veinTier; oreTier += 1) {
+      this.ores[oreTier] = this.ores[oreTier]!.plus(share);
+    }
+    this.totalOre = this.totalOre.plus(total);
     this.manualMines += 1;
+  }
+
+  // ── 镐子（手动开采） ───────────────────────────────────────
+  // 三条线的升级机会都由电压等级发放，用掉就永久生效，不花币。
+
+  pickaxeChances(): Record<PickaxeLine, number> {
+    return {
+      vajra: vajraChances(this.maxTier),
+      collect: collectChances(this.maxTier),
+      blast: blastChances(this.maxTier),
+    };
+  }
+
+  pickaxeLevel(line: PickaxeLine): number {
+    if (line === 'vajra') return this.pickaxeVajra;
+    if (line === 'collect') return this.pickaxeCollect;
+    return this.pickaxeBlast;
+  }
+
+  // 该条线的天花板：金刚杵挖到 T13 就封顶，再往上没有更高级的矿脉
+  pickaxeCap(line: PickaxeLine): number {
+    const chances = this.pickaxeChances();
+    if (line === 'vajra') return Math.min(chances.vajra, vajraMaxLevel());
+    return chances[line];
+  }
+
+  canUpgradePickaxe(line: PickaxeLine): boolean {
+    return this.pickaxeLevel(line) < this.pickaxeCap(line);
+  }
+
+  upgradePickaxe(line: PickaxeLine): boolean {
+    if (!this.canUpgradePickaxe(line)) return false;
+    if (line === 'vajra') this.pickaxeVajra += 1;
+    else if (line === 'collect') this.pickaxeCollect += 1;
+    else this.pickaxeBlast += 1;
+    return true;
+  }
+
+  // 一次点击的产出总量（枚）
+  pickaxeOutput(): Decimal {
+    return pickaxeOutputPerClick({
+      tier: this.maxTier,
+      blastUsed: this.pickaxeBlast,
+      collectLevel: this.pickaxeCollect,
+    });
+  }
+
+  // 手动挖矿挖的是哪座矿脉：已解锁的最高一级，但不能超过金刚杵的等级
+  pickaxeVeinTier(): number {
+    const best = this.unlockedVeins.length ? Math.max(...this.unlockedVeins) : 0;
+    return Math.min(best, this.pickaxeVajra);
+  }
+
+  // 镐子图标用哪一档电压色：金刚杵 0 级（开局）用 ULV 色
+  pickaxeIconTier(): number {
+    return Math.min(MAX_TIER, this.pickaxeVajra + 1);
   }
 
   // 单价：基准成本 × 机型成本系数

@@ -1,4 +1,4 @@
-import { Decimal, dec } from '../numeric/decimal';
+import { Decimal } from '../numeric/decimal';
 import { machineCost } from '../numeric/cost';
 
 // 第一阶段的参数。计划书未定义这些数，集中在这里便于后续调参。
@@ -17,9 +17,6 @@ export const BASE_MACHINE_ENERGY = '8';
 // 暂定：制造机直接吃矿的速率 —— 每产出 100 枚本位币消耗 1 枚本级矿石。
 // 与制造机产量无关，是「矿 → 币」的换算率。
 export const COINS_PER_ORE = '100';
-
-// 暂定：一次手动挖矿的产出（枚 T0 矿石）。
-export const MANUAL_MINE_PER_CLICK = '1';
 
 // 暂定：解锁 X 级需要攒够 X-1 级币，数量 = 该级第 1 台机器成本的 10 倍。
 export const UNLOCK_COST_IN_MACHINES = 10;
@@ -45,15 +42,12 @@ export const UI_REFRESH_MS = 50;
 // v10：加了平行宇宙（转生时选，选过的永久叠加）
 // v11：加了奥术宇宙的源质存量
 // v12：加了「下次转生要带的平行宇宙」这个选择
-export const SAVE_VERSION = 12;
+// v13：加了镐子的三条升级线（金刚杵 / 连锁采集 / 连锁爆破）
+export const SAVE_VERSION = 13;
 export const SAVE_KEY = 'gtnh-incremental-save';
 
 export function unlockCost(machineTier: number): Decimal {
   return machineCost({ baseCost: BASE_MACHINE_COST, tier: machineTier, purchased: 0 }).times(
     UNLOCK_COST_IN_MACHINES,
   );
-}
-
-export function manualMineAmount(): Decimal {
-  return dec(MANUAL_MINE_PER_CLICK);
 }

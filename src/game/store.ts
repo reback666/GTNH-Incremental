@@ -6,6 +6,11 @@ import { formatNumber } from '../numeric/format';
 import { machineEnergy, machineOutput } from '../numeric/output';
 import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../numeric/generator';
 import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
+import {
+  type PickaxeLine,
+  blastBonus,
+  collectMultiplier,
+} from '../numeric/pickaxe';
 import { overclockEnergyMultiplier, overclockSpeedMultiplier } from '../numeric/overclock';
 import { faultHint } from '../numeric/fault';
 import { batteryCapacityEU } from '../numeric/storage';
@@ -168,6 +173,31 @@ export interface ProductionRate {
   fuelPerSecond: string;
 }
 
+// 镐子（手动开采）的一条升级线
+export interface PickaxeLineRow {
+  id: PickaxeLine;
+  name: string;
+  hint: string;
+  level: number;
+  cap: number;
+  effectNow: string;
+  // 下一次升级后的效果，满级时是空串
+  effectNext: string;
+  canUpgrade: boolean;
+}
+
+export interface PickaxeStats {
+  // 镐子图标按金刚杵等级取电压色
+  iconTier: number;
+  outputPerClick: string;
+  // 手动挖矿当前作用在哪座矿脉上，以及已解锁的最高矿脉
+  veinTier: number;
+  veinName: string;
+  maxVeinTier: number;
+  maxVeinName: string;
+  lines: PickaxeLineRow[];
+}
+
 // 研究：算力（流量）与当前研究目标的进度
 export interface ResearchStats {
   // 到 LuV 才解锁研究，之前资源条上不显示这一块
@@ -308,6 +338,7 @@ export interface Snapshot {
   unlockCost: string;
   canUnlock: boolean;
   veins: number[];
+  pickaxe: PickaxeStats;
   // 当前最高等级的矿脉（界面中间那张图），贴图与特效由 veins.ts 按 tier 查
   currentVein: { tier: number; name: string };
 }
@@ -410,6 +441,12 @@ export const useGameStore = defineStore('game', {
     manualMine() {
       getCore().manualMine();
       this.refresh();
+    },
+    upgradePickaxe(line: PickaxeLine) {
+      const core = getCore();
+      if (!core.upgradePickaxe(line)) return;
+      this.refresh();
+      this.save();
     },
     buy(modelId: string, count: number, payWith: PayWith = 'coin'): number {
       const core = getCore();
@@ -715,7 +752,82 @@ function buildSnapshot(core: GameCore): Snapshot {
     unlockCost: nextTier === null ? '—' : formatNumber(core.unlockCostOf(nextTier)),
     canUnlock: nextTier !== null && core.canUnlock(nextTier),
     veins: [...core.unlockedVeins],
+    pickaxe: pickaxeStats(core),
     currentVein: currentVein(core),
+  };
+}
+
+// 镐子：三条升级线各自的进度与效果文案
+function pickaxeStats(core: GameCore): PickaxeStats {
+  const veinTier = core.pickaxeVeinTier();
+  const maxVeinTier = core.unlockedVeins.length ? Math.max(...core.unlockedVeins) : 0;
+
+  const lines: PickaxeLineRow[] = [
+    {
+      id: 'vajra',
+      name: '金刚杵',
+      hint: '决定镐子能挖到哪一级矿脉',
+      ...pickaxeLineText(core, 'vajra'),
+    },
+    {
+      id: 'collect',
+      name: '连锁采集',
+      hint: '每次点击的产出翻倍，结算在连锁爆破之后',
+      ...pickaxeLineText(core, 'collect'),
+    },
+    {
+      id: 'blast',
+      name: '连锁爆破',
+      hint: '每次点击额外加一笔矿石',
+      ...pickaxeLineText(core, 'blast'),
+    },
+  ];
+
+  return {
+    iconTier: core.pickaxeIconTier(),
+    outputPerClick: formatNumber(core.pickaxeOutput()),
+    veinTier,
+    veinName: oreName(veinTier),
+    maxVeinTier,
+    maxVeinName: oreName(maxVeinTier),
+    lines,
+  };
+}
+
+function pickaxeLineText(
+  core: GameCore,
+  line: PickaxeLine,
+): Pick<PickaxeLineRow, 'level' | 'cap' | 'effectNow' | 'effectNext' | 'canUpgrade'> {
+  const level = core.pickaxeLevel(line);
+  const cap = core.pickaxeCap(line);
+  const canUpgrade = core.canUpgradePickaxe(line);
+  const blast = (used: number) => blastBonus(core.maxTier, used);
+  const collect = (value: number) => collectMultiplier(value);
+
+  if (line === 'vajra') {
+    return {
+      level,
+      cap,
+      effectNow: `可挖 ${oreName(level)} 矿脉`,
+      effectNext: canUpgrade ? `可挖 ${oreName(level + 1)} 矿脉` : '',
+      canUpgrade,
+    };
+  }
+  if (line === 'collect') {
+    return {
+      level,
+      cap,
+      effectNow: level > 0 ? `产出 ×${formatNumber(collect(level))}` : '尚未升级',
+      effectNext: canUpgrade ? `产出 ×${formatNumber(collect(level + 1))}` : '',
+      canUpgrade,
+    };
+  }
+  return {
+    level,
+    cap,
+    effectNow: level > 0 ? `每次点击 +${formatNumber(blast(level))}` : '尚未升级',
+    effectNext: canUpgrade ? `每次点击 +${formatNumber(blast(level + 1))}` : '',
+    canUpgrade,
   };
 }
 

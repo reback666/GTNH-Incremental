@@ -54,3 +54,12 @@ export function fromSaveString(text: SerializedDecimal): Decimal {
 export function pow(base: DecimalInput, exponent: number): Decimal {
   return dec(base).pow(decInt(exponent, 'exponent'));
 }
+
+// 分数次幂：连锁爆破要算 n^(n/2)，指数是半整数。
+// 只用来由等级推倍率，不参与反复累加 —— 累加仍然走 Decimal 的加减。
+export function powFraction(base: DecimalInput, numerator: number, denominator: number): Decimal {
+  const top = decInt(numerator, 'numerator');
+  const bottom = decInt(denominator, 'denominator');
+  if (bottom.lte(0)) throw new RangeError(`分母必须是正整数，收到 ${denominator}`);
+  return dec(base).pow(top.div(bottom));
+}

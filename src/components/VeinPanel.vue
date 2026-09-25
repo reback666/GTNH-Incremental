@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useGameStore } from '../game/store';
 import SpriteIcon from './SpriteIcon.vue';
+import { pickaxeIconUrl } from '../game/pickaxe-icons';
 import {
   fxIconFrames,
   fxIconLoopMs,
@@ -14,6 +15,16 @@ import {
 const store = useGameStore();
 const info = computed(() => veinTierInfo(store.snap.currentVein.tier));
 const veinUrl = computed(() => veinIconUrl(store.snap.currentVein.tier));
+// 镐子图标按金刚杵等级取电压色，升级后颜色会跟着变
+const pickaxeUrl = computed(() => pickaxeIconUrl(store.snap.pickaxe.iconTier));
+// 金刚杵还没升级时，面板上说明「已解锁更高级矿脉但挖不动」
+const veinLocked = computed(
+  () => store.snap.pickaxe.veinTier < store.snap.pickaxe.maxVeinTier,
+);
+
+function upgrade(line: 'vajra' | 'collect' | 'blast') {
+  store.upgradePickaxe(line);
+}
 
 // 贴图是竖排的帧条带，用 steps() 逐帧切换，和 Minecraft 的动画贴图一个机制
 const spriteStyle = computed(() => ({
@@ -205,7 +216,7 @@ function mine(event: MouseEvent) {
         :key="'s' + spark.id"
         class="spark"
         :style="{ left: spark.x + 'px', top: spark.y + 'px' }"
-        >+1</span
+        >+{{ store.snap.pickaxe.outputPerClick }}</span
       >
       <span
         v-for="ripple in ripples"
@@ -223,5 +234,45 @@ function mine(event: MouseEvent) {
         <span class="hit-core" />
       </span>
     </button>
+
+    <div class="pickaxe">
+      <div class="pickaxe-head">
+        <span class="pickaxe-icon">
+          <img v-if="pickaxeUrl" :src="pickaxeUrl" alt="" />
+        </span>
+        <div class="pickaxe-summary">
+          <span class="pickaxe-output">镐子 · 每次点击 {{ store.snap.pickaxe.outputPerClick }} 枚</span>
+          <span class="muted small">
+            正在开采 {{ store.snap.pickaxe.veinName }} 矿脉，产出按矿脉规则分给它有产出的全部矿种
+          </span>
+          <span v-if="veinLocked" class="pickaxe-locked">
+            已解锁 {{ store.snap.pickaxe.maxVeinName }} 矿脉，升级金刚杵才挖得动
+          </span>
+        </div>
+      </div>
+
+      <div class="pickaxe-lines">
+        <div v-for="line in store.snap.pickaxe.lines" :key="line.id" class="pickaxe-line">
+          <div class="pickaxe-line-text">
+            <span class="pickaxe-line-name">{{ line.name }}</span>
+            <span class="muted small">{{ line.hint }}</span>
+            <span class="pickaxe-line-effect">
+              {{ line.effectNow }}<template v-if="line.effectNext"> → {{ line.effectNext }}</template>
+            </span>
+          </div>
+          <div class="pickaxe-line-action">
+            <span class="muted small">{{ line.level }} / {{ line.cap }}</span>
+            <button
+              class="pickaxe-upgrade"
+              type="button"
+              :disabled="!line.canUpgrade"
+              @click="upgrade(line.id)"
+            >
+              {{ line.canUpgrade ? '升级' : '已满' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
