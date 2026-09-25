@@ -19,7 +19,7 @@ import {
 } from '../numeric/pollution';
 import { GRID_MODES, gridMode, type GridMode } from '../numeric/grid';
 import { ACHIEVEMENTS } from './achievements';
-import { UNIVERSES } from './universes';
+import { UNIVERSES, universeById } from './universes';
 import { essentiaFromPurify } from '../numeric/arcane';
 import {
   NODE_ESSENTIA_PER_SECOND,
@@ -206,6 +206,11 @@ export interface RebirthStats {
   canRebirth: boolean;
   riftPending: boolean;
   riftClosed: boolean;
+  // 已经选好、等下次转生带走的宇宙（没选时空串）
+  pendingUniverse: string;
+  pendingUniverseName: string;
+  // 已经拥有的宇宙名字，界面上做摘要用
+  universes: string[];
   root: { name: string; x: number; y: number };
   nodes: RebirthNodeRow[];
   // 已经装上的加成汇总
@@ -422,6 +427,20 @@ export const useGameStore = defineStore('game', {
     },
     devClearMachines(): boolean {
       const ok = getCore().devClearMachines();
+      this.refresh();
+      this.save();
+      return ok;
+    },
+    // 测试用：直接把某个宇宙加进来
+    devGrantUniverse(id: string): boolean {
+      const ok = getCore().devGrantUniverse(id);
+      this.refresh();
+      this.save();
+      return ok;
+    },
+    // 记住「下次转生带哪个宇宙」，跟着存档走
+    setPendingUniverse(id: string | null): boolean {
+      const ok = getCore().setPendingUniverse(id);
       this.refresh();
       this.save();
       return ok;
@@ -718,6 +737,12 @@ function rebirthStats(core: GameCore): RebirthStats {
     canRebirth: core.canRebirth('max'),
     riftPending: core.riftPending(),
     riftClosed: core.riftOffered,
+    pendingUniverse: core.pendingUniverse ?? '',
+    pendingUniverseName:
+      core.pendingUniverse === null
+        ? ''
+        : (universeById(core.pendingUniverse)?.name ?? core.pendingUniverse),
+    universes: core.universes.map((id) => universeById(id)?.name ?? id),
     root: { ...REBIRTH_ROOT },
     nodes: REBIRTH_NODES.map((node) => ({
       id: node.id,

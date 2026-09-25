@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useGameStore, type RebirthNodeRow } from '../game/store';
 import { REBIRTH_NODES } from '../game/rebirth';
 
@@ -9,21 +9,22 @@ const emit = defineEmits<{ close: [] }>();
 const store = useGameStore();
 const rebirth = computed(() => store.snap.rebirth);
 const universes = computed(() => store.snap.universes);
-// 本次转生要带上的宇宙（一次一个，已拥有的不能再选）
-const pickedUniverse = ref<string | null>(null);
+// 本次转生要带上的宇宙。选择存在存档里（rebirth.pendingUniverse），
+// 所以来回切页面、刷新都不会丢
+const pickedUniverse = computed(() => store.snap.rebirth.pendingUniverse);
 
 function pickUniverse(id: string, owned: boolean, implemented: boolean) {
   if (owned || !implemented) return;
-  pickedUniverse.value = pickedUniverse.value === id ? null : id;
+  // 再点一下取消选择
+  store.setPendingUniverse(pickedUniverse.value === id ? null : id);
 }
 
 function doRebirth() {
-  store.rebirth('max', pickedUniverse.value ?? undefined);
-  pickedUniverse.value = null;
+  store.rebirth('max', pickedUniverse.value || undefined);
 }
 
 function doRiftRebirth() {
-  store.rebirth('rift', pickedUniverse.value ?? undefined);
+  store.rebirth('rift', pickedUniverse.value || undefined);
 }
 
 interface Link {
@@ -126,7 +127,10 @@ function nodeClass(node: RebirthNodeRow) {
     <h2 class="mt">平行宇宙</h2>
     <p class="muted small" style="margin: 0 0 8px">
       转生时可以带一个宇宙走，选过的永久叠加 —— 下一轮开始，核心规则就多一条。
-      这次不选也行，下次转生再选。
+      选中之后会一直记着（切页面、刷新都不丢），<b>下次转生时才生效</b>；这次不选也行。
+    </p>
+    <p v-if="rebirth.pendingUniverseName" class="small" style="margin: 0 0 8px">
+      本次转生将带上：<b>{{ rebirth.pendingUniverseName }}</b>
     </p>
     <div class="universe-list">
       <button

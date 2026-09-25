@@ -150,6 +150,8 @@ export class GameCore {
   devMode = false;
   // 已经拥有的平行宇宙（转生时选一个，选过的永久叠加）
   universes: UniverseId[] = [];
+  // 已经选好、等下一次转生带走的宇宙（只存选择本身，转生时才生效）
+  pendingUniverse: UniverseId | null = null;
   // 奥术宇宙的源质存量（净化器副产，喂给灵气节点）
   essentia = ZERO;
   // ── 累计统计与成就 ─────────────────────────────────────────
@@ -250,6 +252,19 @@ export class GameCore {
     return true;
   }
 
+  // 记住「下次转生带哪个宇宙」。选中的那一刻不生效，转生时才生效 ——
+  // 这个选择跟着存档走，来回切页面、刷新都不会丢
+  setPendingUniverse(id: string | null): boolean {
+    if (id === null) {
+      this.pendingUniverse = null;
+      return true;
+    }
+    const universe = universeById(id);
+    if (!universe || this.hasUniverse(universe.id)) return false;
+    this.pendingUniverse = universe.id;
+    return true;
+  }
+
   // 工业宇宙：同一机型的边际成本增长从 1.07^k 降到 1.05^k
   marginalGrowth(): string {
     return this.hasUniverse('industry') ? '1.05' : MARGINAL_COST_GROWTH;
@@ -306,6 +321,7 @@ export class GameCore {
     if (!this.canRebirth(route)) return null;
     const gained = this.cablesFor(route);
     if (universe !== undefined) this.addUniverse(universe);
+    this.pendingUniverse = null; // 选择已经用掉
     this.cables = this.cables.plus(gained);
     this.totalCables = this.totalCables.plus(gained);
     this.rebirthCount += 1;
@@ -421,6 +437,12 @@ export class GameCore {
     this.faults = {};
     this.storedEU = ZERO;
     return true;
+  }
+
+  // 测试用：直接把某个宇宙加进来（正常玩法里只有转生时才会获得宇宙）
+  devGrantUniverse(id: string): boolean {
+    if (!this.devMode) return false;
+    return this.addUniverse(id);
   }
 
   private totalBonus(kind: RebirthEffectKind): Decimal {

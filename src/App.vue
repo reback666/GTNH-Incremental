@@ -63,6 +63,12 @@ onMounted(() => {
                 <span class="muted small">
                   · 时空线缆 {{ rebirth.cables }} 条 · 已转生 {{ rebirth.count }} 次</span
                 >
+                <span v-if="rebirth.pendingUniverseName" class="muted small">
+                  · 下次转生带上 {{ rebirth.pendingUniverseName }}</span
+                >
+                <span v-if="rebirth.universes.length" class="muted small">
+                  · 已有宇宙 {{ rebirth.universes.join('、') }}</span
+                >
               </div>
               <button
                 :class="{ primary: rebirth.canRebirth || rebirth.riftPending }"

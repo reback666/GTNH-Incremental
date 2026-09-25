@@ -50,6 +50,8 @@ export interface SaveData {
   universes?: string[];
   // v11：奥术宇宙的源质存量
   essentia?: string;
+  // v12：下次转生要带的平行宇宙（选择本身，转生时才生效）
+  pendingUniverse?: string | null;
   // v1 遗留字段：按电压等级存的数量，读到旧存档时用来迁移
   miners?: number[];
   generators?: number[];
@@ -94,6 +96,7 @@ export function serialize(core: GameCore): SaveData {
     achieved: { ...core.achieved },
     universes: [...core.universes],
     essentia: toSaveString(core.essentia),
+    pendingUniverse: core.pendingUniverse,
     siphoned: toSaveString(core.siphoned),
     maxTier: core.maxTier,
     unlockedVeins: [...core.unlockedVeins],
@@ -146,6 +149,7 @@ export function deserialize(data: SaveData): GameCore {
   core.achieved = { ...(data.achieved ?? {}) };
   core.universes = [...((data.universes ?? []) as GameCore['universes'])];
   core.essentia = fromSaveString(data.essentia ?? '0');
+  core.pendingUniverse = (data.pendingUniverse ?? null) as GameCore['pendingUniverse'];
   core.playSeconds = data.playSeconds;
   core.totalOre = dec(data.totalOre ?? '0');
   core.totalCoins = dec(data.totalCoins ?? '0');

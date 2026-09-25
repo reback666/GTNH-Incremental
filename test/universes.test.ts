@@ -118,4 +118,37 @@ describe('平行宇宙', () => {
     delete legacy.universes;
     expect(deserialize(legacy as never).universes).toEqual([]);
   });
+
+  it('选好的宇宙跟着存档走，转生时才生效、用完清空', () => {
+    const core = new GameCore();
+    expect(core.setPendingUniverse('arcane')).toBe(true);
+    expect(core.pendingUniverse).toBe('arcane');
+    // 只是记住选择，不会立刻拥有
+    expect(core.hasUniverse('arcane')).toBe(false);
+
+    // 切页面 / 刷新都不该丢
+    const restored = deserialize(serialize(core));
+    expect(restored.pendingUniverse).toBe('arcane');
+    expect(serialize(restored)).toEqual(serialize(core));
+
+    // 转生时才真正拿到，并把选择清掉
+    restored.maxTier = 14;
+    restored.runEU = dec('1e24');
+    restored.rebirth('max', restored.pendingUniverse ?? undefined);
+    expect(restored.hasUniverse('arcane')).toBe(true);
+    expect(restored.pendingUniverse).toBe(null);
+
+    // 已经拥有的不能再选；取消选择也可以
+    expect(restored.setPendingUniverse('arcane')).toBe(false);
+    expect(restored.setPendingUniverse(null)).toBe(true);
+  });
+
+  it('开发者模式：可以直接获得宇宙，方便立刻测试', () => {
+    const core = new GameCore();
+    expect(core.devGrantUniverse('arcane')).toBe(false); // 没开开发者模式
+    core.setDevMode(true);
+    expect(core.devGrantUniverse('arcane')).toBe(true);
+    expect(core.hasUniverse('arcane')).toBe(true);
+    expect(core.devGrantUniverse('arcane')).toBe(false); // 不重复
+  });
 });

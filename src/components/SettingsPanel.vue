@@ -107,6 +107,17 @@ const unlockTier = ref(1);
         <div class="name">机器</div>
         <button @click="store.devClearMachines()">清空全部机器</button>
       </div>
+      <div class="row">
+        <div class="name">平行宇宙</div>
+        <button
+          v-for="universe in snap.universes"
+          :key="universe.id"
+          :disabled="universe.owned"
+          @click="store.devGrantUniverse(universe.id)"
+        >
+          {{ universe.owned ? '已有' : '获得' }}{{ universe.name }}
+        </button>
+      </div>
 
       <dl class="stats">
         <div class="stat">

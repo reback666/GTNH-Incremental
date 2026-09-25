@@ -44,7 +44,8 @@ export const UI_REFRESH_MS = 50;
 // v9：加了累计统计与成就（最高电压、累计线缆、历史最高污染、达成记录…）
 // v10：加了平行宇宙（转生时选，选过的永久叠加）
 // v11：加了奥术宇宙的源质存量
-export const SAVE_VERSION = 11;
+// v12：加了「下次转生要带的平行宇宙」这个选择
+export const SAVE_VERSION = 12;
 export const SAVE_KEY = 'gtnh-incremental-save';
 
 export function unlockCost(machineTier: number): Decimal {
