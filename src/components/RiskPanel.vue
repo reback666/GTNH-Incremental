@@ -62,21 +62,33 @@ const risk = computed(() => store.snap.risk);
 
     <h2 class="mt">电网</h2>
     <div class="grid-modes">
-      <button
+      <div
         v-for="mode in risk.gridModes"
         :key="mode.id"
-        type="button"
         class="grid-mode"
         :class="{ active: risk.grid === mode.id, locked: !mode.unlocked }"
-        :disabled="!mode.unlocked"
-        @click="store.setGrid(mode.id)"
       >
-        <b>
-          {{ mode.name }}
-          <span v-if="!mode.unlocked" class="lock">{{ mode.unlockLabel }}</span>
-        </b>
+        <b>{{ mode.name }}</b>
         <span class="muted small">{{ mode.summary }}</span>
-      </button>
+        <span class="grid-actions">
+          <template v-if="mode.unlocked">
+            <button
+              type="button"
+              :disabled="risk.grid === mode.id"
+              @click="store.setGrid(mode.id)"
+            >
+              {{ risk.grid === mode.id ? '使用中' : '切到这一档' }}
+            </button>
+          </template>
+          <template v-else>
+            <span class="muted small">{{ mode.requirement }}</span>
+            <span class="price">{{ mode.cost }} {{ mode.unit }}</span>
+            <button type="button" :disabled="!mode.unlockable" @click="store.unlockGrid(mode.id)">
+              解锁
+            </button>
+          </template>
+        </span>
+      </div>
     </div>
     <p v-if="risk.outage" class="danger small" style="margin: 8px 0 0">
       电网断电中：所有机器停转，等它恢复。

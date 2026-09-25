@@ -17,7 +17,7 @@ import {
   pollutionBand,
   pollutionBandName,
 } from '../numeric/pollution';
-import { GRID_MODES, gridMode, isGridUnlocked, type GridMode } from '../numeric/grid';
+import { GRID_MODES, gridMode, type GridMode } from '../numeric/grid';
 import { type GameCore, type MachineKind, type PayWith } from './core';
 import { canOverclock, modelsOf, type BlockKind, type MachineModel } from './models';
 import { getCore, resetCore, setCore } from './engine';
@@ -79,7 +79,11 @@ export interface RiskStats {
     name: string;
     summary: string;
     unlocked: boolean;
-    unlockLabel: string;
+    unlockable: boolean;
+    // 解锁要求（电压等级）与价格（该等级的 GT 币）
+    requirement: string;
+    cost: string;
+    unit: string;
   }[];
   outage: boolean;
   siphoned: string;
@@ -230,6 +234,13 @@ export const useGameStore = defineStore('game', {
       this.refresh();
       this.save();
     },
+    // 解锁电网要花对应等级的 GT 币
+    unlockGrid(mode: GridMode): boolean {
+      const ok = getCore().unlockGrid(mode);
+      this.refresh();
+      this.save();
+      return ok;
+    },
     setPollutionEnabled(enabled: boolean): void {
       getCore().setPollutionEnabled(enabled);
       this.refresh();
@@ -358,8 +369,11 @@ function riskStats(core: GameCore): RiskStats {
       id: item.id,
       name: item.name,
       summary: item.summary,
-      unlocked: isGridUnlocked(item.id, core.maxTier),
-      unlockLabel: `${VOLTAGE_TIERS[item.unlockTier - 1] ?? '?'} 解锁`,
+      unlocked: core.isGridUnlocked(item.id),
+      unlockable: core.canUnlockGrid(item.id),
+      requirement: `${VOLTAGE_TIERS[item.unlockTier - 1] ?? '?'} 起可解锁`,
+      cost: formatNumber(core.gridUnlockCost(item.id)),
+      unit: coinName(item.unlockTier),
     })),
     outage: core.outageSeconds > 0,
     siphoned: formatNumber(core.siphoned),

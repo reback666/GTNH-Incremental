@@ -4,7 +4,7 @@ import { machineCost } from '../numeric/cost';
 import { machineEnergy, machineOutput } from '../numeric/output';
 import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../numeric/generator';
 import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
-import { paymentTier } from '../numeric/credit';
+import { convertCoins, paymentTier } from '../numeric/credit';
 import { isValidOverclockLevel, overclockEnergyMultiplier, overclockSpeedMultiplier } from '../numeric/overclock';
 import { expectedFaults, sampleFaults } from '../numeric/fault';
 import { batteryCapacityEU, settleStorage } from '../numeric/storage';
@@ -96,6 +96,8 @@ export class GameCore {
   siphoned = ZERO;
   // 电网模式（计划书第六章）
   grid: GridMode = DEFAULT_GRID;
+  // 已解锁的电网。开局只有普通电网，其余的到等级后花对应等级的 GT 币解锁
+  grids: GridMode[] = [DEFAULT_GRID];
   // 波动电网：还要断多久、距离下次判定过了多久
   outageSeconds = 0;
   outageTimer = 0;
@@ -215,9 +217,43 @@ export class GameCore {
 
   // ── 污染与电网 ─────────────────────────────────────────────
 
+  isGridUnlocked(mode: GridMode): boolean {
+    return this.grids.includes(mode);
+  }
+
+  // 解锁价：该等级第一台机器成本的 GRID_UNLOCK_COST_MACHINES 倍，
+  // 用「该等级的 GT 币」支付（计划书第六章：电网要靠升级解锁）
+  gridUnlockCost(mode: GridMode): Decimal {
+    const info = gridMode(mode);
+    const valueInTier1 = machineCost({
+      baseCost: C.BASE_MACHINE_COST,
+      tier: info.unlockTier,
+      purchased: 0,
+    }).times(C.GRID_UNLOCK_COST_MACHINES);
+    return convertCoins(valueInTier1, 1, info.unlockTier);
+  }
+
+  gridPaymentIndex(mode: GridMode): number {
+    return gridMode(mode).unlockTier - 1;
+  }
+
+  canUnlockGrid(mode: GridMode): boolean {
+    if (this.isGridUnlocked(mode)) return false;
+    if (gridMode(mode).unlockTier > this.maxTier) return false;
+    return this.coins[this.gridPaymentIndex(mode)]!.gte(this.gridUnlockCost(mode));
+  }
+
+  unlockGrid(mode: GridMode): boolean {
+    if (!this.canUnlockGrid(mode)) return false;
+    const index = this.gridPaymentIndex(mode);
+    this.coins[index] = this.coins[index]!.minus(this.gridUnlockCost(mode));
+    this.grids.push(mode);
+    return true;
+  }
+
   // 换电网：只有解锁过的才能接。返回是否切换成功
   setGrid(mode: GridMode): boolean {
-    if (!isGridUnlocked(mode, this.maxTier)) return false;
+    if (!this.isGridUnlocked(mode)) return false;
     if (this.grid === mode) return true;
     this.grid = mode;
     // 换电网等于重新接线：断电立刻结束，计时从头开始

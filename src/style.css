@@ -628,9 +628,12 @@ h1 .small {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: 3px;
   text-align: left;
   padding: 8px 10px;
+  border: 1px solid #333c48;
+  border-radius: 8px;
+  background: #1a2027;
 }
 
 .grid-mode.active {
@@ -639,17 +642,24 @@ h1 .small {
 }
 
 .grid-mode.locked {
-  opacity: 0.5;
+  opacity: 0.75;
 }
 
-.grid-mode .lock {
-  margin-left: 6px;
-  padding: 0 5px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--muted);
-  border: 1px solid #3a4553;
+.grid-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.grid-actions button {
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+.grid-actions .price {
+  font-size: 12px;
+  color: var(--text);
 }
 
 /* 镐子敲上去：矿脉轻轻往下一沉再回弹，不做整体提亮（原来那版闪一下太扎眼） */

@@ -1,5 +1,6 @@
 import { dec, fromSaveString, toSaveString } from '../numeric/decimal';
 import { MAX_TIER } from '../numeric/voltage';
+import { DEFAULT_GRID } from '../numeric/grid';
 import { GameCore, type MachineKind } from './core';
 import { baseModelOf } from './models';
 import { SAVE_KEY, SAVE_VERSION } from './constants';
@@ -21,6 +22,8 @@ export interface SaveData {
   pollutionEnabled?: boolean;
   grid?: string;
   siphoned?: string;
+  // v5：已解锁的电网（解锁要花对应等级的 GT 币）
+  grids?: string[];
   // v1 遗留字段：按电压等级存的数量，读到旧存档时用来迁移
   miners?: number[];
   generators?: number[];
@@ -45,6 +48,7 @@ export function serialize(core: GameCore): SaveData {
     pollution: toSaveString(core.pollution),
     pollutionEnabled: core.pollutionEnabled,
     grid: core.grid,
+    grids: [...core.grids],
     siphoned: toSaveString(core.siphoned),
     maxTier: core.maxTier,
     unlockedVeins: [...core.unlockedVeins],
@@ -66,6 +70,10 @@ export function deserialize(data: SaveData): GameCore {
   core.pollution = fromSaveString(data.pollution ?? '0');
   core.pollutionEnabled = data.pollutionEnabled ?? true;
   core.grid = (data.grid as GameCore['grid']) ?? 'stable';
+  // v4 及以前没有「已解锁电网」的概念：把当前接的那一档当成已解锁，别让玩家白花钱
+  core.grids = data.grids
+    ? (data.grids as GameCore['grids'])
+    : ([DEFAULT_GRID, ...(core.grid !== DEFAULT_GRID ? [core.grid] : [])] as GameCore['grids']);
   core.siphoned = fromSaveString(data.siphoned ?? '0');
   core.maxTier = data.maxTier;
   core.unlockedVeins = [...data.unlockedVeins];
@@ -107,7 +115,7 @@ export function loadFromStorage(): GameCore | null {
   if (!raw) return null;
   try {
     const data = JSON.parse(raw) as SaveData;
-    if (![1, 2, 3, SAVE_VERSION].includes(data.version)) {
+    if (![1, 2, 3, 4, SAVE_VERSION].includes(data.version)) {
       throw new Error(`存档版本 ${data.version} 无法识别`);
     }
     return deserialize(data);

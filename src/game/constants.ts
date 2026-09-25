@@ -24,6 +24,10 @@ export const MANUAL_MINE_PER_CLICK = '1';
 // 暂定：解锁 X 级需要攒够 X-1 级币，数量 = 该级第 1 台机器成本的 10 倍。
 export const UNLOCK_COST_IN_MACHINES = 10;
 
+// 电网解锁价 = 该等级第一台机器成本的这个倍数，用该等级的 GT 币支付。
+// 与电压解锁同样的口径（10 台机器的价钱），但不再往下折一级。
+export const GRID_UNLOCK_COST_MACHINES = 10;
+
 // 模拟步长与界面刷新频率（计划书第十四章：UI 20 Hz、运算 1 Hz 或更低）。
 export const SIM_STEP_MS = 1000;
 export const UI_REFRESH_MS = 50;
@@ -33,7 +37,8 @@ export const UI_REFRESH_MS = 50;
 // v2：改按机型存（counts: 机型 id → 数量），因为同一个等级现在可以有多个机型
 // v3：加了超频档位、故障台数、存电存量（第二阶段：自动化与深度）
 // v4：加了污染值与开关、电网模式、黑市窃取累计（第二阶段：风险杠杆）
-export const SAVE_VERSION = 4;
+// v5：电网改成花 GT 币解锁，存档要记「已解锁哪些电网」
+export const SAVE_VERSION = 5;
 export const SAVE_KEY = 'gtnh-incremental-save';
 
 export function unlockCost(machineTier: number): Decimal {

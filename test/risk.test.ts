@@ -9,6 +9,8 @@ import {
   purifyPerSecond,
 } from '../src/numeric/pollution';
 import { gridEnergyMultiplier } from '../src/numeric/grid';
+import { gridMode } from '../src/numeric/grid';
+import type { GridMode } from '../src/numeric/grid';
 
 // 第二阶段收尾：风险杠杆（计划书第六章）——污染与电网。
 const ULV_MINER = 'm-1';
@@ -25,6 +27,15 @@ function factory(pollution = '0'): GameCore {
   core.counts['m-3'] = 20;
   core.pollution = dec(pollution);
   return core;
+}
+
+// 电网要花对应等级的 GT 币解锁，测试里先给够钱
+function unlockGrids(core: GameCore, modes: GridMode[]): void {
+  for (const mode of modes) {
+    const index = gridMode(mode).unlockTier - 1;
+    core.coins[index] = dec('1000000');
+    core.unlockGrid(mode);
+  }
 }
 
 describe('污染数值', () => {
@@ -110,24 +121,33 @@ describe('污染在模拟里的效果', () => {
 });
 
 describe('电网模式在模拟里的效果', () => {
-  it('开局只有普通电网，其余按电压等级解锁', () => {
+  it('开局只有普通电网，其余要花对应等级的 GT 币解锁', () => {
     const core = new GameCore();
     expect(core.grid).toBe('normal');
-    expect(core.setGrid('stable')).toBe(false); // LV 才解锁
+    expect(core.grids).toEqual(['normal']);
+    // 没到等级：有钱也解锁不了
+    core.coins[1] = dec('1000000');
+    expect(core.unlockGrid('stable')).toBe(false);
+    // 到了 LV 还要付得起：稳定电网解锁价 = 10 × 该级首台机器成本，用 LV 币计价
     core.maxTier = 2;
+    expect(core.gridUnlockCost('stable').toString()).toBe('5000');
+    core.coins[1] = dec('4999');
+    expect(core.canUnlockGrid('stable')).toBe(false);
+    core.coins[1] = dec('5000');
+    expect(core.unlockGrid('stable')).toBe(true);
+    expect(core.coins[1]!.toString()).toBe('0'); // 钱被扣掉
+    expect(core.isGridUnlocked('stable')).toBe(true);
     expect(core.setGrid('stable')).toBe(true);
-    expect(core.setGrid('volatile')).toBe(false); // MV 才解锁
-    core.maxTier = 3;
-    expect(core.setGrid('volatile')).toBe(true);
-    expect(core.setGrid('black')).toBe(false); // HV 才解锁
-    core.maxTier = 4;
-    expect(core.setGrid('black')).toBe(true);
+    // 没解锁的档位接不上
+    expect(core.setGrid('volatile')).toBe(false);
+    expect(core.grid).toBe('stable');
   });
 
   it('普通电网不省电也不加价', () => {
     const used = (mode: 'normal' | 'stable' | 'volatile' | 'black'): number => {
       const core = factory();
       core.maxTier = 4; // 黑市电网要 HV 才解锁
+      unlockGrids(core, ['stable', 'volatile', 'black']);
       core.setGrid(mode);
       core.tick(1);
       return core.lastReport.euConsumed.toNumber();
@@ -147,6 +167,7 @@ describe('电网模式在模拟里的效果', () => {
     expect(normal.lastReport.outage).toBe(true);
 
     const stable = factory();
+    unlockGrids(stable, ['stable']);
     stable.setGrid('stable');
     stable.random = () => 0;
     stable.tick(300);
@@ -155,6 +176,7 @@ describe('电网模式在模拟里的效果', () => {
 
   it('波动电网断电：机器全停', () => {
     const core = factory();
+    unlockGrids(core, ['volatile']);
     core.setGrid('volatile');
     core.random = () => 0; // 5 分钟判定必中
     core.tick(300);
@@ -167,6 +189,7 @@ describe('电网模式在模拟里的效果', () => {
     // 用一台机器都没有的干净存档，避免产出干扰判断
     const core = new GameCore();
     core.maxTier = 4;
+    unlockGrids(core, ['black']);
     core.setGrid('black');
     core.coins[2] = dec('1000');
     core.random = () => 0;
@@ -177,6 +200,7 @@ describe('电网模式在模拟里的效果', () => {
 
   it('切换电网会立刻结束断电', () => {
     const core = factory();
+    unlockGrids(core, ['volatile', 'stable']);
     core.setGrid('volatile');
     core.outageSeconds = 8;
     core.setGrid('stable');
