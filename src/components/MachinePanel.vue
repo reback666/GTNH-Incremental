@@ -9,12 +9,32 @@ import {
 import type { MachineKind, PayWith } from '../game/core';
 import { MAX_OVERCLOCK_LEVEL as MAX_OC } from '../numeric/overclock';
 import MachineIcon from './MachineIcon.vue';
+import { pickaxeIconUrl } from '../game/pickaxe-icons';
 
 const props = defineProps<{ columns: MachineColumn[] }>();
 const store = useGameStore();
 
-// 最上方是三个大类，点谁就展开谁，另外两个挤压收起。
-const active = ref<MachineKind>('miner');
+// 最上方是一排大类标签，点谁就展开谁，其余挤压收起。
+// 最后一个是「镐子」：它不是机器类别，展开的是手动挖矿的三条升级线。
+const active = ref<MachineKind | 'pickaxe'>('miner');
+const PICKAXE_TAB = 'pickaxe';
+
+// 镐子标签上的角标：三条线还剩几次能升
+const pickaxeLines = computed(() => store.snap.pickaxe.lines);
+const pickaxeChancesLeft = computed(() =>
+  pickaxeLines.value.reduce((sum, line) => sum + (line.cap - line.level), 0),
+);
+const pickaxeTabIcon = computed(() =>
+  pickaxeIconUrl('vajra', pickaxeLines.value[0]?.iconTier ?? 1),
+);
+// 已解锁更高级矿脉、但金刚杵还不够格挖
+const pickaxeVeinLocked = computed(
+  () => store.snap.pickaxe.veinTier < store.snap.pickaxe.maxVeinTier,
+);
+
+function lineIcon(line: { id: 'vajra' | 'collect' | 'blast'; iconTier: number }): string | undefined {
+  return pickaxeIconUrl(line.id, line.iconTier);
+}
 // 计划书第七章规定用 GT 币买；开局没有产币机器，所以再给一条用矿石建造的路子。
 const payWith = ref<PayWith>('coin');
 
@@ -76,6 +96,7 @@ const activeColumn = computed(() => props.columns.find((item) => item.kind === a
 watch(
   () => props.columns.map((column) => column.kind).join(','),
   () => {
+    if (active.value === PICKAXE_TAB) return;
     if (!props.columns.some((column) => column.kind === active.value) && props.columns[0]) {
       active.value = props.columns[0].kind;
     }
@@ -122,6 +143,18 @@ function canBuy(model: MachineModelRow): boolean {
         <MachineIcon :model-id="tabIconId(column.kind)" :kind="column.kind" :size="30" />
         <span class="tab-name">{{ column.title }}</span>
         <span class="tab-count">已建 {{ column.count }} 台</span>
+      </button>
+      <button
+        type="button"
+        class="machine-tab"
+        :class="{ active: active === PICKAXE_TAB }"
+        @click="active = PICKAXE_TAB"
+      >
+        <img v-if="pickaxeTabIcon" class="tab-icon" :src="pickaxeTabIcon" alt="" />
+        <span class="tab-name">镐子</span>
+        <span class="tab-count" :class="{ can: pickaxeChancesLeft > 0 }">
+          {{ pickaxeChancesLeft > 0 ? `可升 ${pickaxeChancesLeft} 次` : '已全部升满' }}
+        </span>
       </button>
     </div>
 
@@ -221,6 +254,58 @@ function canBuy(model: MachineModelRow): boolean {
             </span>
             <button :disabled="!canBuy(bar.model)" @click="store.buy(bar.model.id, 1, payWith)">×1</button>
             <button :disabled="!canBuy(bar.model)" @click="store.buy(bar.model.id, 10, payWith)">×10</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 镐子：手动挖矿的三条升级线 -->
+    <div class="machine-body" :class="{ collapsed: active !== PICKAXE_TAB }">
+      <div class="inner">
+        <div class="pad">
+          <p class="muted small hint">
+            手动挖矿的三条升级线。机会随电压等级发放，用掉就永久生效，不花币；转生后跟电压一起回到开局。
+          </p>
+
+          <dl class="stats">
+            <div class="stat">
+              <dt>每次点击</dt>
+              <dd>{{ store.snap.pickaxe.outputPerClick }} 枚</dd>
+            </div>
+            <div class="stat">
+              <dt>正在开采</dt>
+              <dd>{{ store.snap.pickaxe.veinName }}</dd>
+            </div>
+          </dl>
+
+          <p v-if="pickaxeVeinLocked" class="pickaxe-locked">
+            已解锁 {{ store.snap.pickaxe.maxVeinName }} 矿脉，升级金刚杵才挖得动
+          </p>
+
+          <div v-for="line in pickaxeLines" :key="line.id" class="pickaxe-line">
+            <img v-if="lineIcon(line)" class="pickaxe-line-icon" :src="lineIcon(line)" alt="" />
+            <div class="pickaxe-line-text">
+              <span class="pickaxe-line-name">{{ line.name }}</span>
+              <span class="muted small">{{ line.hint }}</span>
+              <span class="pickaxe-line-effect">
+                {{ line.effectNow }}
+                <template v-if="line.effectNext">
+                  <span class="pickaxe-arrow">→</span>
+                  <span class="pickaxe-next">{{ line.effectNext }}</span>
+                </template>
+              </span>
+            </div>
+            <div class="pickaxe-line-action">
+              <span class="muted small">{{ line.level }} / {{ line.cap }}</span>
+              <button
+                class="pickaxe-upgrade"
+                type="button"
+                :disabled="!line.canUpgrade"
+                @click="store.upgradePickaxe(line.id)"
+              >
+                {{ line.canUpgrade ? '升级' : '已满级' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>

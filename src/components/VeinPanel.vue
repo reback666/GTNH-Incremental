@@ -2,7 +2,6 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useGameStore } from '../game/store';
 import SpriteIcon from './SpriteIcon.vue';
-import { pickaxeIconUrl } from '../game/pickaxe-icons';
 import {
   fxIconFrames,
   fxIconLoopMs,
@@ -15,28 +14,6 @@ import {
 const store = useGameStore();
 const info = computed(() => veinTierInfo(store.snap.currentVein.tier));
 const veinUrl = computed(() => veinIconUrl(store.snap.currentVein.tier));
-// 金刚杵还没升级时，面板上说明「已解锁更高级矿脉但挖不动」
-const veinLocked = computed(
-  () => store.snap.pickaxe.veinTier < store.snap.pickaxe.maxVeinTier,
-);
-
-// 镐子是一个标签（和机器面板的小标签同款），点开向下列出三条升级线
-const pickaxeOpen = ref(true);
-const pickaxeLines = computed(() => store.snap.pickaxe.lines);
-// 标签上的角标：还有几次能升（三条线合计）
-const chancesLeft = computed(() =>
-  pickaxeLines.value.reduce((sum, line) => sum + (line.cap - line.level), 0),
-);
-// 标签图标用金刚杵，颜色跟金刚杵自己的进度走
-const pickaxeIcon = computed(() => pickaxeIconUrl('vajra', pickaxeLines.value[0]?.iconTier ?? 1));
-
-function lineIcon(line: { id: 'vajra' | 'collect' | 'blast'; iconTier: number }): string | undefined {
-  return pickaxeIconUrl(line.id, line.iconTier);
-}
-
-function upgrade(line: 'vajra' | 'collect' | 'blast') {
-  store.upgradePickaxe(line);
-}
 
 // 贴图是竖排的帧条带，用 steps() 逐帧切换，和 Minecraft 的动画贴图一个机制
 const spriteStyle = computed(() => ({
@@ -247,68 +224,8 @@ function mine(event: MouseEvent) {
       </span>
     </button>
 
-    <div class="pickaxe">
-      <div class="pickaxe-summary">
-        <span class="pickaxe-output">镐子 · 每次点击 {{ store.snap.pickaxe.outputPerClick }} 枚</span>
-        <span class="muted small">
-          正在开采 {{ store.snap.pickaxe.veinName }} 矿脉，产出按矿脉规则分给它有产出的全部矿种
-        </span>
-        <span v-if="veinLocked" class="pickaxe-locked">
-          已解锁 {{ store.snap.pickaxe.maxVeinName }} 矿脉，升级金刚杵才挖得动
-        </span>
-      </div>
-
-      <div class="machine-tabs">
-        <button
-          type="button"
-          class="machine-tab"
-          :class="{ active: pickaxeOpen }"
-          @click="pickaxeOpen = !pickaxeOpen"
-        >
-          <img v-if="pickaxeIcon" class="tab-icon" :src="pickaxeIcon" alt="" />
-          <span class="tab-name">镐子</span>
-          <span class="tab-count" :class="{ can: chancesLeft > 0 }">
-            {{ chancesLeft > 0 ? `可升 ${chancesLeft} 次` : '已全部升满' }}
-          </span>
-        </button>
-      </div>
-
-      <div class="machine-body" :class="{ collapsed: !pickaxeOpen }">
-        <div class="inner">
-          <div class="pad">
-            <div v-for="line in pickaxeLines" :key="line.id" class="pickaxe-line">
-              <img
-                v-if="lineIcon(line)"
-                class="pickaxe-line-icon"
-                :src="lineIcon(line)"
-                alt=""
-              />
-              <div class="pickaxe-line-text">
-                <span class="pickaxe-line-name">{{ line.name }}</span>
-                <span class="muted small">{{ line.hint }}</span>
-                <span class="pickaxe-line-effect">
-                  {{ line.effectNow }}
-                  <template v-if="line.effectNext">
-                    <span class="pickaxe-arrow">→</span>
-                    <span class="pickaxe-next">{{ line.effectNext }}</span>
-                  </template>
-                </span>
-              </div>
-              <div class="pickaxe-line-action">
-                <span class="muted small">{{ line.level }} / {{ line.cap }}</span>
-                <button
-                  class="pickaxe-upgrade"
-                  type="button"
-                  :disabled="!line.canUpgrade"
-                  @click="upgrade(line.id)"
-                >
-                  {{ line.canUpgrade ? '升级' : '已满级' }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <p class="vein-note">
+      每次点击 {{ store.snap.pickaxe.outputPerClick }} 枚，镐子升级在下面的机器面板里
+    </p>
   </section>
 </template>
