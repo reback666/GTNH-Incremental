@@ -59,12 +59,19 @@ RESEARCH_FROM_TIER = 7
 COMPUTER_FACE = "assets/gregtech/textures/blocks/iconsets/EM_COMPUTER.png"
 LAB_FACE = "assets/gregtech/textures/blocks/iconsets/OVERLAY_FRONT_RESEARCH_COMPLETER.png"
 
-# 后期多方块发电机：等级、机型 id、GT 面片
+# 后期多方块发电机：等级、机型 id、GT 面片。
+#
+# GTNH 的多方块发电机图标一律是「机壳 + iconsets/LARGETURBINE_*.png」的涡轮面片
+# （既有图标反推结果：HV=ST1、EV=ADVGAS1、IV=SS1、LuV=TU1、ZPM=NEW1、UV=TI1）。
+# 这套面片有 6 个家族 × 9 种叶型，所以每一台都能挑一张互不重复的：
+# 叶型 5 在六个家族里都是同一张占位图，避开它。
 LATE_GENERATORS = [
-    (10, "g-uhv-mb-naquadah", "assets/gregtech/textures/blocks/iconsets/NAQUADAH_REACTOR_SOLID_FRONT.png"),
-    (11, "g-uev-mb-decay", "assets/gregtech/textures/blocks/iconsets/EM_DECAY.png"),
-    (13, "g-uxv-mb-annihilation", "assets/gregtech/textures/blocks/iconsets/EM_ANNIHILATION.png"),
-    (14, "g-max-mb-blackhole", "assets/gregtech/textures/blocks/iconsets/OVERLAY_MULTI_BLACKHOLE.png"),
+    (10, "g-uhv-mb-naquadah", "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_SS9.png"),
+    (11, "g-uev-mb-decay", "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW9.png"),
+    # 戴森云原来直接复用了 UV 的 TI1，两张图一模一样，这里换成 TU9
+    (12, "g-uiv-mb-dyson", "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_TU9.png"),
+    (13, "g-uxv-mb-annihilation", "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_ADVGAS9.png"),
+    (14, "g-max-mb-blackhole", "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_TI9.png"),
 ]
 
 OUTLINE = (24, 27, 34, 255)

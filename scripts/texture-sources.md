@@ -40,10 +40,11 @@ GT 的机器不是一张整图，而是「**机壳 + 功能面片**」两层叠�
 | 各级制造机 | `basicmachines/macerator/OVERLAY_FRONT.png` |
 | 各级计算机 | `iconsets/EM_COMPUTER.png` 的最上一格（原图是 5 帧竖排条带） |
 | 各级研究站 | `iconsets/OVERLAY_FRONT_RESEARCH_COMPLETER.png` |
-| 大型硅岩反应堆（UHV） | `iconsets/NAQUADAH_REACTOR_SOLID_FRONT.png` |
-| 衰变发电机（UEV） | `iconsets/EM_DECAY.png` 的最上一格（原图是 8 帧竖排条带） |
-| 湮灭发电机（UXV） | `iconsets/EM_ANNIHILATION.png` 的最上一格（原图是 8 帧竖排条带） |
-| 黑洞发电机（MAX） | `iconsets/OVERLAY_MULTI_BLACKHOLE.png` |
+| 大型硅岩反应堆（UHV） | `iconsets/LARGETURBINE_SS9.png` |
+| 衰变发电机（UEV） | `iconsets/LARGETURBINE_NEW9.png` |
+| 戴森云地面单元（UIV） | `iconsets/LARGETURBINE_TU9.png` |
+| 湮灭发电机（UXV） | `iconsets/LARGETURBINE_ADVGAS9.png` |
+| 黑洞发电机（MAX） | `iconsets/LARGETURBINE_TI9.png` |
 
 机壳按机型的电压等级取，所以同一面片在不同等级下颜色不同、能区分开。
 
@@ -113,11 +114,17 @@ T12 海珀珍没有原版贴图可用（它的材质定义在 GT++，颜色取�
 生成脚本：`python scripts/build-facility-icons.py`，开放等级与 `models.ts`、`numeric/research.ts` 对齐。
 
 UHV 及以后的四级发电机也在这个脚本里生成：GTNH 的单方块发电机只做到 UV，
-这四级照 GTNH 后期的多方块机器取（硅岩反应堆来自 goodgenerator，衰变 / 湮灭 / 黑洞
-来自 tectech），同样是「机壳 + 面片」。
+这几级照 GTNH 后期的多方块机器取名字（硅岩反应堆来自 goodgenerator，衰变 / 湮灭 /
+黑洞来自 tectech），图标沿用多方块发电机那一套「机壳 + `LARGETURBINE_*` 涡轮面片」。
+
+面片是从既有图标反推出来的：GTNH 的多方块发电机图标 = `MACHINE_<电压>_SIDE` 机壳 +
+`LARGETURBINE_<家族><叶型><帧>.png` 的最上一格，6 个家族 × 9 种叶型足够让每台机器
+都拿到一张互不重复的面片（叶型 5 在六个家族里都是同一张占位图，避开）。
+所以「大型硅岩反应堆」这类不是涡轮的机器，图标看起来也是涡轮面孔 ——
+这是为了和既有发电机图标保持一致的取舍。
 
 已知不足：GT 的 `MACHINE_UEV_SIDE` 与 `MACHINE_UXV_SIDE` 两张机壳几乎一样
-（256 个像素里只差 20 个），所以衰变发电机与湮灭发电机的图标主要靠中间的面片图案区分。
+（256 个像素里只差 20 个）。这两级的面片色差很大（暗板岩 vs 深红），所以图标仍然好认。
 
 重新生成：`python scripts/build-veins.py`（默认从 gradle 缓存里找 jar，可用 `--jar` 指定）。
 它会重写 `src/assets/veins/t*.png`、`fx/*.png` 与 `src/game/vein-meta.ts`。
