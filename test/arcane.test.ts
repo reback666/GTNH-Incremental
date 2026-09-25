@@ -17,7 +17,7 @@ describe('奥术宇宙', () => {
     expect(nodeVisPerSecond(8).toString()).toBe('131072'); // 8 × 4^7
     expect(nodeEssentiaDemand('3').toString()).toBe('3');
     // 净化 1%/秒 → 1000 源质/秒
-    expect(essentiaFromPurify('0.0036').toString()).toBe('3.6');
+    expect(essentiaFromPurify('0.0072').toString()).toBe('7.2');
   });
 
   it('源质喂满出力翻倍，没有源质只出一半', () => {
@@ -70,14 +70,14 @@ describe('奥术宇宙', () => {
     const core = new GameCore();
     core.universes = ['arcane'];
     core.maxTier = 3; // 净化器从 MV 起才有
-    core.counts['p-3'] = 1; // MV 净化器：净化 0.0036 %/秒
-    expect(core.purifyPerSecond().toString()).toBe('0.0036');
+    core.counts['p-3'] = 1; // MV 净化器：净化 3×0.0024 = 0.0072 %/秒
+    expect(core.purifyPerSecond().toString()).toBe('0.0072');
 
     core.essentia = dec('0');
     const report = core.tick(1);
-    // 每秒凝出 3.6 源质，节点需求 0 → 全部存起来
-    expect(report.essentiaProduced.toString()).toBe('3.6');
-    expect(core.essentia.toString()).toBe('3.6');
+    // 每秒凝出 7.2 源质，节点需求 0 → 全部存起来
+    expect(report.essentiaProduced.toString()).toBe('7.2');
+    expect(core.essentia.toString()).toBe('7.2');
   });
 
   it('奥术宇宙里超频不会故障', () => {

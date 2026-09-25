@@ -14,8 +14,10 @@ export const POLLUTION_HIGH = '70'; // 高于它进崩溃区
 // 50 台 MV（3 级）= 0.12 %/秒 ≈ 7%/分钟；50 台 MAX（14 级）≈ 34%/分钟
 export const POLLUTION_PER_TIER_PER_SECOND = '0.0008';
 
-// 净化器每台每秒压下去的百分点：电压等级 × 这个系数，略高于污染增长
-export const PURIFY_PER_TIER_PER_SECOND = '0.0012';
+// 净化器每台每秒压下去的百分点：电压等级 × 这个系数。
+// 取 0.0024 是污染增长（0.0008）的 3 倍 —— 一台净化器刚好压得住 3 台同级机器，
+// 也就是「每 3 台机器配 1 台净化器」。
+export const PURIFY_PER_TIER_PER_SECOND = '0.0024';
 
 // 30-70% 区间：每 60 秒判定一次，这个概率爆一笔"变异"奖励
 export const MUTATION_CHANCE_PER_MINUTE = 0.2;
