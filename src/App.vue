@@ -4,6 +4,7 @@ import { useGameStore } from './game/store';
 import ResourceBar from './components/ResourceBar.vue';
 import MachinePanel from './components/MachinePanel.vue';
 import VeinPanel from './components/VeinPanel.vue';
+import PollutionPanel from './components/PollutionPanel.vue';
 import TechTreePanel from './components/TechTreePanel.vue';
 import GridPanel from './components/GridPanel.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
@@ -54,6 +55,7 @@ onMounted(() => {
           <ResourceBar />
           <VeinPanel />
           <MachinePanel :columns="store.snap.columns" />
+          <PollutionPanel />
         </template>
 
         <!-- 第 2 页：科技、电网、转生 -->

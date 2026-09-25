@@ -3,8 +3,8 @@ import { computed, ref } from 'vue';
 import { useGameStore } from '../game/store';
 import { VOLTAGE_TIERS } from '../numeric/voltage';
 
-// 设置：污染机制的整体开关与污染读数（计划书第六章）。
-// 电网、转生都在别的页面，这里只管设置项。
+// 设置：污染机制的整体开关、开发者模式（计划书第六章）。
+// 污染读数在第 1 页最下方，电网与转生在别的页面，这里只管设置项。
 const store = useGameStore();
 const risk = computed(() => store.snap.risk);
 const snap = computed(() => store.snap);
@@ -25,75 +25,8 @@ const unlockTier = ref(1);
       </button>
     </div>
     <p class="muted small" style="margin: 6px 0 0">
-      关掉之后污染不再增长、也不产生任何影响（默认开启）。
+      关掉之后污染不再增长、也不产生任何影响（默认开启）。污染值显示在第 1 页最下方。
     </p>
-
-    <div class="pollution">
-      <div class="pollution-head">
-        <span>污染值</span>
-        <b>{{ risk.pollution }}</b>
-      </div>
-      <div class="pollution-track" :class="{ off: !risk.enabled }">
-        <span
-          class="pollution-fill"
-          :class="risk.band"
-          :style="{ width: (risk.enabled ? risk.pollutionRaw : '0') + '%' }"
-        />
-        <span class="pollution-mark" style="left: 30%">30%</span>
-        <span class="pollution-mark" style="left: 70%">70%</span>
-      </div>
-      <p class="muted small" style="margin: 6px 0 0">{{ risk.bandName }}</p>
-
-      <dl class="stats">
-        <div class="stat">
-          <dt>产生</dt>
-          <dd>{{ risk.enabled ? risk.growth : '—' }}</dd>
-        </div>
-        <div class="stat">
-          <dt>净化</dt>
-          <dd>{{ risk.enabled ? '-' + risk.purify : '—' }}</dd>
-        </div>
-        <div class="stat">
-          <dt>净变化</dt>
-          <dd :class="{ danger: risk.enabled && risk.netPositive }">
-            {{ risk.enabled ? risk.net : '—' }}
-          </dd>
-        </div>
-      </dl>
-      <p class="muted small" style="margin: 0">
-        <template v-if="risk.boosted">
-          污染在这个存档里是燃料：30% 是中性点，比它脏就增产、比它干净就减产。
-          重度污染仍然会工厂崩溃（{{ risk.collapseChance }}）
-          <template v-if="snap.abyss.active">，而且会腐蚀机器</template>。
-        </template>
-        <template v-else>
-          中度污染会变异（{{ risk.mutationChance }}），重度污染会工厂崩溃（{{
-            risk.collapseChance
-          }}）。建净化器把污染压回 30% 以下。
-        </template>
-      </p>
-
-      <!-- 深渊宇宙：污染既推产出也腐蚀机器 -->
-      <template v-if="snap.abyss.active">
-        <dl class="stats">
-          <div class="stat">
-            <dt>污染对产出</dt>
-            <dd>{{ snap.abyss.pollutionFactor }}</dd>
-          </div>
-          <div class="stat">
-            <dt>抑制器抵消</dt>
-            <dd>{{ snap.abyss.suppression }} 点</dd>
-          </div>
-          <div class="stat">
-            <dt>腐蚀速率</dt>
-            <dd :class="{ danger: snap.abyss.effective !== '0' }">
-              {{ snap.abyss.corrosionPerMinute }}（每台）
-            </dd>
-          </div>
-        </dl>
-        <p class="muted small" style="margin: 6px 0 0">{{ snap.abyss.note }}</p>
-      </template>
-    </div>
 
     <!-- ── 开发者模式 ─────────────────────────────────────────── -->
     <h2 class="mt">开发者模式</h2>
