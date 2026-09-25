@@ -9,7 +9,7 @@ import { MAX_TIER, VOLTAGE_TIERS } from '../numeric/voltage';
 // （基础蒸汽轮机 / 进阶蒸汽轮机 / 涡轮蒸汽轮机是三条独立条目），
 // 这样最直观，也方便逐条调数值。
 
-export type MachineCategory = 'miner' | 'generator' | 'machine';
+export type MachineCategory = 'miner' | 'generator' | 'machine' | 'storage';
 export type BlockKind = 'single' | 'multiblock';
 
 export interface MachineModel {
@@ -103,7 +103,26 @@ const MACHINES: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => 
   };
 });
 
-export const MACHINE_MODELS: MachineModel[] = [...GENERATORS, ...MINERS, ...MACHINES];
+// ── 存电装置 ────────────────────────────────────────────────
+// 计划书第七章：中期解锁存电装置，富余电力存进电池，发电不足时先放存量。
+// 从 MV（tier 3）开始开放 —— 前两级还没有富余电力可存。
+export const STORAGE_FROM_TIER = 3;
+
+const STORAGES: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
+  const tier = index + 1;
+  return {
+    id: `b-${tier}`,
+    name: `${VOLTAGE_TIERS[index]} 储电箱`,
+    category: 'storage' as const,
+    block: 'single' as const,
+    tier,
+    outputFactor: '1',
+    costFactor: '1.5',
+    traits: ['可存电'],
+  };
+}).filter((model) => model.tier >= STORAGE_FROM_TIER);
+
+export const MACHINE_MODELS: MachineModel[] = [...GENERATORS, ...MINERS, ...MACHINES, ...STORAGES];
 
 const BY_ID = new Map(MACHINE_MODELS.map((model) => [model.id, model]));
 
@@ -122,4 +141,10 @@ export function baseModelOf(category: MachineCategory, tier: number): MachineMod
   const found = modelsOf(category).find((model) => model.tier === tier);
   if (!found) throw new Error(`${category} 在 tier ${tier} 没有机型`);
   return found;
+}
+
+// 只有跑配方的机器能超频：采矿机与制造机。
+// 发电机没有配方，原版 GT 也不给发电机超频，所以不给档位。
+export function canOverclock(model: MachineModel): boolean {
+  return model.category === 'miner' || model.category === 'machine';
 }

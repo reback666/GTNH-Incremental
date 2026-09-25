@@ -5,8 +5,12 @@ import { machineEnergy, machineOutput } from '../numeric/output';
 import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../numeric/generator';
 import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
 import { paymentTier } from '../numeric/credit';
+import { isValidOverclockLevel, overclockEnergyMultiplier, overclockSpeedMultiplier } from '../numeric/overclock';
+import { expectedFaults, sampleFaults } from '../numeric/fault';
+import { batteryCapacityEU, settleStorage } from '../numeric/storage';
 import {
   MACHINE_MODELS,
+  canOverclock,
   modelsOf,
   type MachineCategory,
   type MachineModel,
@@ -37,19 +41,27 @@ export interface TickReport {
   euGenerated: Decimal;
   euConsumed: Decimal;
   powerRatio: number;
+  // 本拍的存电结算：充进去多少、放出来多少
+  euCharged: Decimal;
+  euDischarged: Decimal;
+  // 本拍因超频新增的故障台数
+  faultsGained: number;
   oreGained: Decimal[];
   oreSpent: Decimal[];
   coinsGained: Decimal[];
 }
-
-// 第一阶段的超频档位固定为 0（界面与逐台控制放到后续阶段）。
-const OVERCLOCK_LEVEL = 0;
 
 export class GameCore {
   ores: Decimal[] = Array.from({ length: 14 }, () => ZERO);
   coins: Decimal[] = Array.from({ length: MAX_TIER }, () => ZERO);
   // 按机型 id 存数量。机型目录见 models.ts
   counts: Record<string, number> = {};
+  // 超频档位（0-3）：机型 id → 档位。同机型的所有台数共用一个档位
+  overclock: Record<string, number> = {};
+  // 故障台数：机型 id → 坏了几台。坏了的机器不产不耗，要手动维护
+  faults: Record<string, number> = {};
+  // 存电装置的存量（EU），所有电池共用一个池子
+  storedEU = ZERO;
   maxTier = 1;
   unlockedVeins: number[] = [0];
   playSeconds = 0;
@@ -57,6 +69,8 @@ export class GameCore {
   totalCoins = ZERO;
   totalOreSpent = ZERO;
   lastReport: TickReport = emptyReport();
+  // 故障抽样用的随机源。测试里替换成固定序列，游戏里就是 Math.random
+  random: () => number = Math.random;
 
   // ── 查询 ───────────────────────────────────────────────────
 
@@ -66,6 +80,90 @@ export class GameCore {
 
   countOfCategory(category: MachineCategory): number {
     return modelsOf(category).reduce((sum, model) => sum + this.countOf(model.id), 0);
+  }
+
+  // 超频档位：越界或非整数一律当作 0，存档里出现脏数据也不会带崩模拟
+  overclockOf(modelId: string): number {
+    const level = this.overclock[modelId] ?? 0;
+    return isValidOverclockLevel(level) ? level : 0;
+  }
+
+  setOverclock(modelId: string, level: number): boolean {
+    const model = MACHINE_MODELS.find((item) => item.id === modelId);
+    if (!model || !canOverclock(model)) return false;
+    if (!isValidOverclockLevel(level)) return false;
+    // 调档位相当于顺手检修一次，把故障清掉
+    delete this.faults[modelId];
+    if (level === 0) delete this.overclock[modelId];
+    else this.overclock[modelId] = level;
+    return true;
+  }
+
+  faultyCountOf(modelId: string): number {
+    return Math.min(this.faults[modelId] ?? 0, this.countOf(modelId));
+  }
+
+  // 能干活（没坏）的台数：停机的那几台既不产出也不耗电
+  workingCountOf(modelId: string): number {
+    return Math.max(0, this.countOf(modelId) - this.faultyCountOf(modelId));
+  }
+
+  repair(modelId: string): number {
+    const fixed = this.faultyCountOf(modelId);
+    delete this.faults[modelId];
+    return fixed;
+  }
+
+  // 存电装置的总容量（EU）
+  batteryCapacity(): Decimal {
+    let capacity = ZERO;
+    for (const model of modelsOf('storage')) {
+      const n = this.countOf(model.id);
+      if (n > 0) capacity = capacity.plus(batteryCapacityEU(model.tier).times(n));
+    }
+    return capacity;
+  }
+
+  // ── 机型 → 有效数值 ────────────────────────────────────────
+  // 都带上超频与故障：坏掉的台数不产不耗，超频按档位提产耗电。
+  // 模拟与界面统一走这几个函数，避免两边各算一套。
+
+  minerOutputPerSecond(model: MachineModel): Decimal {
+    return minerOrePerSecond(model.tier)
+      .times(overclockSpeedMultiplier(this.overclockOf(model.id)))
+      .times(this.workingCountOf(model.id));
+  }
+
+  minerEnergyDrain(model: MachineModel): Decimal {
+    return minerEnergyEU(model.tier)
+      .times(overclockEnergyMultiplier(this.overclockOf(model.id)))
+      .times(this.workingCountOf(model.id));
+  }
+
+  machineOutputPerSecond(model: MachineModel): Decimal {
+    return machineOutput({
+      baseOutput: C.BASE_MACHINE_OUTPUT,
+      tier: model.tier,
+      overclockLevel: this.overclockOf(model.id),
+    })
+      .times(model.outputFactor)
+      .times(this.workingCountOf(model.id));
+  }
+
+  machineEnergyDrain(model: MachineModel): Decimal {
+    return machineEnergy({
+      baseEnergy: C.BASE_MACHINE_ENERGY,
+      tier: model.tier,
+      overclockLevel: this.overclockOf(model.id),
+    }).times(this.workingCountOf(model.id));
+  }
+
+  generatorOutputRated(model: MachineModel): Decimal {
+    return outputOf(model).times(this.countOf(model.id));
+  }
+
+  generatorFuelDrain(model: MachineModel): Decimal {
+    return fuelRateOf(model).times(this.countOf(model.id));
   }
 
   // 在给定电压等级上能造的机型
@@ -154,23 +252,16 @@ export class GameCore {
       (model) => model.tier <= this.maxTier && this.countOf(model.id) > 0,
     );
 
-    // 1) 发电能力与耗电需求
+    // 1) 发电能力与耗电需求。坏掉的机器不耗电，超频的机器按档位吃电
     let capacity = ZERO;
     let demand = ZERO;
     for (const model of active) {
-      const n = this.countOf(model.id);
       if (model.category === 'generator') {
-        capacity = capacity.plus(outputOf(model).times(n));
+        capacity = capacity.plus(this.generatorOutputRated(model));
       } else if (model.category === 'miner') {
-        demand = demand.plus(minerEnergyEU(model.tier).times(n));
-      } else {
-        demand = demand.plus(
-          machineEnergy({
-            baseEnergy: C.BASE_MACHINE_ENERGY,
-            tier: model.tier,
-            overclockLevel: OVERCLOCK_LEVEL,
-          }).times(n),
-        );
+        demand = demand.plus(this.minerEnergyDrain(model));
+      } else if (model.category === 'machine') {
+        demand = demand.plus(this.machineEnergyDrain(model));
       }
     }
 
@@ -178,8 +269,7 @@ export class GameCore {
     let generated = ZERO;
     for (const model of active) {
       if (model.category !== 'generator') continue;
-      const n = this.countOf(model.id);
-      const want = fuelRateOf(model).times(n).times(dtSeconds);
+      const want = this.generatorFuelDrain(model).times(dtSeconds);
       const oreTier = model.tier - 1; // 本级发电机烧本级矿石
       const available = this.ores[oreTier]!;
       const burned = Decimal.min(want, available);
@@ -189,13 +279,25 @@ export class GameCore {
         this.totalOreSpent = this.totalOreSpent.plus(burned);
       }
       const ratio = want.gt(0) ? burned.div(want) : ONE;
-      generated = generated.plus(outputOf(model).times(n).times(dtSeconds).times(ratio));
+      generated = generated.plus(this.generatorOutputRated(model).times(dtSeconds).times(ratio));
     }
 
-    // 3) 电力充足率：发电不够就整体降载。全程用 Decimal，只在报告里转成 number
-    const ratioDec = demand.lte(0) ? ONE : Decimal.min(ONE, generated.div(demand));
+    // 3) 先过存电装置：富余电力存起来，发电不够先放存量，放完还不够才降载
+    const settlement = settleStorage({
+      stored: this.storedEU,
+      capacity: this.batteryCapacity(),
+      net: generated.minus(demand),
+      dtSeconds,
+    });
+    this.storedEU = settlement.stored;
+    const needEU = demand.times(dtSeconds);
+    const ratioDec = needEU.lte(0)
+      ? ONE
+      : Decimal.max(0, Decimal.min(ONE, needEU.minus(settlement.shortfall).div(needEU)));
+    report.euCharged = settlement.charged;
+    report.euDischarged = settlement.discharged;
 
-    // 4) 采矿机产矿
+    // 4) 采矿机产矿。超频提速，坏了的机器不算数
     //
     // 一台等级 n 的采矿机开采对应等级的矿脉：ULV 采矿机 → T0 矿脉，LV 采矿机 → T1 矿脉。
     // 所以没建 LV 采矿机时，T1 矿石一滴都不会涨。
@@ -203,8 +305,9 @@ export class GameCore {
     const veinRates = new Map<number, Decimal>();
     for (const model of active) {
       if (model.category !== 'miner') continue;
+      const rate = this.minerOutputPerSecond(model);
+      if (rate.lte(0)) continue;
       const veinTier = model.tier - 1;
-      const rate = minerOrePerSecond(model.tier).times(this.countOf(model.id));
       veinRates.set(veinTier, (veinRates.get(veinTier) ?? ZERO).plus(rate));
     }
     for (const [veinTier, ratePerSecond] of veinRates) {
@@ -219,19 +322,10 @@ export class GameCore {
       this.totalOre = this.totalOre.plus(total);
     }
 
-    // 5) 制造机产币，同时吃矿
+    // 5) 制造机产币，同时吃矿。超频提速，吃矿与耗电同步上涨
     for (const model of active) {
       if (model.category !== 'machine') continue;
-      const n = this.countOf(model.id);
-      const produce = machineOutput({
-        baseOutput: C.BASE_MACHINE_OUTPUT,
-        tier: model.tier,
-        overclockLevel: OVERCLOCK_LEVEL,
-      })
-        .times(model.outputFactor)
-        .times(n)
-        .times(dtSeconds)
-        .times(ratioDec);
+      const produce = this.machineOutputPerSecond(model).times(dtSeconds).times(ratioDec);
       const wantOre = produce.div(C.COINS_PER_ORE);
       const oreTier = model.tier - 1;
       const available = this.ores[oreTier]!;
@@ -249,6 +343,19 @@ export class GameCore {
       }
     }
 
+    // 6) 超频机器的故障判定：档位越高越容易坏，坏掉的下一拍开始停机
+    for (const model of active) {
+      const level = this.overclockOf(model.id);
+      if (level === 0 || !canOverclock(model)) continue;
+      const healthy = this.workingCountOf(model.id);
+      if (healthy <= 0) continue;
+      const broke = Math.min(healthy, sampleFaults(expectedFaults(level, healthy, dtSeconds), this.random));
+      if (broke > 0) {
+        this.faults[model.id] = this.faultyCountOf(model.id) + broke;
+        report.faultsGained += broke;
+      }
+    }
+
     this.playSeconds += dtSeconds;
     report.euGenerated = generated;
     report.euConsumed = demand.times(dtSeconds).times(ratioDec);
@@ -263,6 +370,9 @@ function emptyReport(): TickReport {
     euGenerated: ZERO,
     euConsumed: ZERO,
     powerRatio: 1,
+    euCharged: ZERO,
+    euDischarged: ZERO,
+    faultsGained: 0,
     oreGained: Array.from({ length: 14 }, () => ZERO),
     oreSpent: Array.from({ length: 14 }, () => ZERO),
     coinsGained: Array.from({ length: MAX_TIER }, () => ZERO),

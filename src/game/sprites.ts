@@ -4,7 +4,7 @@
 // 所以贴图先用 SVG 方块拼出来：零依赖、可缩放、随时能替换。
 // 以后拿到真正的位图贴图，只需把 SpriteIcon 换成 <img>，接口（kind / size）不变。
 
-export type SpriteKind = 'vein' | 'miner' | 'generator' | 'machine';
+export type SpriteKind = 'vein' | 'miner' | 'generator' | 'machine' | 'storage';
 
 export const SPRITE_GRID = 16;
 
@@ -97,9 +97,22 @@ const MACHINE: SpriteRect[] = [
   [11, 4, 1, 1, 'accent'],
 ];
 
+// 存电装置：电池外壳 + 顶部接线柱 + 电量条
+const STORAGE: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [3, 3, 10, 11, 'metalDark'],
+  [4, 4, 8, 9, 'dark'],
+  [7, 2, 2, 1, 'metal'],
+  [5, 5, 6, 1, 'stoneLight'],
+  [5, 7, 6, 1, 'accent'],
+  [5, 9, 6, 1, 'accent'],
+  [5, 11, 6, 1, 'warm'],
+];
+
 export const SPRITES: Record<SpriteKind, SpriteRect[]> = {
   vein: VEIN,
   miner: MINER,
   generator: GENERATOR,
   machine: MACHINE,
+  storage: STORAGE,
 };

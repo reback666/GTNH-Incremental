@@ -515,6 +515,51 @@ h1 .small {
   letter-spacing: 0.12em;
 }
 
+/* 机型行里的超频档位与故障维护 */
+.overclock {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.overclock .oc-label {
+  letter-spacing: 0.08em;
+}
+
+.oc-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  line-height: 1;
+  font-size: 14px;
+  border-radius: 5px;
+}
+
+.oc-level {
+  min-width: 12px;
+  text-align: center;
+  color: var(--text);
+}
+
+.fault {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #ffb4a2;
+  background: rgba(217, 82, 79, 0.14);
+  border: 1px solid rgba(217, 82, 79, 0.35);
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+
+.fault button {
+  padding: 1px 6px;
+  font-size: 12px;
+}
+
 /* 镐子敲上去：矿脉轻轻往下一沉再回弹，不做整体提亮（原来那版闪一下太扎眼） */
 @keyframes vein-settle {
   0%,

@@ -93,6 +93,12 @@ T12 海珀珍没有原版贴图可用（它的材质定义在 GT++，颜色取�
 
 按 16×16 一格 56px 画，和矿脉 2×2 方块的尺度对得上。
 
+## 存电装置图标
+
+`src/assets/machines/b-<等级>.png` 也是「机壳 + 面片」合成的：机壳用
+`iconsets/MACHINE_<电压>_SIDE.png`，上面叠一个自己画的电池图案（GT 的储电箱贴图不在开发包里）。
+生成脚本：`python scripts/build-battery-icons.py`（从 MV 起，与 `models.ts` 的 `STORAGE_FROM_TIER` 对齐）。
+
 重新生成：`python scripts/build-veins.py`（默认从 gradle 缓存里找 jar，可用 `--jar` 指定）。
 它会重写 `src/assets/veins/t*.png`、`fx/*.png` 与 `src/game/vein-meta.ts`。
 

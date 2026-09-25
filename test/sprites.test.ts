@@ -18,7 +18,13 @@ describe('像素图标', () => {
     });
   }
 
-  it('四个图标都有内容', () => {
-    expect(Object.keys(SPRITES).sort()).toEqual(['generator', 'machine', 'miner', 'vein']);
+  it('每一个类别图标都有内容', () => {
+    expect(Object.keys(SPRITES).sort()).toEqual([
+      'generator',
+      'machine',
+      'miner',
+      'storage',
+      'vein',
+    ]);
   });
 });

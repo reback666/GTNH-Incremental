@@ -7,6 +7,7 @@ import {
   type MachineTierGroup,
 } from '../game/store';
 import type { MachineKind, PayWith } from '../game/core';
+import { MAX_OVERCLOCK_LEVEL as MAX_OC } from '../numeric/overclock';
 import SpriteIcon from './SpriteIcon.vue';
 import MachineIcon from './MachineIcon.vue';
 
@@ -38,11 +39,16 @@ const tip = ref<TipState | null>(null);
 
 function showTip(event: Event, model: MachineModelRow) {
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const lines = [...model.single];
+  if (model.overclock > 0) {
+    lines.push({ label: '超频', value: `${model.overclock} 档（速度 +${model.overclock * 60}%）` });
+    lines.push({ label: '故障率', value: model.faultHint });
+  }
   const width = 178;
-  const height = 36 + (model.single.length + (model.traits.length ? 1 : 0)) * 19;
+  const height = 36 + (lines.length + (model.traits.length ? 1 : 0)) * 19;
   tip.value = {
     name: model.name,
-    lines: model.single,
+    lines,
     traits: model.traits,
     x: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
     y: rect.bottom + 8 + height > window.innerHeight ? rect.top - height - 6 : rect.bottom + 6,
@@ -149,6 +155,32 @@ function canBuy(model: MachineModelRow): boolean {
             </div>
 
             <span class="count">×{{ bar.model.count }}</span>
+            <span v-if="bar.model.overclockable" class="overclock">
+              <span class="oc-label">超频</span>
+              <button
+                class="oc-btn"
+                :disabled="bar.model.overclock === 0"
+                :title="'降低超频档位（当前 ' + bar.model.overclock + ' 档）'"
+                @click="store.setOverclock(bar.model.id, bar.model.overclock - 1)"
+              >
+                −
+              </button>
+              <b class="oc-level">{{ bar.model.overclock }}</b>
+              <button
+                class="oc-btn"
+                :disabled="bar.model.overclock >= MAX_OC"
+                :title="'提高超频档位：速度 +60%、耗电翻倍，故障率也翻倍'"
+                @click="store.setOverclock(bar.model.id, bar.model.overclock + 1)"
+              >
+                +
+              </button>
+            </span>
+            <span v-if="bar.model.faulty > 0" class="fault">
+              故障 {{ bar.model.faulty }} 台
+              <button title="修理这台机型的所有故障机器" @click="store.repair(bar.model.id)">
+                维护
+              </button>
+            </span>
             <span class="price">
               <template v-if="payWith === 'coin'">{{ bar.model.price }} {{ bar.group.unit }}</template>
               <template v-else>{{ bar.model.orePrice }} {{ bar.group.oreLabel }}</template>

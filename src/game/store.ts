@@ -6,8 +6,11 @@ import { formatNumber } from '../numeric/format';
 import { machineEnergy, machineOutput } from '../numeric/output';
 import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../numeric/generator';
 import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
+import { overclockEnergyMultiplier, overclockSpeedMultiplier } from '../numeric/overclock';
+import { faultHint } from '../numeric/fault';
+import { batteryCapacityEU } from '../numeric/storage';
 import { type GameCore, type MachineKind, type PayWith } from './core';
-import { modelsOf, type BlockKind, type MachineModel } from './models';
+import { canOverclock, modelsOf, type BlockKind, type MachineModel } from './models';
 import { getCore, resetCore, setCore } from './engine';
 import * as C from './constants';
 import { clearStorage, loadFromStorage, saveToStorage } from './save';
@@ -54,6 +57,12 @@ export interface MachineModelRow {
   // 单台的消耗与产出，鼠标移到机器名上时显示
   single: { label: string; value: string }[];
   count: number;
+  // 超频档位（0-3）。发电机没有配方，档位恒为 0 且不可调
+  overclock: number;
+  overclockable: boolean;
+  // 故障台数与「平均多久坏一台」的提示
+  faulty: number;
+  faultHint: string;
   icons: number;
   overflow: number;
   price: string;
@@ -118,6 +127,10 @@ const COLUMN_META: Record<MachineKind, { title: string; hint: string }> = {
   miner: { title: '采矿机', hint: '放在矿脉上自动产矿，是整条循环的入口。' },
   generator: { title: '发电机', hint: '烧本级矿石发电。同等级有多种机型，效率高的更贵。' },
   machine: { title: '制造机', hint: '吃本级矿石与电力，直接产出本级 GT 币。' },
+  storage: {
+    title: '存电装置',
+    hint: '富余电力存进电池；发电不够时先放存量，存量见底才降载停机。',
+  },
 };
 
 export const useGameStore = defineStore('game', {
@@ -156,6 +169,20 @@ export const useGameStore = defineStore('game', {
       this.save();
       return ok;
     },
+    // 超频档位：0-3。档位越高越快、越费电，也越容易坏
+    setOverclock(modelId: string, level: number): boolean {
+      const ok = getCore().setOverclock(modelId, level);
+      this.refresh();
+      this.save();
+      return ok;
+    },
+    // 手动维护：把该机型坏掉的机器全部修好
+    repair(modelId: string): number {
+      const fixed = getCore().repair(modelId);
+      this.refresh();
+      this.save();
+      return fixed;
+    },
     step(dtSeconds: number) {
       getCore().tick(dtSeconds);
       this.refresh();
@@ -183,7 +210,7 @@ export const useGameStore = defineStore('game', {
 });
 
 function findModel(id: string): MachineModel | undefined {
-  return ['miner', 'generator', 'machine']
+  return ['miner', 'generator', 'machine', 'storage']
     .flatMap((category) => modelsOf(category as MachineKind))
     .find((model) => model.id === id);
 }
@@ -216,7 +243,7 @@ function buildSnapshot(core: GameCore): Snapshot {
       value: amount.toString(),
       detail: [{ label: '产出', value: `${formatNumber(coinRate[index]!)}/秒` }],
     })),
-    columns: (['miner', 'generator', 'machine'] as MachineKind[]).map((kind) =>
+    columns: (['miner', 'generator', 'machine', 'storage'] as MachineKind[]).map((kind) =>
       machineColumn(core, kind),
     ),
     maxTier: core.maxTier,
@@ -266,13 +293,19 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
       unit: payment,
       models: models.map((model) => {
         const count = core.countOf(model.id);
+        const overclockable = canOverclock(model);
+        const level = overclockable ? core.overclockOf(model.id) : 0;
         return {
           id: model.id,
           name: model.name,
           block: model.block,
           traits: model.traits ?? [],
-          single: singleStats(model),
+          single: singleStats(model, level),
           count,
+          overclock: level,
+          overclockable,
+          faulty: core.faultyCountOf(model.id),
+          faultHint: faultHint(level, core.workingCountOf(model.id)),
           icons: Math.min(count, TIER_ICON_LIMIT),
           overflow: Math.max(0, count - TIER_ICON_LIMIT),
           price: formatNumber(core.coinPriceOf(model)),
@@ -299,8 +332,11 @@ function paymentUnit(tier: number): string {
 }
 
 // 单台机器的消耗与产出。发电机看「出力 / 烧矿 / 效率」，
-// 采矿机看「产矿 / 耗电」，制造机看「产币 / 耗电 / 吃矿」。
-function singleStats(model: MachineModel): { label: string; value: string }[] {
+// 采矿机看「产矿 / 耗电」，制造机看「产币 / 耗电 / 吃矿」，存电装置看容量。
+// 超频档位不为 0 时，这里给的是超频后的单台数值。
+function singleStats(model: MachineModel, level = 0): { label: string; value: string }[] {
+  const speed = overclockSpeedMultiplier(level);
+  const energy = overclockEnergyMultiplier(level);
   if (model.category === 'generator') {
     const efficiency = model.fuelEfficiency ?? generatorFuelEfficiency(model.tier).toString();
     return [
@@ -314,20 +350,23 @@ function singleStats(model: MachineModel): { label: string; value: string }[] {
   }
   if (model.category === 'miner') {
     return [
-      { label: '产矿', value: `${formatNumber(minerOrePerSecond(model.tier))}/秒` },
-      { label: '耗电', value: `${formatNumber(minerEnergyEU(model.tier))} EU/t` },
+      { label: '产矿', value: `${formatNumber(minerOrePerSecond(model.tier).times(speed))}/秒` },
+      { label: '耗电', value: `${formatNumber(minerEnergyEU(model.tier).times(energy))} EU/t` },
     ];
+  }
+  if (model.category === 'storage') {
+    return [{ label: '容量', value: `${formatNumber(batteryCapacityEU(model.tier))} EU` }];
   }
   const output = machineOutput({ baseOutput: C.BASE_MACHINE_OUTPUT, tier: model.tier }).times(
     model.outputFactor,
   );
   return [
-    { label: '产币', value: `${formatNumber(output)}/秒` },
+    { label: '产币', value: `${formatNumber(output.times(speed))}/秒` },
     {
       label: '耗电',
-      value: `${formatNumber(machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }))} EU/t`,
+      value: `${formatNumber(machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }).times(energy))} EU/t`,
     },
-    { label: '吃矿', value: `${formatNumber(output.div(C.COINS_PER_ORE))}/秒` },
+    { label: '吃矿', value: `${formatNumber(output.times(speed).div(C.COINS_PER_ORE))}/秒` },
   ];
 }
 
@@ -338,20 +377,17 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
   let coins = ZERO;
   let fuel = ZERO;
   for (const model of core.unlockedModels(kind)) {
-    const n = core.countOf(model.id);
-    if (n === 0) continue;
+    if (core.countOf(model.id) === 0) continue;
     if (kind === 'miner') {
-      ore = ore.plus(minerOrePerSecond(model.tier).times(n));
-      eu = eu.plus(minerEnergyEU(model.tier).times(n));
+      ore = ore.plus(core.minerOutputPerSecond(model));
+      eu = eu.plus(core.minerEnergyDrain(model));
     } else if (kind === 'generator') {
-      eu = eu.plus(generatorOutputEU(model.tier, model.outputFactor).times(n));
-      fuel = fuel.plus(fuelRateOf(model).times(n));
-    } else {
-      const output = machineOutput({ baseOutput: C.BASE_MACHINE_OUTPUT, tier: model.tier })
-        .times(model.outputFactor)
-        .times(n);
+      eu = eu.plus(core.generatorOutputRated(model));
+      fuel = fuel.plus(core.generatorFuelDrain(model));
+    } else if (kind === 'machine') {
+      const output = core.machineOutputPerSecond(model);
       coins = coins.plus(output);
-      eu = eu.plus(machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }).times(n));
+      eu = eu.plus(core.machineEnergyDrain(model));
       ore = ore.plus(output.div(C.COINS_PER_ORE));
     }
   }
@@ -365,6 +401,12 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
     return [
       { label: '发电', value: `${formatNumber(eu)} EU/t` },
       { label: '烧矿', value: `${formatNumber(fuel)}/秒` },
+    ];
+  }
+  if (kind === 'storage') {
+    return [
+      { label: '总容量', value: `${formatNumber(core.batteryCapacity())} EU` },
+      { label: '当前存电', value: `${formatNumber(core.storedEU)} EU` },
     ];
   }
   return [
@@ -388,20 +430,18 @@ function oreRates(core: GameCore): { gross: Decimal; spent: Decimal }[] {
   for (const model of core.unlockedModels('miner')) {
     const n = core.countOf(model.id);
     if (n === 0) continue;
-    const share = minerOrePerSecond(model.tier).times(n).div(model.tier);
+    const share = core.minerOutputPerSecond(model).div(model.tier);
     for (let ore = 0; ore <= model.tier - 1; ore += 1) gross[ore] = gross[ore]!.plus(share);
   }
   for (const model of core.unlockedModels('generator')) {
     const n = core.countOf(model.id);
     if (n === 0) continue;
-    spent[model.tier - 1] = spent[model.tier - 1]!.plus(fuelRateOf(model).times(n));
+    spent[model.tier - 1] = spent[model.tier - 1]!.plus(core.generatorFuelDrain(model));
   }
   for (const model of core.unlockedModels('machine')) {
     const n = core.countOf(model.id);
     if (n === 0) continue;
-    const output = machineOutput({ baseOutput: C.BASE_MACHINE_OUTPUT, tier: model.tier })
-      .times(model.outputFactor)
-      .times(n);
+    const output = core.machineOutputPerSecond(model);
     spent[model.tier - 1] = spent[model.tier - 1]!.plus(output.div(C.COINS_PER_ORE));
   }
   return gross.map((value, index) => ({ gross: value, spent: spent[index]! }));
@@ -413,11 +453,8 @@ function coinRates(core: GameCore): Decimal[] {
     const tier = index + 1;
     let total = ZERO;
     for (const model of core.modelsAt('machine', tier)) {
-      const n = core.countOf(model.id);
-      if (n === 0) continue;
-      total = total.plus(
-        machineOutput({ baseOutput: C.BASE_MACHINE_OUTPUT, tier }).times(model.outputFactor).times(n),
-      );
+      if (core.countOf(model.id) === 0) continue;
+      total = total.plus(core.machineOutputPerSecond(model));
     }
     return total;
   });
@@ -457,30 +494,40 @@ function powerStats(core: GameCore): PowerStats {
   for (const model of core.unlockedModels('miner')) {
     const n = core.countOf(model.id);
     if (n === 0) continue;
-    demand = push(consumed, model, n, minerEnergyEU(model.tier).times(n), demand);
+    demand = push(consumed, model, n, core.minerEnergyDrain(model), demand);
   }
   for (const model of core.unlockedModels('machine')) {
     const n = core.countOf(model.id);
     if (n === 0) continue;
-    demand = push(
-      consumed,
-      model,
-      n,
-      machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }).times(n),
-      demand,
-    );
+    demand = push(consumed, model, n, core.machineEnergyDrain(model), demand);
   }
+
+  // 存电装置：每台容量 × 台数，合起来是一个池子
+  const stored: PowerDetailRow[] = [];
+  let capacity = ZERO;
+  for (const model of core.unlockedModels('storage')) {
+    const n = core.countOf(model.id);
+    if (n === 0) continue;
+    capacity = push(stored, model, n, batteryCapacityEU(model.tier).times(n), capacity);
+  }
+  const settled = core.lastReport;
 
   const actualPerSecond = core.lastReport.euGenerated.div(C.SIM_STEP_MS / 1000);
   const starved = rated.gt(0) && actualPerSecond.lt(rated);
   const ratio = core.lastReport.powerRatio;
+  const storedNote = (): string => {
+    if (capacity.lte(0)) return '还没有存电装置：富余电力直接浪费，缺口只能降载';
+    if (settled.euCharged.gt(0)) return `上一拍充入 ${formatNumber(settled.euCharged)} EU`;
+    if (settled.euDischarged.gt(0)) return `上一拍放出 ${formatNumber(settled.euDischarged)} EU`;
+    return '上一拍没有充放电';
+  };
 
   return {
     stored: {
-      value: '0 EU',
-      rows: [],
+      value: `${formatNumber(core.storedEU)} / ${formatNumber(capacity)} EU`,
+      rows: stored,
       emptyText: '还没有存电装置',
-      note: '存电装置属于中期内容，数值层还没实现（计划书第七章）',
+      note: storedNote(),
     },
     generated: {
       value: `${formatNumber(rated)} EU/t`,
@@ -514,25 +561,20 @@ function productionOf(core: GameCore): {
   let coins = ZERO;
   let fuel = ZERO;
   for (const model of core.unlockedModels('miner')) {
-    const n = core.countOf(model.id);
-    if (n === 0) continue;
-    oreNet = oreNet.plus(minerOrePerSecond(model.tier).times(n));
-    euNet = euNet.minus(minerEnergyEU(model.tier).times(n));
+    if (core.countOf(model.id) === 0) continue;
+    oreNet = oreNet.plus(core.minerOutputPerSecond(model));
+    euNet = euNet.minus(core.minerEnergyDrain(model));
   }
   for (const model of core.unlockedModels('generator')) {
-    const n = core.countOf(model.id);
-    if (n === 0) continue;
-    euNet = euNet.plus(generatorOutputEU(model.tier, model.outputFactor).times(n));
-    fuel = fuel.plus(fuelRateOf(model).times(n));
+    if (core.countOf(model.id) === 0) continue;
+    euNet = euNet.plus(core.generatorOutputRated(model));
+    fuel = fuel.plus(core.generatorFuelDrain(model));
   }
   for (const model of core.unlockedModels('machine')) {
-    const n = core.countOf(model.id);
-    if (n === 0) continue;
-    const output = machineOutput({ baseOutput: C.BASE_MACHINE_OUTPUT, tier: model.tier })
-      .times(model.outputFactor)
-      .times(n);
+    if (core.countOf(model.id) === 0) continue;
+    const output = core.machineOutputPerSecond(model);
     coins = coins.plus(output);
-    euNet = euNet.minus(machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }).times(n));
+    euNet = euNet.minus(core.machineEnergyDrain(model));
     oreNet = oreNet.minus(output.div(C.COINS_PER_ORE));
   }
   return { oreNet, euNet, coins, fuel };

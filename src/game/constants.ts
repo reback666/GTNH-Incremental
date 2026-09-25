@@ -31,7 +31,8 @@ export const UI_REFRESH_MS = 50;
 // 存档结构版本，用于迁移（计划书第十四章）。
 // v1：机器数量按电压等级存（miners/generators/machines 各 14 个）
 // v2：改按机型存（counts: 机型 id → 数量），因为同一个等级现在可以有多个机型
-export const SAVE_VERSION = 2;
+// v3：加了超频档位、故障台数、存电存量（第二阶段：自动化与深度）
+export const SAVE_VERSION = 3;
 export const SAVE_KEY = 'gtnh-incremental-save';
 
 export function unlockCost(machineTier: number): Decimal {
