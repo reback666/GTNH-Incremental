@@ -43,6 +43,8 @@ describe('第三阶段：研究硬墙', () => {
     core.counts['x-7'] = 1; // 一台 LuV 计算机：1 算力/秒、32768 EU/t
     core.counts['r-7'] = 1; // 一台 LuV 研究站：吃掉 1 算力/秒
     core.storedEU = dec('100000000'); // 拿存电顶住耗电，便于单独验证研究
+    // 普通电网每 5 分钟有 5% 概率断电，断电那一拍算力为 0；这里固定成不会触发
+    core.random = () => 0.999;
 
     const report = core.tick(1);
     expect(report.computeProduced.toString()).toBe('1');
