@@ -83,8 +83,8 @@ describe('游戏核心：ULV → LV 完整循环', () => {
     expect(report.powerRatio).toBe(1);
     expect(report.euGenerated.toString()).toBe('24');
     expect(core.coins[0]!.toString()).toBe('1');
-    expect(report.oreGained[0]!.toString()).toBe('3');
-    // 产矿提速 16 倍后，同级采矿机产矿远快于发电机烧矿，矿石转为净增长
+    expect(report.oreGained[0]!.toString()).toBe('1.5');
+    // 产矿提速 8 倍后，同级采矿机产矿快于发电机烧矿，矿石转为净增长
     expect(core.ores[0]!.gt(before)).toBe(true);
   });
 
@@ -162,7 +162,7 @@ describe('游戏核心：ULV → LV 完整循环', () => {
     core.counts[ULV_MINER] = 1;
     core.counts['m-2'] = 1; // LV 采矿机 → T1 矿脉
     core.tick(1);
-    expect(core.ores[1]!.toString()).toBe('1');
+    expect(core.ores[1]!.toString()).toBe('0.5');
   });
 
   it('存档往返不丢精度，状态完整还原', () => {

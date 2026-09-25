@@ -35,7 +35,7 @@ describe('发电机', () => {
     expect(oreEnergyValue(3).toString()).toBe('512');
   });
 
-  it('矿石能量 ×2 与采矿机提速 ×2 相乘为 4，一台采矿机能养的发电机台数恒等于 16 × 燃料效率', () => {
+  it('矿石能量 ×2 与采矿机提速 ×2 相乘为 4，一台采矿机能养的发电机台数恒等于全局产矿倍率 × 燃料效率', () => {
     // 烧矿速率随等级 ×2：输出 ×4，但矿石能量只 ×2
     expect(generatorFuelRate(2).div(generatorFuelRate(1)).toSignificantDigits(6).toString()).toBe('2');
     // 采矿机产矿也随等级 ×2，两者抵消，比例只剩燃料效率与全局产矿倍率

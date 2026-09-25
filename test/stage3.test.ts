@@ -221,11 +221,11 @@ describe('第三阶段：转生与永久加成', () => {
     const core = new GameCore();
     core.counts['m-1'] = 1;
     const miner = modelById('m-1');
-    // ULV 采矿机比 LV 慢一倍：全局提速 16 倍后 1 秒一枚（计划书第四章）
-    expect(core.minerOutputPerSecond(miner).toString()).toBe('1');
+    // ULV 采矿机比 LV 慢一倍：全局提速 8 倍后 2 秒一枚（计划书第四章）
+    expect(core.minerOutputPerSecond(miner).toString()).toBe('0.5');
 
     core.rebirthNodes.push('speed-1'); // 全机器速度 +4%
-    expect(core.minerOutputPerSecond(miner).toString()).toBe('1.04');
+    expect(core.minerOutputPerSecond(miner).toString()).toBe('0.52');
 
     core.rebirthNodes.push('research-2b'); // 研究需求 -8%
     expect(core.researchRequiredFor(8).toString()).toBe('920');
