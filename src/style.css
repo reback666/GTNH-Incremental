@@ -552,13 +552,45 @@ h1 .small {
   color: var(--warn);
 }
 
-.pickaxe-effect {
+/* 展开后：三条升级线各一行 */
+.pickaxe-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.pickaxe-line:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.pickaxe-line-icon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  image-rendering: pixelated;
+}
+
+.pickaxe-line-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.pickaxe-line-name {
+  font-size: 13px;
+}
+
+.pickaxe-line-effect {
+  font-size: 12px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
-  font-size: 13px;
-  margin-bottom: 10px;
+  gap: 5px;
 }
 
 .pickaxe-arrow {
@@ -569,9 +601,15 @@ h1 .small {
   color: var(--accent);
 }
 
+.pickaxe-line-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 .pickaxe-upgrade {
-  width: 100%;
-  min-height: 38px;
+  min-height: 34px;
   padding: 0 14px;
   border-color: var(--accent);
   color: var(--accent);

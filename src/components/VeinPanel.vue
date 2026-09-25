@@ -20,8 +20,15 @@ const veinLocked = computed(
   () => store.snap.pickaxe.veinTier < store.snap.pickaxe.maxVeinTier,
 );
 
-// 三条升级线和机器面板一样用标签切换：点谁就展开谁的详情
-const activeLine = ref<'vajra' | 'collect' | 'blast'>('vajra');
+// 镐子是一个标签（和机器面板的小标签同款），点开向下列出三条升级线
+const pickaxeOpen = ref(true);
+const pickaxeLines = computed(() => store.snap.pickaxe.lines);
+// 标签上的角标：还有几次能升（三条线合计）
+const chancesLeft = computed(() =>
+  pickaxeLines.value.reduce((sum, line) => sum + (line.cap - line.level), 0),
+);
+// 标签图标用金刚杵，颜色跟金刚杵自己的进度走
+const pickaxeIcon = computed(() => pickaxeIconUrl('vajra', pickaxeLines.value[0]?.iconTier ?? 1));
 
 function lineIcon(line: { id: 'vajra' | 'collect' | 'blast'; iconTier: number }): string | undefined {
   return pickaxeIconUrl(line.id, line.iconTier);
@@ -253,45 +260,52 @@ function mine(event: MouseEvent) {
 
       <div class="machine-tabs">
         <button
-          v-for="line in store.snap.pickaxe.lines"
-          :key="line.id"
           type="button"
           class="machine-tab"
-          :class="{ active: activeLine === line.id }"
-          @click="activeLine = line.id"
+          :class="{ active: pickaxeOpen }"
+          @click="pickaxeOpen = !pickaxeOpen"
         >
-          <img v-if="lineIcon(line)" class="tab-icon" :src="lineIcon(line)" alt="" />
-          <span class="tab-name">{{ line.name }}</span>
-          <span class="tab-count" :class="{ can: line.canUpgrade }">
-            {{ line.canUpgrade ? `可升 ${line.cap - line.level} 次` : `${line.level} / ${line.cap}` }}
+          <img v-if="pickaxeIcon" class="tab-icon" :src="pickaxeIcon" alt="" />
+          <span class="tab-name">镐子</span>
+          <span class="tab-count" :class="{ can: chancesLeft > 0 }">
+            {{ chancesLeft > 0 ? `可升 ${chancesLeft} 次` : '已全部升满' }}
           </span>
         </button>
       </div>
 
-      <div
-        v-for="line in store.snap.pickaxe.lines"
-        :key="line.id"
-        class="machine-body"
-        :class="{ collapsed: activeLine !== line.id }"
-      >
+      <div class="machine-body" :class="{ collapsed: !pickaxeOpen }">
         <div class="inner">
           <div class="pad">
-            <p class="muted small hint">{{ line.hint }}</p>
-            <div class="pickaxe-effect">
-              <span>{{ line.effectNow }}</span>
-              <template v-if="line.effectNext">
-                <span class="pickaxe-arrow">→</span>
-                <span class="pickaxe-next">{{ line.effectNext }}</span>
-              </template>
+            <div v-for="line in pickaxeLines" :key="line.id" class="pickaxe-line">
+              <img
+                v-if="lineIcon(line)"
+                class="pickaxe-line-icon"
+                :src="lineIcon(line)"
+                alt=""
+              />
+              <div class="pickaxe-line-text">
+                <span class="pickaxe-line-name">{{ line.name }}</span>
+                <span class="muted small">{{ line.hint }}</span>
+                <span class="pickaxe-line-effect">
+                  {{ line.effectNow }}
+                  <template v-if="line.effectNext">
+                    <span class="pickaxe-arrow">→</span>
+                    <span class="pickaxe-next">{{ line.effectNext }}</span>
+                  </template>
+                </span>
+              </div>
+              <div class="pickaxe-line-action">
+                <span class="muted small">{{ line.level }} / {{ line.cap }}</span>
+                <button
+                  class="pickaxe-upgrade"
+                  type="button"
+                  :disabled="!line.canUpgrade"
+                  @click="upgrade(line.id)"
+                >
+                  {{ line.canUpgrade ? '升级' : '已满级' }}
+                </button>
+              </div>
             </div>
-            <button
-              class="pickaxe-upgrade"
-              type="button"
-              :disabled="!line.canUpgrade"
-              @click="upgrade(line.id)"
-            >
-              {{ line.canUpgrade ? '升级' : '已满级' }}
-            </button>
           </div>
         </div>
       </div>
