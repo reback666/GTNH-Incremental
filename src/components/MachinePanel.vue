@@ -394,14 +394,16 @@ function canBuy(model: MachineModelRow): boolean {
               </span>
             </div>
             <div class="pickaxe-line-action">
-              <span class="muted small">{{ line.level }} / {{ line.cap }}</span>
+              <span class="muted small">
+                {{ line.locked ? '未开放' : `${line.level} / ${line.cap}` }}
+              </span>
               <button
                 class="pickaxe-upgrade"
                 type="button"
                 :disabled="!line.canUpgrade"
                 @click="store.upgradePickaxe(line.id)"
               >
-                {{ line.canUpgrade ? '升级' : '已满级' }}
+                {{ line.canUpgrade ? '升级' : line.locked ? '还没开放' : '已满级' }}
               </button>
             </div>
           </div>

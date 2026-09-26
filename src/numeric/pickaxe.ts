@@ -26,9 +26,11 @@ export function vajraMaxLevel(): number {
   return MAX_TIER - 1;
 }
 
-// 三条线各自能拿到的总机会数（随最高电压等级增长）
+// 三条线各自能拿到的总机会数（随最高电压等级增长）。
+// 金刚杵从 LV 才开始给：开局本来就能挖 T0 矿脉，第一次升级对应的是 LV（挖 T1）。
+// 所以它在 ULV 时是 0 次，到 MAX 正好 13 次，和第 13 级矿脉的封顶严丝合缝。
 export function vajraChances(maxTier: number): number {
-  return maxTier * VAJRA_CHANCES_PER_TIER;
+  return Math.max(0, maxTier - 1) * VAJRA_CHANCES_PER_TIER;
 }
 
 export function collectChances(maxTier: number): number {

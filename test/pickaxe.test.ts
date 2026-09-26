@@ -21,9 +21,11 @@ import { useGameStore } from '../src/game/store';
 import { getCore } from '../src/game/engine';
 
 describe('镐子的三条升级线', () => {
-  it('升级机会随电压等级发放：金刚杵每级 1 次、连锁采集每 2 级 1 次、连锁爆破每级 2 次', () => {
-    expect(vajraChances(1)).toBe(1);
-    expect(vajraChances(MAX_TIER)).toBe(14);
+  it('升级机会随电压等级发放：金刚杵从 LV 起每级 1 次、连锁采集每 2 级 1 次、连锁爆破每级 2 次', () => {
+    // 金刚杵在 ULV 时没有机会（开局本来就能挖 T0，第一次升级对应 LV）
+    expect(vajraChances(1)).toBe(0);
+    expect(vajraChances(2)).toBe(1);
+    expect(vajraChances(MAX_TIER)).toBe(13);
     expect(collectChances(1)).toBe(0);
     expect(collectChances(2)).toBe(1);
     expect(collectChances(MAX_TIER)).toBe(7);
@@ -130,6 +132,19 @@ describe('游戏核心里的镐子', () => {
     expect(core.ores[1]!.toString()).toBe('0.5');
   });
 
+  it('ULV 时金刚杵还没开放，到 LV 才有第一次机会', () => {
+    const core = new GameCore();
+    expect(core.pickaxeCap('vajra')).toBe(0);
+    expect(core.canUpgradePickaxe('vajra')).toBe(false);
+    expect(core.upgradePickaxe('vajra')).toBe(false);
+    expect(core.pickaxeVajra).toBe(0);
+
+    core.maxTier = 2; // 解锁 LV
+    expect(core.pickaxeCap('vajra')).toBe(1);
+    expect(core.upgradePickaxe('vajra')).toBe(true);
+    expect(core.pickaxeVajra).toBe(1);
+  });
+
   it('金刚杵等级不够时，挖的还是镐子够得着的那一级', () => {
     const core = new GameCore();
     core.maxTier = 4;
@@ -221,6 +236,20 @@ describe('镐子面板拿到的数据', () => {
     expect(pickaxe.maxVeinTier).toBe(0);
     // 三条线都还没升过级：都是 ULV 色，跟当前电压无关
     expect(pickaxe.lines.map((line) => line.iconTier)).toEqual([1, 1, 1]);
+    // 已经到了 HV：三条线都开放了
+    expect(pickaxe.lines.map((line) => line.locked)).toEqual([false, false, false]);
+  });
+
+  it('ULV 时金刚杵在界面上标「未开放」', () => {
+    const store = useGameStore();
+    store.boot();
+    getCore().maxTier = 1;
+    store.refresh();
+
+    const vajra = store.snap.pickaxe.lines[0]!;
+    expect(vajra.locked).toBe(true);
+    expect(vajra.cap).toBe(0);
+    expect(vajra.canUpgrade).toBe(false);
   });
 
   it('点了升级就立刻反映到产出、矿脉与图标上', () => {

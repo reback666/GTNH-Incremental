@@ -201,6 +201,8 @@ export interface PickaxeLineRow {
   // 下一次升级后的效果，满级时是空串
   effectNext: string;
   canUpgrade: boolean;
+  // 这一档电压还没给机会（例如 ULV 时的金刚杵）
+  locked: boolean;
 }
 
 export interface PickaxeStats {
@@ -832,11 +834,15 @@ function pickaxeStats(core: GameCore): PickaxeStats {
 function pickaxeLineText(
   core: GameCore,
   line: PickaxeLine,
-): Pick<PickaxeLineRow, 'level' | 'cap' | 'iconTier' | 'effectNow' | 'effectNext' | 'canUpgrade'> {
+): Pick<
+  PickaxeLineRow,
+  'level' | 'cap' | 'iconTier' | 'effectNow' | 'effectNext' | 'canUpgrade' | 'locked'
+> {
   const level = core.pickaxeLevel(line);
   const cap = core.pickaxeCap(line);
   const canUpgrade = core.canUpgradePickaxe(line);
   const iconTier = core.pickaxeLineIconTier(line);
+  const locked = cap <= 0;
   const effectNow = pickaxeEffectNow(core, line);
 
   if (line === 'vajra') {
@@ -847,6 +853,7 @@ function pickaxeLineText(
       effectNow,
       effectNext: canUpgrade ? `可挖 ${oreName(level + 1)} 矿脉` : '',
       canUpgrade,
+      locked,
     };
   }
   if (line === 'collect') {
@@ -857,6 +864,7 @@ function pickaxeLineText(
       effectNow,
       effectNext: canUpgrade ? `产出 ×${formatNumber(collectMultiplier(level + 1))}` : '',
       canUpgrade,
+      locked,
     };
   }
   return {
@@ -866,6 +874,7 @@ function pickaxeLineText(
     effectNow,
     effectNext: canUpgrade ? `每次点击 +${formatNumber(blastBonus(core.maxTier, level + 1))}` : '',
     canUpgrade,
+    locked,
   };
 }
 
@@ -1111,7 +1120,7 @@ function modifierRows(core: GameCore, kind: MachineKind | 'pickaxe'): ModifierRo
 
 // 镐子三条升级线的固定信息。清单、面板、悬停提示都读这一份。
 const PICKAXE_LINE_META: { id: PickaxeLine; name: string; hint: string }[] = [
-  { id: 'vajra', name: '金刚杵', hint: '决定镐子能挖到哪一级矿脉' },
+  { id: 'vajra', name: '金刚杵', hint: '决定镐子能挖到哪一级矿脉，从 LV 起每个电压给 1 次机会' },
   {
     id: 'collect',
     name: '连锁采集',
