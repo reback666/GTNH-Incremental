@@ -78,6 +78,25 @@ export function collectMultiplier(level: number): Decimal {
   return pow(String(COLLECT_MULTIPLIER), level);
 }
 
+// 这条线一共能升多少次（分母用满级时的机会总数，不跟着当前电压变）
+export function pickaxeTotalChances(line: PickaxeLine): number {
+  if (line === 'vajra') return vajraMaxLevel();
+  if (line === 'collect') return collectChances(MAX_TIER);
+  return blastChances(MAX_TIER);
+}
+
+// 图标配色按「这条线升了多少次 ÷ 一共能升多少次」取，每升一级都往前挪：
+//   金刚杵 13 次走完 14 档（一级一档）、连锁采集 7 次走完 14 档（一级约两档）、
+//   连锁爆破 28 次走完 14 档（两左右一档）。
+// 分母必须用总次数，不能用「当前电压给的机会数」—— 后者在前期很小
+// （ULV 时金刚杵只有 1 次），升一次就是 100%，会直接跳成 MAX 的彩虹色。
+export function pickaxeIconTier(line: PickaxeLine, level: number): number {
+  const total = pickaxeTotalChances(line);
+  if (total <= 0 || level <= 0) return 1;
+  const ratio = Math.min(1, level / total);
+  return 1 + Math.floor(ratio * (MAX_TIER - 1));
+}
+
 // 一次点击的产出总量（枚），按矿脉规则分给各矿种。
 // 先算连锁爆破的加法，再乘连锁采集的倍率。
 export function pickaxeOutputPerClick(input: {
