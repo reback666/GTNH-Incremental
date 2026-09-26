@@ -83,15 +83,27 @@ describe('镐子的三条升级线', () => {
     expect(output.toSignificantDigits(12).toString()).toBe('111130.91134');
   });
 
-  it('图标配色按各自进度取：没升是 ULV 色，满级是 MAX 的彩虹', () => {
-    expect(pickaxeIconTier(0, 13)).toBe(1);
-    expect(pickaxeIconTier(13, 13)).toBe(14);
-    expect(pickaxeIconTier(0, 7)).toBe(1);
-    expect(pickaxeIconTier(7, 7)).toBe(14);
-    expect(pickaxeIconTier(0, 28)).toBe(1);
-    expect(pickaxeIconTier(28, 28)).toBe(14);
-    // 三条线机会数不同，但走完一半进度时取的色阶一致
-    expect(pickaxeIconTier(13, 26)).toBe(pickaxeIconTier(7, 14));
+  it('图标配色按电压一格一格走，前期不会一次跳满', () => {
+    // 没升级时三条线都是 ULV 色
+    expect(pickaxeIconTier('vajra', 0)).toBe(1);
+    expect(pickaxeIconTier('collect', 0)).toBe(1);
+    expect(pickaxeIconTier('blast', 0)).toBe(1);
+
+    // 金刚杵每升一级跳一档：ULV 时升一次是 LV 色，不是 MAX
+    expect(pickaxeIconTier('vajra', 1)).toBe(2);
+    expect(pickaxeIconTier('vajra', 2)).toBe(3);
+    expect(pickaxeIconTier('vajra', 13)).toBe(14);
+
+    // 连锁采集每 2 个电压才给一次机会，所以升一级跳两档
+    expect(pickaxeIconTier('collect', 1)).toBe(2);
+    expect(pickaxeIconTier('collect', 2)).toBe(4);
+    expect(pickaxeIconTier('collect', 7)).toBe(14);
+
+    // 连锁爆破每个电压给两次机会，所以两才一级
+    expect(pickaxeIconTier('blast', 1)).toBe(1);
+    expect(pickaxeIconTier('blast', 2)).toBe(1);
+    expect(pickaxeIconTier('blast', 3)).toBe(2);
+    expect(pickaxeIconTier('blast', 28)).toBe(14);
   });
 });
 

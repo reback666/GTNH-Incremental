@@ -1031,9 +1031,9 @@ export class GameCore {
     return Math.min(best, this.pickaxeVajra);
   }
 
-  // 这条线的图标用哪一档电压色：按各自进度取色，满级就是 MAX 的彩虹
+  // 这条线的图标用哪一档电压色：按它走到了哪个电压时代取，满级就是 MAX 的彩虹
   pickaxeLineIconTier(line: PickaxeLine): number {
-    return pickaxeIconTier(this.pickaxeLevel(line), this.pickaxeCap(line));
+    return pickaxeIconTier(line, this.pickaxeLevel(line));
   }
 
   // 单价：基准成本 × 机型成本系数
