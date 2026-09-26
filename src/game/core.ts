@@ -37,7 +37,6 @@ import {
   blastChances,
   collectChances,
   pickaxeOutputPerClick,
-  pickaxeIconTier,
   vajraChances,
   vajraMaxLevel,
 } from '../numeric/pickaxe';
@@ -1031,9 +1030,11 @@ export class GameCore {
     return Math.min(best, this.pickaxeVajra);
   }
 
-  // 这条线的图标用哪一档电压色：按它走到了哪个电压时代取，满级就是 MAX 的彩虹
-  pickaxeLineIconTier(line: PickaxeLine): number {
-    return pickaxeIconTier(line, this.pickaxeLevel(line));
+  // 镐子图标的配色：三条线一起跟着当前电压走，随电压一级一级变。
+  // 曾经按「这条线自己走到哪」取色（金刚杵一次一档、连锁采集一次两档、
+  // 连锁爆破两次一档），三条线的颜色节奏对不上，看起来是乱的。
+  pickaxeIconTier(): number {
+    return this.maxTier;
   }
 
   // 单价：基准成本 × 机型成本系数

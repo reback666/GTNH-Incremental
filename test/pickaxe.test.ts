@@ -9,7 +9,6 @@ import {
   blastNextBonus,
   collectChances,
   collectMultiplier,
-  pickaxeIconTier,
   pickaxeOutputPerClick,
   vajraChances,
   vajraMaxLevel,
@@ -83,27 +82,16 @@ describe('镐子的三条升级线', () => {
     expect(output.toSignificantDigits(12).toString()).toBe('111130.91134');
   });
 
-  it('图标配色按电压一格一格走，前期不会一次跳满', () => {
-    // 没升级时三条线都是 ULV 色
-    expect(pickaxeIconTier('vajra', 0)).toBe(1);
-    expect(pickaxeIconTier('collect', 0)).toBe(1);
-    expect(pickaxeIconTier('blast', 0)).toBe(1);
-
-    // 金刚杵每升一级跳一档：ULV 时升一次是 LV 色，不是 MAX
-    expect(pickaxeIconTier('vajra', 1)).toBe(2);
-    expect(pickaxeIconTier('vajra', 2)).toBe(3);
-    expect(pickaxeIconTier('vajra', 13)).toBe(14);
-
-    // 连锁采集每 2 个电压才给一次机会，所以升一级跳两档
-    expect(pickaxeIconTier('collect', 1)).toBe(2);
-    expect(pickaxeIconTier('collect', 2)).toBe(4);
-    expect(pickaxeIconTier('collect', 7)).toBe(14);
-
-    // 连锁爆破每个电压给两次机会，所以两才一级
-    expect(pickaxeIconTier('blast', 1)).toBe(1);
-    expect(pickaxeIconTier('blast', 2)).toBe(1);
-    expect(pickaxeIconTier('blast', 3)).toBe(2);
-    expect(pickaxeIconTier('blast', 28)).toBe(14);
+  it('镐子图标跟当前电压走：三条线同色，随电压一级一级变', () => {
+    const core = new GameCore();
+    expect(core.pickaxeIconTier()).toBe(1); // 开局 ULV 色
+    // 升级本身不换色 —— 换色跟着电压解锁走
+    core.pickaxeVajra = 1;
+    expect(core.pickaxeIconTier()).toBe(1);
+    core.maxTier = 3;
+    expect(core.pickaxeIconTier()).toBe(3); // 到 MV 就是 MV 色
+    core.maxTier = MAX_TIER;
+    expect(core.pickaxeIconTier()).toBe(14); // 到 MAX 就是彩虹
   });
 });
 
@@ -218,8 +206,8 @@ describe('镐子面板拿到的数据', () => {
     expect(pickaxe.outputPerClick).toBe('1');
     expect(pickaxe.veinTier).toBe(0);
     expect(pickaxe.maxVeinTier).toBe(0);
-    // 三条线都还没升级：都是 ULV 色
-    expect(pickaxe.lines.map((line) => line.iconTier)).toEqual([1, 1, 1]);
+    // 三条线同色：这一局到 HV 了，图标都是 HV 色
+    expect(pickaxe.lines.map((line) => line.iconTier)).toEqual([4, 4, 4]);
   });
 
   it('点了升级就立刻反映到产出、矿脉与图标上', () => {

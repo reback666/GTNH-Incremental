@@ -836,7 +836,7 @@ function pickaxeLineText(
   const level = core.pickaxeLevel(line);
   const cap = core.pickaxeCap(line);
   const canUpgrade = core.canUpgradePickaxe(line);
-  const iconTier = core.pickaxeLineIconTier(line);
+  const iconTier = core.pickaxeIconTier();
   const effectNow = pickaxeEffectNow(core, line);
 
   if (line === 'vajra') {

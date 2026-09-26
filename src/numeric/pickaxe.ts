@@ -78,19 +78,6 @@ export function collectMultiplier(level: number): Decimal {
   return pow(String(COLLECT_MULTIPLIER), level);
 }
 
-// 图标配色按「这条线走到了哪个电压时代」取，一格一格往上走：
-//   金刚杵   每次机会来自一个电压，所以升一级就跳一档
-//   连锁采集 每 2 个电压才给一次机会，升一级跳两档
-//   连锁爆破 每个电压给两次机会，所以两才一级
-// 不能按「走完多少比例」算 —— 前期机会总数很少（ULV 时金刚杵只有 1 次），
-// 升一次就是 100%，会直接跳成 MAX 的彩虹色。
-export function pickaxeIconTier(line: PickaxeLine, level: number): number {
-  if (level <= 0) return 1;
-  if (line === 'vajra') return Math.min(MAX_TIER, level + 1);
-  if (line === 'collect') return Math.min(MAX_TIER, level * 2);
-  return Math.min(MAX_TIER, Math.ceil(level / 2));
-}
-
 // 一次点击的产出总量（枚），按矿脉规则分给各矿种。
 // 先算连锁爆破的加法，再乘连锁采集的倍率。
 export function pickaxeOutputPerClick(input: {
