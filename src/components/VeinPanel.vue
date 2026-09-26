@@ -154,7 +154,7 @@ function mine(event: MouseEvent) {
 <template>
   <section class="panel">
     <h2>矿脉 · 手动开采</h2>
-    <p class="muted small">开局只有一座 T0 矿脉。先手挖攒矿，造出机器之后它就会自己转起来。</p>
+    <p class="muted small">开局一矿脉，资源全靠挖！</p>
 
     <button class="vein-btn" type="button" @click="mine">
       <span class="vein-sprite" :class="{ shake: shaking }">
@@ -224,8 +224,5 @@ function mine(event: MouseEvent) {
       </span>
     </button>
 
-    <p class="vein-note">
-      每次点击 {{ store.snap.pickaxe.outputPerClick }} 枚，镐子升级在下面的机器面板里
-    </p>
   </section>
 </template>

@@ -362,7 +362,7 @@ function canBuy(model: MachineModelRow): boolean {
       <div class="inner">
         <div class="pad">
           <p class="muted small hint">
-            手动挖矿的三条升级线。机会随电压等级发放，用掉就永久生效，不花币；转生后跟电压一起回到开局。
+            手动挖矿的三条升级线，机会随电压等级发放。
           </p>
 
           <dl class="stats">
@@ -394,16 +394,14 @@ function canBuy(model: MachineModelRow): boolean {
               </span>
             </div>
             <div class="pickaxe-line-action">
-              <span class="muted small">
-                {{ line.locked ? '未开放' : `${line.level} / ${line.cap}` }}
-              </span>
+              <span v-if="!line.locked" class="muted small">{{ line.level }} / {{ line.cap }}</span>
               <button
                 class="pickaxe-upgrade"
                 type="button"
                 :disabled="!line.canUpgrade"
                 @click="store.upgradePickaxe(line.id)"
               >
-                {{ line.canUpgrade ? '升级' : line.locked ? '还没开放' : '已满级' }}
+                {{ line.canUpgrade ? '升级' : line.locked ? '未开放' : '已满级' }}
               </button>
             </div>
           </div>

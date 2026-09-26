@@ -516,14 +516,6 @@ h1 .small {
 }
 
 /* ── 镐子（手动开采的三条升级线） ───────────────────────── */
-/* 矿脉面板底部的一行提示：产出多少、去哪升级 */
-.vein-note {
-  margin: 10px 0 0;
-  font-size: 12px;
-  color: var(--muted);
-  text-align: center;
-}
-
 .pickaxe-locked {
   font-size: 12px;
   color: var(--warn);

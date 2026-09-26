@@ -401,7 +401,7 @@ const COLUMN_ORDER: MachineKind[] = [
 const COLUMN_META: Record<MachineKind, { title: string; hint: string }> = {
   miner: { title: '采矿机', hint: '放在矿脉上自动产矿，是整条循环的入口。' },
   generator: { title: '发电机', hint: '烧本级矿石发电。同等级有多种机型，效率高的更贵。' },
-  machine: { title: '制造机', hint: '吃本级矿石与电力，直接产出本级 GT 币。' },
+  machine: { title: '制造机', hint: '消耗本级矿石与电力，直接产出本级 GT 币。' },
   storage: {
     title: '存电装置',
     hint: '富余电力存进电池；发电不够时先放存量，存量见底才降载停机。',
