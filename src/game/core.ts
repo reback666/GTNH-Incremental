@@ -243,7 +243,10 @@ export class GameCore {
   }
 
   countOfCategory(category: MachineCategory): number {
-    return modelsOf(category).reduce((sum, model) => sum + this.countOf(model.id), 0);
+    // 宇宙被收回之后，那类机器既看不见也不干活，就别再算进台数里
+    return modelsOf(category)
+      .filter((model) => this.universeSatisfied(model))
+      .reduce((sum, model) => sum + this.countOf(model.id), 0);
   }
 
   // 超频档位：越界或非整数一律当作 0，存档里出现脏数据也不会带崩模拟
@@ -610,10 +613,13 @@ export class GameCore {
   // 机型能不能造：除了研究，还要看它是不是要求某个平行宇宙（灵气节点要奥术宇宙）
   isModelUnlocked(model: MachineModel): boolean {
     if (!this.isResearched(model.tier)) return false;
-    if (model.requiresUniverse !== undefined && !this.hasUniverse(model.requiresUniverse)) {
-      return false;
-    }
-    return true;
+    return this.universeSatisfied(model);
+  }
+
+  // 这台机器要求的平行宇宙有没有。没有的话它既买不到、界面上也不该出现、
+  // 已经建好的也停摆（开发者模式可以收回宇宙，不能留下看不见还在跑的机器）。
+  universeSatisfied(model: MachineModel): boolean {
+    return model.requiresUniverse === undefined || this.hasUniverse(model.requiresUniverse);
   }
 
   // 当前研究目标：已解锁电压里最低的那个还没研究出来的等级。
@@ -1145,7 +1151,10 @@ export class GameCore {
   tick(dtSeconds: number): TickReport {
     const report = emptyReport();
     const active = MACHINE_MODELS.filter(
-      (model) => model.tier <= this.maxTier && this.countOf(model.id) > 0,
+      (model) =>
+        model.tier <= this.maxTier &&
+        this.countOf(model.id) > 0 &&
+        this.universeSatisfied(model),
     );
 
     // 1) 发电能力与耗电需求。坏掉的机器不耗电，超频的机器按档位吃电

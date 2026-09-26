@@ -89,4 +89,24 @@ describe('标签上的增益 / 减益清单', () => {
     expect(capacity?.source).toBe('存电装置合计');
     expect(capacity?.value).toContain('EU');
   });
+
+  it('没解锁奥术宇宙时，魔法机器整个不出现', () => {
+    const { store, core } = boot();
+    core.maxTier = 7;
+    const minerIds = () =>
+      column(store, 'miner')
+        .tiers.flatMap((tier) => tier.models.map((model) => model.id));
+
+    core.universes = [];
+    store.refresh();
+    expect(minerIds()).toContain('m-4'); // 电力版照常显示
+    expect(minerIds()).not.toContain('mm-4'); // 魔法版不占位置
+    expect(
+      column(store, 'generator').tiers.flatMap((tier) => tier.models.map((model) => model.id)),
+    ).not.toContain('mg-4');
+
+    core.universes = ['arcane'];
+    store.refresh();
+    expect(minerIds()).toContain('mm-4');
+  });
 });

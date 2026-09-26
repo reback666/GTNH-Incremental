@@ -86,6 +86,25 @@ describe('奥术宇宙', () => {
     expect(core.buy(modelById('n-1'), 1, 'coin')).toBe(1);
   });
 
+  it('收回宇宙之后，已经建好的魔法机器停摆', () => {
+    const core = new GameCore();
+    core.universes = ['arcane'];
+    core.pollutionEnabled = false;
+    core.maxTier = 2;
+    core.ores[1] = dec('1e6');
+    core.counts['mc-2'] = 1;
+    core.counts['n-2'] = 1;
+    core.essentia = dec('1000');
+
+    core.tick(1);
+    expect(core.coins[1]!.gt(0)).toBe(true); // 有宇宙时正常产币
+
+    core.universes = [];
+    core.coins[1] = dec('0');
+    core.tick(1);
+    expect(core.coins[1]!.toString()).toBe('0'); // 没宇宙就不干了
+  });
+
   it('魔法机器吃灵气：没节点就停摆，节点喂满就按 2.5 倍产出', () => {
     const core = new GameCore();
     core.universes = ['arcane'];

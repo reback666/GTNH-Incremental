@@ -136,8 +136,6 @@ export interface MachineModelRow {
   researched: boolean;
   // 是否已解锁（研究 + 所属平行宇宙都满足）；奥术宇宙的灵气节点要拥有奥术宇宙
   unlocked: boolean;
-  // 需要哪个平行宇宙才能建造，没有需求时是空串
-  needsUniverse: string;
   // 灵气驱动的魔法机器（不耗电、吃灵气）
   visPowered: boolean;
   // 单台的消耗与产出，鼠标移到机器名上时显示
@@ -1146,7 +1144,9 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
   const meta = COLUMN_META[kind];
   const tiers: MachineTierGroup[] = [];
   for (let tier = 1; tier <= MAX_TIER; tier += 1) {
-    const models = core.modelsAt(kind, tier);
+    // 没解锁对应平行宇宙的机型（魔法机器、灵气节点、腐蚀抑制器）整个不出现，
+    // 和「标签按进度出现」同一个规矩：没到那一步就不占位置
+    const models = core.modelsAt(kind, tier).filter((model) => core.universeSatisfied(model));
     if (models.length === 0) continue;
     const payment = paymentUnit(tier);
     tiers.push({
@@ -1166,12 +1166,6 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
           traits: model.traits ?? [],
           researched: core.isResearched(model.tier),
           unlocked: core.isModelUnlocked(model),
-          needsUniverse:
-            model.requiresUniverse === 'arcane' && !core.hasUniverse('arcane')
-              ? '奥术宇宙'
-              : model.requiresUniverse === 'abyss' && !core.hasUniverse('abyss')
-                ? '深渊宇宙'
-                : '',
           visPowered: model.visPowered === true,
           single: singleStats(model, level),
           count,

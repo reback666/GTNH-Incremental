@@ -263,12 +263,6 @@ function canBuy(model: MachineModelRow): boolean {
                   title="魔法机器：不耗电，改吃灵气；产出是同价电力机型的 2.5 倍"
                   >魔法</span
                 >
-                <span
-                  v-else-if="bar.model.needsUniverse"
-                  class="badge warn"
-                  title="要先在转生时选上对应的平行宇宙"
-                  >需{{ bar.model.needsUniverse }}</span
-                >
               </span>
 
               <div class="tier-icons">
