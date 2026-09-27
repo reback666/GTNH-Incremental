@@ -52,7 +52,7 @@ describe('成就', () => {
     expect(core.repair('m-1')).toBe(1);
     core.grids.push('stable');
 
-    core.researched.push(8);
+    core.researchedModels.push('c-8');
     core.maxTier = 8;
     core.peakTier = 8;
     core.rebirthNodes.push('speed-1');

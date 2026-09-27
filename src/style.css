@@ -1094,6 +1094,7 @@ h2 .small {
 .rebirth-node {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 1px;
   width: 108px;
   height: 40px;
@@ -1105,12 +1106,6 @@ h2 .small {
   font-family: inherit;
   text-align: center;
   cursor: default;
-}
-
-.rebirth-node b {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.1;
 }
 
 .rebirth-node span {
@@ -1183,6 +1178,60 @@ h2 .small {
 
 .research {
   margin-top: 10px;
+}
+
+/* 研究项目列表：点一行就把算力投到那一级上 */
+.research-sub {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* 待研究机器列表的折叠开关：点一下收起 / 展开 */
+.research-toggle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  margin-top: 12px;
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--muted);
+  background: transparent;
+  border-color: transparent;
+}
+
+.research-toggle:hover {
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.research-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.research-item {
+  display: grid;
+  gap: 4px;
+  min-height: 0;
+  padding: 6px 8px;
+  text-align: left;
+  border-color: var(--line);
+}
+
+.research-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
 }
 
 .research-head {

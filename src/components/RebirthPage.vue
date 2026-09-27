@@ -172,12 +172,11 @@ function nodeClass(node: RebirthNodeRow) {
         :class="nodeClass(node)"
         :style="{ left: node.x + 'px', top: node.y + 'px' }"
         :disabled="node.owned || !node.buyable"
-        :title="node.owned ? '已点亮' : `前置：${node.requires.join(' / ') || '无'} · 价格 ${node.cost} 条`"
+        :title="node.owned ? undefined : `前置：${node.requires.join(' / ') || '无'} · 价格 ${node.cost} 条`"
         @click="store.buyRebirthNode(node.id)"
       >
-        <b>{{ node.name }}</b>
         <span>{{ node.effectText }}</span>
-        <em>{{ node.owned ? '已点亮' : node.cost + ' 条' }}</em>
+        <em v-if="!node.owned">{{ node.cost }} 条</em>
       </button>
     </div>
 

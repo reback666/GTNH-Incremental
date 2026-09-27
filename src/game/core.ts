@@ -114,8 +114,9 @@ export type PayWith = 'coin' | 'ore';
 // 开发者模式里「指定资源增减」的目标：
 //   ores / coins / both 是每一级都给（原来那个「每级各加一笔」）
 //   ore / coin 只动指定等级的那一种
+//   cables 是时空线缆（转生货币）
 export type DevResourceTarget =
-  | { scope: 'ores' | 'coins' | 'both' }
+  | { scope: 'ores' | 'coins' | 'both' | 'cables' }
   | { scope: 'ore' | 'coin'; tier: number };
 
 export interface TickReport {
@@ -128,7 +129,8 @@ export interface TickReport {
   computeWasted: Decimal;
   // 本拍推进的研究进度，以及是否刚好研究完成（值是刚解锁的电压等级）
   researchGained: Decimal;
-  researchUnlocked: number | null;
+  // 刚研究出来的机型 id（没有进展就是 null）
+  researchUnlocked: string | null;
   // 奥术宇宙：本拍的灵气产出 / 实际用掉，以及源质的产出 / 消耗
   visProduced: Decimal;
   visUsed: Decimal;
@@ -235,13 +237,12 @@ export class GameCore {
   collapseTimer = 0;
   maxTier = 1;
   unlockedVeins: number[] = [0];
-  // 当前研究目标已经攒下的进度（研究完一级就清零重来）
-  researchProgress = ZERO;
-  // 已经研究出来、可以建造的电压等级。LuV 及以前不用研究，开局就在里面
-  researched: number[] = Array.from(
-    { length: RESEARCH_GATE_FROM_TIER - 1 },
-    (_, index) => index + 1,
-  );
+  // 研究是手选机型：ZPM 及以后每个机型都要单独研究，只有选中的那一台在推进。
+  // 每台机器各记自己的进度，中途换项目不会把已攒的进度丢掉
+  researchTarget: string | null = null;
+  researchProgress: Record<string, Decimal> = {};
+  // 已经研究出来、可以建造的机型 id。LuV 及以前的机型不用研究，不在这个名单里
+  researchedModels: string[] = [];
   playSeconds = 0;
   totalOre = ZERO;
   totalCoins = ZERO;
@@ -481,7 +482,11 @@ export class GameCore {
       overclockUsed: this.overclockUsed,
       repairs: this.repairs,
       gridCount: this.grids.length,
-      researchCount: this.researched.filter((tier) => tier >= RESEARCH_GATE_FROM_TIER).length,
+      researchCount: this.researchedModels.length,
+      researchedZpm: this.researchedModels.some((id) => {
+        const model = MACHINE_MODELS.find((item) => item.id === id);
+        return model?.tier === RESEARCH_GATE_FROM_TIER;
+      }),
       rebirthCount: this.rebirthCount,
       rebirthNodeCount: this.rebirthNodes.length,
       storedEU: this.storedEU,
@@ -519,8 +524,11 @@ export class GameCore {
     this.maxTier = tier;
     this.peakTier = Math.max(this.peakTier, tier);
     this.unlockedVeins = Array.from({ length: tier }, (_, index) => index);
-    this.researched = Array.from({ length: tier }, (_, index) => index + 1);
-    this.researchProgress = ZERO;
+    this.researchedModels = MACHINE_MODELS.filter(
+      (model) => model.tier <= tier && needsResearch(model.tier),
+    ).map((model) => model.id);
+    this.researchTarget = null;
+    this.researchProgress = {};
     return true;
   }
 
@@ -565,14 +573,15 @@ export class GameCore {
         this.ores = this.ores.map(apply);
         this.coins = this.coins.map(apply);
         break;
+      case 'cables':
+        this.cables = apply(this.cables);
+        break;
     }
     return true;
   }
 
   devGrantCables(amount: string): boolean {
-    if (!this.devMode) return false;
-    this.cables = this.cables.plus(dec(amount));
-    return true;
+    return this.devAdjustResource({ scope: 'cables' }, amount, 1);
   }
 
   // 快进：按给定的秒数跑一拍模拟
@@ -665,24 +674,22 @@ export class GameCore {
     this.pickaxeVajra = 0;
     this.pickaxeCollect = 0;
     this.pickaxeBlast = 0;
-    this.researchProgress = ZERO;
-    this.researched = Array.from(
-      { length: RESEARCH_GATE_FROM_TIER - 1 },
-      (_, index) => index + 1,
-    );
+    this.researchTarget = null;
+    this.researchProgress = {};
+    this.researchedModels = [];
     this.runEU = ZERO;
     this.riftOffered = false;
     this.lastReport = emptyReport();
   }
 
-  // 这一级的机型能不能造。ZPM 及以后要先研究出来
-  isResearched(tier: number): boolean {
-    return !needsResearch(tier) || this.researched.includes(tier);
+  // 这台机型要不要先研究（ZPM 及以后要），研究出来没有
+  isModelResearched(model: MachineModel): boolean {
+    return !needsResearch(model.tier) || this.researchedModels.includes(model.id);
   }
 
-  // 机型能不能造：除了研究，还要看它是不是要求某个平行宇宙（灵气节点要奥术宇宙）
+  // 机型能不能造：研究 + 平行宇宙两个条件都要满足（灵气节点要奥术宇宙）
   isModelUnlocked(model: MachineModel): boolean {
-    if (!this.isResearched(model.tier)) return false;
+    if (!this.isModelResearched(model)) return false;
     return this.universeSatisfied(model);
   }
 
@@ -692,13 +699,50 @@ export class GameCore {
     return model.requiresUniverse === undefined || this.hasUniverse(model.requiresUniverse);
   }
 
-  // 当前研究目标：已解锁电压里最低的那个还没研究出来的等级。
-  // 没有目标（还没到 ZPM，或目标都研究完了）时返回 null
-  researchTargetTier(): number | null {
-    for (let tier = RESEARCH_GATE_FROM_TIER; tier <= this.maxTier; tier += 1) {
-      if (!this.researched.includes(tier)) return tier;
+  // 这一级要单独研究的机型（ZPM 及以后每个机型一张研究单）
+  researchableModelsAt(tier: number): MachineModel[] {
+    if (!needsResearch(tier)) return [];
+    return MACHINE_MODELS.filter(
+      (model) => model.tier === tier && this.universeSatisfied(model),
+    );
+  }
+
+  // 可以选的研究项目：所有还没研究出来的机型（电压没解锁也能先研究，只是暂时造不了）
+  researchOptions(): MachineModel[] {
+    const out: MachineModel[] = [];
+    for (let tier = RESEARCH_GATE_FROM_TIER; tier <= MAX_TIER; tier += 1) {
+      for (const model of this.researchableModelsAt(tier)) {
+        if (!this.researchedModels.includes(model.id)) out.push(model);
+      }
     }
-    return null;
+    return out;
+  }
+
+  // 手选研究项目：算力只往选中的那一台机器上投
+  setResearchTarget(modelId: string): boolean {
+    const model = MACHINE_MODELS.find((item) => item.id === modelId);
+    if (!model || !needsResearch(model.tier)) return false;
+    if (!this.universeSatisfied(model)) return false;
+    if (this.researchedModels.includes(model.id)) return false;
+    this.researchTarget = model.id;
+    return true;
+  }
+
+  // 当前选中的机型（没选、已经研究完、宇宙不支持时返回 null）。
+  // 电压没到也能先研究，所以这里不看 maxTier
+  researchTargetModel(): MachineModel | null {
+    const id = this.researchTarget;
+    if (id === null) return null;
+    const model = MACHINE_MODELS.find((item) => item.id === id);
+    if (!model || !needsResearch(model.tier)) return null;
+    if (this.researchedModels.includes(model.id)) return null;
+    if (!this.universeSatisfied(model)) return null;
+    return model;
+  }
+
+  // 某台机器已经攒下的研究进度
+  researchProgressOf(modelId: string): Decimal {
+    return this.researchProgress[modelId] ?? ZERO;
   }
 
   // 计算机的算力总产量（额定值，不含供电降载）
@@ -715,14 +759,20 @@ export class GameCore {
     return total;
   }
 
-  // 解锁某一级机型需要的研究进度（含永久加成的减免）
-  researchRequiredFor(tier: number): Decimal {
-    return researchRequired(tier).times(this.researchCostFactor());
+  // 研究一台机器需要的进度：该等级的总额度按这一级的机型数平摊
+  // （所以「把一级的机器全研究完」的总量还是老样子），再乘永久加成的减免
+  researchRequiredFor(model: MachineModel): Decimal {
+    // 用这一级全部机型数（不看宇宙要求），免得拿到一个新宇宙就改变了研究价
+    const count = Math.max(
+      1,
+      MACHINE_MODELS.filter((item) => item.tier === model.tier && needsResearch(item.tier)).length,
+    );
+    return researchRequired(model.tier).div(count).times(this.researchCostFactor());
   }
 
   // 研究站想吃的算力总量（额定值）。没有研究目标时研究站空转，不打算力
   labComputeDemand(): Decimal {
-    if (this.researchTargetTier() === null) return ZERO;
+    if (this.researchTargetModel() === null) return ZERO;
     let total = ZERO;
     for (const model of modelsOf('research')) {
       if (model.computeRole !== 'consume' || model.tier > this.maxTier) continue;
@@ -1497,17 +1547,22 @@ export class GameCore {
     report.computeProduced = computeProduced;
     report.computeUsed = computeSettlement.used;
     report.computeWasted = computeSettlement.wasted;
-    const researchTarget = this.researchTargetTier();
+    const researchTarget = this.researchTargetModel();
     if (researchTarget !== null) {
       const gain = researchGain(computeSettlement.used, dtSeconds).times(this.researchSpeedBonus());
       if (gain.gt(0)) {
-        this.researchProgress = this.researchProgress.plus(gain);
         report.researchGained = gain;
         const required = this.researchRequiredFor(researchTarget);
-        if (this.researchProgress.gte(required)) {
-          this.researchProgress = this.researchProgress.minus(required);
-          this.researched.push(researchTarget);
-          report.researchUnlocked = researchTarget;
+        const done = this.researchProgressOf(researchTarget.id).plus(gain);
+        if (done.gte(required)) {
+          // 项目完成：这台机器解锁，选中的项目清空，等玩家自己挑下一个。
+          // 多出来的算力不结转 —— 研究是手动排的，攒够那一刻就该停。
+          this.researchedModels.push(researchTarget.id);
+          delete this.researchProgress[researchTarget.id];
+          this.researchTarget = null;
+          report.researchUnlocked = researchTarget.id;
+        } else {
+          this.researchProgress[researchTarget.id] = done;
         }
       }
     }

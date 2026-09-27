@@ -1,9 +1,9 @@
-import { dec, fromSaveString, toSaveString } from '../numeric/decimal';
+import { Decimal, ZERO, dec, fromSaveString, toSaveString } from '../numeric/decimal';
 import { MAX_TIER } from '../numeric/voltage';
 import { DEFAULT_GRID } from '../numeric/grid';
-import { RESEARCH_GATE_FROM_TIER } from '../numeric/research';
+import { RESEARCH_GATE_FROM_TIER, needsResearch } from '../numeric/research';
 import { GameCore, RIFT_FROM_TIER, type MachineKind } from './core';
-import { baseModelOf } from './models';
+import { MACHINE_MODELS, baseModelOf } from './models';
 import { SAVE_KEY, SAVE_VERSION } from './constants';
 import { errorText, logEvent } from './log';
 
@@ -27,8 +27,16 @@ export interface SaveData {
   // v5：已解锁的电网（解锁要花对应等级的 GT 币）
   grids?: string[];
   // v6：研究进度与已研究出来的电压等级（ZPM 及以后要先研究）
+  // v15 及以前是自动研究：这里记的是当时那个自动目标的进度，读到旧存档时迁移用
   researchProgress?: string;
   researched?: number[];
+  // v16：研究曾经是「手选等级」：选中的等级 + 各等级各自的进度
+  researchTarget?: number | null;
+  researchProgressByTier?: Record<string, string>;
+  // v17：研究改成「手选机型」：已研究机型 id + 选中的机型 + 各机型各自的进度
+  researchedModels?: string[];
+  researchTargetModel?: string | null;
+  researchProgressByModel?: Record<string, string>;
   // v7：转生：时空线缆、永久加成节点、转生次数、本周目累计 EU
   cables?: string;
   rebirthCount?: number;
@@ -88,8 +96,11 @@ export function serialize(core: GameCore): SaveData {
     pollutionEnabled: core.pollutionEnabled,
     grid: core.grid,
     grids: [...core.grids],
-    researchProgress: toSaveString(core.researchProgress),
-    researched: [...core.researched],
+    researchTargetModel: core.researchTarget,
+    researchProgressByModel: Object.fromEntries(
+      Object.entries(core.researchProgress).map(([id, amount]) => [id, toSaveString(amount)]),
+    ),
+    researchedModels: [...core.researchedModels],
     cables: toSaveString(core.cables),
     rebirthCount: core.rebirthCount,
     rebirthNodes: [...core.rebirthNodes],
@@ -143,11 +154,47 @@ export function deserialize(data: SaveData): GameCore {
   core.siphoned = fromSaveString(data.siphoned ?? '0');
   core.maxTier = data.maxTier;
   core.unlockedVeins = [...data.unlockedVeins];
-  // v5 及以前没有研究概念：默认只有 LuV 及以前不用研究的那几级
-  core.researchProgress = fromSaveString(data.researchProgress ?? '0');
-  core.researched = data.researched
-    ? [...data.researched]
-    : Array.from({ length: RESEARCH_GATE_FROM_TIER - 1 }, (_, index) => index + 1);
+  // v17 起研究细到机型：一台机器一张研究单。旧存档记的是「哪几个等级研究过」，
+  // 迁移时把那些等级的全部机型都标成已研究，解锁范围不变
+  core.researchedModels = data.researchedModels ? [...data.researchedModels] : [];
+  core.researchProgress = {};
+  core.researchTarget = data.researchTargetModel ?? null;
+  for (const [id, amount] of Object.entries(data.researchProgressByModel ?? {})) {
+    core.researchProgress[id] = fromSaveString(amount);
+  }
+
+  if (!data.researchedModels) {
+    // v16 及以前：按等级记录
+    const legacyTiers = data.researched ?? [];
+    for (const model of MACHINE_MODELS) {
+      if (needsResearch(model.tier) && legacyTiers.includes(model.tier)) {
+        core.researchedModels.push(model.id);
+      }
+    }
+    // 旧进度是按等级记的：挂到那一级第一台还没研究的机器上，进度不白攒
+    const attach = (tier: number, amount: Decimal): string | undefined => {
+      const model = MACHINE_MODELS.find(
+        (item) => item.tier === tier && !core.researchedModels.includes(item.id),
+      );
+      if (model && amount.gt(0)) core.researchProgress[model.id] = amount;
+      return model?.id;
+    };
+    for (const [tier, amount] of Object.entries(data.researchProgressByTier ?? {})) {
+      core.researchTarget = attach(Number(tier), fromSaveString(amount)) ?? core.researchTarget;
+    }
+    if (data.researchTarget !== undefined && data.researchTarget !== null) {
+      core.researchTarget = attach(data.researchTarget, ZERO) ?? core.researchTarget;
+    }
+    if (!data.researchProgressByTier && !data.researchTarget) {
+      // 更早的存档只有一个进度数字：那是当时自动挑的目标攒的
+      const legacy = fromSaveString(data.researchProgress ?? '0');
+      const auto = core.researchOptions()[0];
+      if (legacy.gt(0) && auto) {
+        core.researchProgress[auto.id] = legacy;
+        core.researchTarget = auto.id;
+      }
+    }
+  }
   core.cables = fromSaveString(data.cables ?? '0');
   core.rebirthCount = data.rebirthCount ?? 0;
   core.rebirthNodes = [...(data.rebirthNodes ?? [])];

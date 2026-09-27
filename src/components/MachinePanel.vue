@@ -360,6 +360,65 @@ function canBuy(model: MachineModelRow): boolean {
               </span>
             </div>
           </div>
+
+          <!-- 研究：当前研究置顶，下面列出所有还没研究出来的机型（可点选） -->
+          <template v-if="column.kind === 'research'">
+            <h3 class="research-sub">当前研究</h3>
+            <div class="research">
+              <div class="research-head">
+                <span>
+                  {{ store.snap.research.hasTarget ? store.snap.research.targetName : '空着' }}
+                  <span v-if="store.snap.research.hasTarget" class="badge">
+                    {{ store.snap.research.targetTierName }}
+                  </span>
+                </span>
+                <b>{{ store.snap.research.progress }} / {{ store.snap.research.required }}</b>
+              </div>
+              <div class="research-bar">
+                <span :style="{ width: store.snap.research.percent + '%' }" />
+              </div>
+              <p class="muted small" style="margin: 6px 0 0">
+                {{ store.snap.research.note }}
+                <template v-if="store.snap.research.eta !== '—'">
+                  按当前算力还要 {{ store.snap.research.eta }}。
+                </template>
+              </p>
+            </div>
+
+            <template v-if="store.snap.research.pending.length">
+              <button
+                type="button"
+                class="research-toggle"
+                :aria-expanded="!store.researchListCollapsed"
+                @click="store.toggleResearchList()"
+              >
+                <span>{{ store.researchListCollapsed ? '▸' : '▾' }} 需要研究的机器</span>
+                <span class="muted small">{{ store.snap.research.pending.length }} 台</span>
+              </button>
+              <div v-if="!store.researchListCollapsed" class="research-list">
+                <button
+                  v-for="row in store.snap.research.pending"
+                  :key="row.id"
+                  type="button"
+                  class="research-item"
+                  @click="store.setResearchTarget(row.id)"
+                >
+                  <span class="research-item-head">
+                    <b>
+                      {{ row.name }}
+                      <span class="badge">{{ row.tierName }}</span>
+                      <span v-if="!row.voltageReady" class="badge warn">电压未到</span>
+                    </b>
+                    <span class="muted small">需要 {{ row.required }} 算力</span>
+                  </span>
+                  <span v-if="row.percent > 0" class="research-bar">
+                    <span :style="{ width: row.percent + '%' }" />
+                  </span>
+                  <span v-if="row.percent > 0" class="muted small">已攒 {{ row.progress }}</span>
+                </button>
+              </div>
+            </template>
+          </template>
         </div>
       </div>
     </div>

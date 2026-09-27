@@ -21,8 +21,10 @@ export interface AchievementState {
   overclockUsed: boolean;
   repairs: number;
   gridCount: number;
-  // 已研究的等级数（ZPM 及以后）
+  // 已研究出来的机型数（ZPM 及以后每个机型单独研究）
   researchCount: number;
+  // 有没有研究出 ZPM 那一级的机型
+  researchedZpm: boolean;
   rebirthCount: number;
   rebirthNodeCount: number;
   // 存电与污染
@@ -106,14 +108,14 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'first-research',
     name: '开始研究',
-    desc: '研究出第一个等级的机型',
+    desc: '研究出第一台机型',
     check: (state) => state.researchCount >= 1,
   },
   {
     id: 'research-wall',
     name: '越过硬墙',
     desc: '研究出 ZPM 级机型',
-    check: (state) => state.researchCount >= 1 && state.peakTier >= 8,
+    check: (state) => state.researchedZpm && state.peakTier >= 8,
   },
   {
     id: 'first-rebirth',

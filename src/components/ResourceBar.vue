@@ -166,40 +166,5 @@ function togglePower(key: PowerKey) {
       <p class="muted small" style="margin: 6px 0 0">{{ snap.arcane.note }}</p>
     </template>
 
-    <!-- ── 第四行：研究（LuV 起才有） ─────────────────────────── -->
-    <template v-if="snap.research.unlocked">
-    <h2 class="mt">研究</h2>
-    <dl class="stats">
-      <div class="stat">
-        <dt>算力产出</dt>
-        <dd>{{ snap.research.computeProduced }}</dd>
-      </div>
-      <div class="stat">
-        <dt>算力消耗</dt>
-        <dd>{{ snap.research.computeUsed }}</dd>
-      </div>
-      <div class="stat">
-        <dt>算力浪费</dt>
-        <dd>{{ snap.research.computeWasted }}</dd>
-      </div>
-      <div class="stat">
-        <dt>研究目标</dt>
-        <dd>{{ snap.research.hasTarget ? snap.research.targetName + ' 级机型' : '暂无' }}</dd>
-      </div>
-    </dl>
-    <div class="research">
-      <div class="research-head">
-        <span>研究进度</span>
-        <b>{{ snap.research.progress }} / {{ snap.research.required }}</b>
-      </div>
-      <div class="research-bar">
-        <span :style="{ width: snap.research.percent + '%' }" />
-      </div>
-      <p class="muted small" style="margin: 6px 0 0">
-        {{ snap.research.note }}
-        <template v-if="snap.research.eta !== '—'">按当前算力还要 {{ snap.research.eta }}。</template>
-      </p>
-    </div>
-    </template>
   </section>
 </template>
