@@ -449,6 +449,8 @@ export const useGameStore = defineStore('game', {
     running: false,
     // 成就列表收起来没有（纯界面状态，不进存档）
     achievementsCollapsed: false,
+    // 待研究机器列表收起来没有（纯界面状态，不进存档）
+    researchListCollapsed: false,
     // 模拟连续出错时暂停（纯运行时状态，不进存档；刷新页面即可恢复）
     simulationPaused: false,
     crashStreak: 0,
@@ -465,6 +467,9 @@ export const useGameStore = defineStore('game', {
   actions: {
     toggleAchievements(): void {
       this.achievementsCollapsed = !this.achievementsCollapsed;
+    },
+    toggleResearchList(): void {
+      this.researchListCollapsed = !this.researchListCollapsed;
     },
     boot() {
       const loaded = loadFromStorage();

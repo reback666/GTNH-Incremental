@@ -386,8 +386,16 @@ function canBuy(model: MachineModelRow): boolean {
             </div>
 
             <template v-if="store.snap.research.pending.length">
-              <h3 class="research-sub">需要研究的机器</h3>
-              <div class="research-list">
+              <button
+                type="button"
+                class="research-toggle"
+                :aria-expanded="!store.researchListCollapsed"
+                @click="store.toggleResearchList()"
+              >
+                <span>{{ store.researchListCollapsed ? '▸' : '▾' }} 需要研究的机器</span>
+                <span class="muted small">{{ store.snap.research.pending.length }} 台</span>
+              </button>
+              <div v-if="!store.researchListCollapsed" class="research-list">
                 <button
                   v-for="row in store.snap.research.pending"
                   :key="row.id"
