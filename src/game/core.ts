@@ -97,6 +97,9 @@ function outputOf(model: MachineModel): Decimal {
   return generatorOutputEU(model.tier, model.outputFactor);
 }
 
+// 会产生污染的机器类别（净化器不产生，它是往下压的那一方）
+const POLLUTING_CATEGORIES: MachineCategory[] = ['miner', 'generator', 'machine', 'research'];
+
 export type MachineKind = MachineCategory;
 
 // 时空裂缝：本周目第一次到 LuV 时弹一次，选了转生就固定给这么多条线缆
@@ -175,6 +178,8 @@ export class GameCore {
   // 污染值 0-100。设置里关掉污染机制后它不涨、也不产生任何影响
   pollution = ZERO;
   pollutionEnabled = true;
+  // 上一拍每台机器实际跑起来的比例（机型 id → 0..1），只用来折算污染产生量
+  private pollutionLoad = new Map<string, Decimal>();
   // 累计被黑市电网薅走的 GT 币（按币值折算）
   siphoned = ZERO;
   // 电网模式（计划书第六章）
@@ -899,13 +904,53 @@ export class GameCore {
 
   // 每秒产生的污染（百分点/秒）
   pollutionPerSecond(): Decimal {
-    const machinery: { tier: number; count: number }[] = [
-      ...this.runningTiers('miner'),
-      ...this.runningTiers('generator'),
-      ...this.runningTiers('machine'),
-      ...this.runningTiers('research'),
-    ];
+    const machinery: { tier: number; count: number; load: Decimal }[] = [];
+    for (const category of POLLUTING_CATEGORIES) {
+      for (const model of modelsOf(category)) {
+        if (model.tier > this.maxTier) continue;
+        const count = this.workingCountOf(model.id);
+        if (count <= 0) continue;
+        machinery.push({
+          tier: model.tier,
+          count,
+          load: this.pollutionLoad.get(model.id) ?? ONE,
+        });
+      }
+    }
     return pollutionPerSecond(machinery);
+  }
+
+  // 这一拍每台机器实际跑起来的比例：停电、被停机调度、没燃料、没灵气的记 0，
+  // 降载的按比例记。界面上的「产生」读数与模拟共用这份数据，看到的和算进去的一致。
+  private samplePollutionLoad(input: {
+    shed: Set<MachineKind>;
+    outage: boolean;
+    ratio: Decimal;
+    visRatio: Decimal;
+    fuelLoad: Map<string, Decimal>;
+  }): void {
+    this.pollutionLoad = new Map();
+    for (const model of MACHINE_MODELS) {
+      if (model.tier > this.maxTier) continue;
+      // 停电是整厂停摆：这一拍谁都不算干活
+      if (input.outage) {
+        this.pollutionLoad.set(model.id, ZERO);
+        continue;
+      }
+      if (model.category === 'generator') {
+        // 发电机不接负载，它烧到多少燃料就干了多少活（魔法发电机吃灵气）
+        this.pollutionLoad.set(
+          model.id,
+          model.visPowered ? input.visRatio : (input.fuelLoad.get(model.id) ?? ONE),
+        );
+        continue;
+      }
+      if (input.shed.has(model.category)) {
+        this.pollutionLoad.set(model.id, ZERO);
+        continue;
+      }
+      this.pollutionLoad.set(model.id, model.visPowered ? input.visRatio : input.ratio);
+    }
   }
 
   // 每秒净化掉的污染（百分点/秒）
@@ -1235,6 +1280,8 @@ export class GameCore {
 
     // 2) 发电机按库存矿石实际烧掉多少 —— 烧不到就发不满
     let generated = ZERO;
+    // 每台发电机这一拍烧到的燃料比例：没燃料就是 0，污染按它算
+    const fuelLoad = new Map<string, Decimal>();
     for (const model of active) {
       if (model.category !== 'generator') continue;
       // 魔法发电机不烧矿，它在灵气结算那里直接按灵气出力
@@ -1249,6 +1296,7 @@ export class GameCore {
         this.totalOreSpent = this.totalOreSpent.plus(burned);
       }
       const ratio = want.gt(0) ? burned.div(want) : ONE;
+      fuelLoad.set(model.id, ratio);
       generated = generated.plus(this.generatorOutputRated(model).times(dtSeconds).times(ratio));
     }
 
@@ -1343,6 +1391,7 @@ export class GameCore {
     report.euDischarged = settlement.discharged;
 
     // 污染：边污染边被净化器压，产出按污染档位打折
+    this.samplePollutionLoad({ shed, outage: report.outage, ratio: ratioDec, visRatio, fuelLoad });
     const pollutionDelta = this.pollutionDeltaPerSecond();
     if (this.pollutionEnabled) {
       this.pollution = clampPollution(this.pollution.plus(pollutionDelta.times(dtSeconds)));

@@ -82,6 +82,31 @@ describe('污染在模拟里的效果', () => {
     expect(core.pollution.toNumber()).toBeCloseTo(80 * 3 * 0.0008, 6);
   });
 
+  it('机器不工作时污染不涨：没电、没燃料、停电都不算干活', () => {
+    // 只有耗电设备、没有发电机：供电率 0，机器全停
+    const dark = factory();
+    delete dark.counts['g-mv-comb'];
+    dark.tick(1);
+    expect(dark.pollutionPerSecond().toNumber()).toBe(0);
+    expect(dark.pollution.toString()).toBe('0');
+
+    // 发电机还在、但库存没矿：烧不到燃料就不算干活
+    const dry = factory();
+    dry.counts = { 'g-mv-comb': 40 };
+    dry.ores = dry.ores.map(() => dec('0'));
+    dry.tick(1);
+    expect(dry.pollutionPerSecond().toNumber()).toBe(0);
+    expect(dry.pollution.toString()).toBe('0');
+
+    // 电网断电：整厂停摆的那一拍不产生污染
+    const offline = factory();
+    offline.outageSeconds = 60;
+    offline.tick(1);
+    expect(offline.lastReport.outage).toBe(true);
+    expect(offline.pollutionPerSecond().toNumber()).toBe(0);
+    expect(offline.pollution.toString()).toBe('0');
+  });
+
   it('重度污染把产出打到 6 折', () => {
     const clean = factory('0');
     clean.tick(1);
