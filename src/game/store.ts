@@ -1763,21 +1763,26 @@ function powerStats(core: GameCore): PowerStats {
     rated = push(generated, model, n, generatorOutputEU(model.tier, model.outputFactor).times(n), rated);
   }
   for (const model of core.unlockedModels('miner')) {
+    // 魔法机器吃灵气、不接电网，和模拟里的耗电结算保持一致
+    if (model.visPowered) continue;
     const n = core.countOf(model.id);
     if (n === 0) continue;
     demand = push(consumed, model, n, core.minerEnergyDrain(model), demand);
   }
   for (const model of core.unlockedModels('machine')) {
+    if (model.visPowered) continue;
     const n = core.countOf(model.id);
     if (n === 0) continue;
     demand = push(consumed, model, n, core.machineEnergyDrain(model), demand);
   }
   for (const model of core.unlockedModels('purifier')) {
+    if (model.visPowered) continue;
     const n = core.countOf(model.id);
     if (n === 0) continue;
     demand = push(consumed, model, n, core.purifierEnergyDrain(model), demand);
   }
   for (const model of core.unlockedModels('research')) {
+    if (model.visPowered) continue;
     if (model.computeRole !== 'produce') continue;
     const n = core.countOf(model.id);
     if (n === 0) continue;
@@ -1822,8 +1827,8 @@ function powerStats(core: GameCore): PowerStats {
         : {}),
     },
     consumed: {
-      // 奥术宇宙里机器吃的是灵气，耗电这一栏不计；明细仍是各机型的额定值，供参考
-      value: core.hasUniverse('arcane') ? '0 EU/t' : `${formatNumber(demand)} EU/t`,
+      // 只算接电网的机型：奥术宇宙的魔法机器吃灵气，不计在这一栏
+      value: `${formatNumber(demand)} EU/t`,
       rows: consumed,
       emptyText: '还没建耗电机器',
     },
