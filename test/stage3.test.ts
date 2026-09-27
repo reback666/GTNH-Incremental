@@ -141,7 +141,7 @@ describe('第三阶段：研究硬墙', () => {
     expect(migrated.researchProgressOf(8).toString()).toBe('500');
   });
 
-  it('手选研究项目：只能选已解锁且没研究过的等级，各项目进度各记各的', () => {
+  it('手选研究项目：没研究过的等级都能选（包括电压还没到的），各项目进度各记各的', () => {
     const core = new GameCore();
     core.maxTier = 9;
     core.counts['x-7'] = 1;
@@ -149,19 +149,20 @@ describe('第三阶段：研究硬墙', () => {
     core.storedEU = dec('100000000');
     core.random = () => 0.999;
 
-    expect(core.researchOptions()).toEqual([8, 9]);
+    // 列的是所有还没研究出来的等级，电压没解锁的也列出来（可以先研究，暂时造不了）
+    expect(core.researchOptions()).toEqual([8, 9, 10, 11, 12, 13, 14]);
     expect(core.setResearchTarget(7)).toBe(false); // 不用研究的等级
-    expect(core.setResearchTarget(10)).toBe(false); // 还没解锁
     expect(core.setResearchTarget(8)).toBe(true);
+    expect(core.setResearchTarget(14)).toBe(true); // 电压没到也能先研究
 
     core.tick(10);
-    expect(core.researchProgressOf(8).toString()).toBe('10');
+    expect(core.researchProgressOf(14).toString()).toBe('10');
 
-    // 换到 UV：ZPM 那份进度留在自己名下，不会被搬过去
+    // 换到 ZPM：UHV 那份进度留在自己名下，不会被搬过去
     expect(core.setResearchTarget(9)).toBe(true);
     core.tick(10);
-    expect(core.researchProgressOf(8).toString()).toBe('10');
     expect(core.researchProgressOf(9).toString()).toBe('10');
+    expect(core.researchProgressOf(14).toString()).toBe('10');
 
     // 已经研究出来的等级不能再选
     core.researched.push(9);

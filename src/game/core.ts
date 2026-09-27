@@ -698,26 +698,29 @@ export class GameCore {
     return model.requiresUniverse === undefined || this.hasUniverse(model.requiresUniverse);
   }
 
-  // 可以选的研究项目：解锁了电压、还没研究出来的等级
+  // 可以选的研究项目：还没研究出来的等级（电压没解锁也能先研究，只是暂时造不了）
   researchOptions(): number[] {
     const out: number[] = [];
-    for (let tier = RESEARCH_GATE_FROM_TIER; tier <= this.maxTier; tier += 1) {
+    for (let tier = RESEARCH_GATE_FROM_TIER; tier <= MAX_TIER; tier += 1) {
       if (!this.researched.includes(tier)) out.push(tier);
     }
     return out;
   }
 
-  // 手选研究项目：算力只往选中的那一项上投。只想研究已解锁且还没研究出来的等级
+  // 手选研究项目：算力只往选中的那一项上投。还没研究出来的等级都能选
   setResearchTarget(tier: number): boolean {
-    if (!isValidTier(tier) || tier > this.maxTier || this.researched.includes(tier)) return false;
+    if (!isValidTier(tier) || tier < RESEARCH_GATE_FROM_TIER) return false;
+    if (this.researched.includes(tier)) return false;
     this.researchTarget = tier;
     return true;
   }
 
-  // 当前选中的项目（没选、已经研究完、电压被重置时返回 null）
+  // 当前选中的项目（没选、等级越界、已经研究完时返回 null）。
+  // 电压没到也能先研究，所以这里不看 maxTier
   researchTargetTier(): number | null {
     const target = this.researchTarget;
-    if (target === null || target > this.maxTier) return null;
+    if (target === null) return null;
+    if (target < RESEARCH_GATE_FROM_TIER || target > MAX_TIER) return null;
     if (this.researched.includes(target)) return null;
     return target;
   }

@@ -242,15 +242,17 @@ export interface ResearchStats {
   percent: number;
   eta: string;
   note: string;
-  // 可以选的研究项目（已解锁电压、还没研究出来的等级）
-  options: ResearchOptionRow[];
+  // 还没研究出来的机型（当前正在研究的那一项单独显示在上方，不在这里）
+  pending: ResearchOptionRow[];
 }
 
-// 研究项目列表里的一行
+// 待研究机型列表里的一行
 export interface ResearchOptionRow {
   tier: number;
   name: string;
-  selected: boolean;
+  // 电压够不够：不够也能先研究，只是这一级还不能建造
+  voltageReady: boolean;
+  // 这一项已经攒下的进度（没动过就是 0）
   progress: string;
   required: string;
   percent: number;
@@ -1264,13 +1266,13 @@ function researchStats(core: GameCore): ResearchStats {
       ? Math.min(100, progress.div(required).times(100).toNumber())
       : 0;
 
+  const pendingTiers = core.researchOptions().filter((tier) => tier !== target);
+
   let note: string;
-  if (core.maxTier < RESEARCH_GATE_FROM_TIER) {
-    note = `还没到 ${VOLTAGE_TIERS[RESEARCH_GATE_FROM_TIER - 1]}：计算机可以先建起来，但研究站现在空转，算力会浪费掉。`;
-  } else if (core.researchOptions().length === 0) {
-    note = '当前已解锁的机型都研究完了。';
+  if (target === null && pendingTiers.length === 0) {
+    note = '所有机型都研究完了。';
   } else if (target === null) {
-    note = '还没选研究项目：挑一个，算力才会往它上面投。';
+    note = '还没选研究项目：从下面的列表里挑一个，算力才会往它上面投。';
   } else {
     note = `正在研究 ${targetName} 级机型：工程进度 ${formatNumber(progress)} / ${formatNumber(required)}。`;
   }
@@ -1290,13 +1292,13 @@ function researchStats(core: GameCore): ResearchStats {
     percent,
     eta: target !== null && used.gt(0) ? formatDuration(remaining.div(used).toNumber()) : '—',
     note,
-    options: core.researchOptions().map((tier) => {
+    pending: pendingTiers.map((tier) => {
       const need = core.researchRequiredFor(tier);
       const have = core.researchProgressOf(tier);
       return {
         tier,
         name: VOLTAGE_TIERS[tier - 1] ?? `T${tier}`,
-        selected: tier === target,
+        voltageReady: tier <= core.maxTier,
         progress: formatNumber(have),
         required: formatNumber(need),
         percent: need.gt(0) ? Math.min(100, have.div(need).times(100).toNumber()) : 0,

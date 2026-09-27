@@ -1181,6 +1181,13 @@ h2 .small {
 }
 
 /* 研究项目列表：点一行就把算力投到那一级上 */
+.research-sub {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
 .research-list {
   display: grid;
   gap: 6px;
@@ -1194,11 +1201,6 @@ h2 .small {
   padding: 6px 8px;
   text-align: left;
   border-color: var(--line);
-}
-
-.research-item.active {
-  border-color: var(--accent);
-  background: rgba(88, 196, 163, 0.12);
 }
 
 .research-item-head {

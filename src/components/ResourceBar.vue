@@ -188,29 +188,13 @@ function togglePower(key: PowerKey) {
       </div>
     </dl>
 
-    <!-- 手选研究项目：算力只往选中的那一项上投 -->
-    <div v-if="snap.research.options.length" class="research-list">
-      <button
-        v-for="option in snap.research.options"
-        :key="option.tier"
-        type="button"
-        class="research-item"
-        :class="{ active: option.selected }"
-        @click="store.setResearchTarget(option.tier)"
-      >
-        <span class="research-item-head">
-          <b>{{ option.name }} 级机型</b>
-          <span class="muted small">{{ option.progress }} / {{ option.required }}</span>
-        </span>
-        <span class="research-bar">
-          <span :style="{ width: option.percent + '%' }" />
-        </span>
-      </button>
-    </div>
-
+    <!-- 当前正在研究的那一项：进度与具体数值都在这里 -->
     <div class="research">
       <div class="research-head">
-        <span>研究进度</span>
+        <span>
+          当前研究 ·
+          {{ snap.research.hasTarget ? snap.research.targetName + ' 级机型' : '空着' }}
+        </span>
         <b>{{ snap.research.progress }} / {{ snap.research.required }}</b>
       </div>
       <div class="research-bar">
@@ -221,6 +205,32 @@ function togglePower(key: PowerKey) {
         <template v-if="snap.research.eta !== '—'">按当前算力还要 {{ snap.research.eta }}。</template>
       </p>
     </div>
+
+    <!-- 待研究的机型列表：点一行就把它提到上面去研究 -->
+    <template v-if="snap.research.pending.length">
+      <h3 class="research-sub">需要研究的机型</h3>
+      <div class="research-list">
+        <button
+          v-for="row in snap.research.pending"
+          :key="row.tier"
+          type="button"
+          class="research-item"
+          @click="store.setResearchTarget(row.tier)"
+        >
+          <span class="research-item-head">
+            <b>
+              {{ row.name }} 级机型
+              <span v-if="!row.voltageReady" class="badge warn">电压未到</span>
+            </b>
+            <span class="muted small">需要 {{ row.required }} 算力</span>
+          </span>
+          <span v-if="row.percent > 0" class="research-bar">
+            <span :style="{ width: row.percent + '%' }" />
+          </span>
+          <span v-if="row.percent > 0" class="muted small">已攒 {{ row.progress }}</span>
+        </button>
+      </div>
+    </template>
     </template>
   </section>
 </template>
