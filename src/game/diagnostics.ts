@@ -15,6 +15,10 @@ export function buildStamp(): string {
   return typeof __BUILD_STAMP__ === 'string' ? __BUILD_STAMP__ : '开发环境';
 }
 
+export function appVersion(): string {
+  return typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '开发环境';
+}
+
 // 环境信息：同一个问题在不同浏览器 / 打开方式下表现可能完全不同，
 // 这几行是作者判断「是不是只有他一个人这样」的起点。
 export function environmentInfo(): string[] {
@@ -22,7 +26,7 @@ export function environmentInfo(): string[] {
   const loc = typeof location === 'undefined' ? undefined : location;
   const view = typeof window === 'undefined' ? undefined : window;
   const lines = [
-    `游戏版本：${buildStamp()}`,
+    `游戏版本：v${appVersion()}（构建 ${buildStamp()}）`,
     `导出时间：${stamp(new Date())}`,
     `浏览器：${nav?.userAgent ?? '未知（非浏览器环境）'}`,
     `打开方式：${

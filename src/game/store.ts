@@ -57,7 +57,7 @@ import {
 import { getCore, resetCore, setCore } from './engine';
 import * as C from './constants';
 import { clearStorage, loadFromStorage, saveToStorage } from './save';
-import { buildStamp, stateSnapshot } from './diagnostics';
+import { appVersion, buildStamp, stateSnapshot } from './diagnostics';
 import { errorText, logEntries, logEvent, onLogChange, setLogGameSeconds } from './log';
 
 export interface ResourceRow {
@@ -448,7 +448,7 @@ export const useGameStore = defineStore('game', {
     boot() {
       const loaded = loadFromStorage();
       if (loaded) setCore(loaded);
-      logEvent('info', 'app.boot', `启动游戏（构建 ${buildStamp()}）`);
+      logEvent('info', 'app.boot', `启动游戏（版本 v${appVersion()}，构建 ${buildStamp()}）`);
       this.phase.maxTier = getCore().maxTier;
       // 日志变了就刷新错误条数：设置页按钮上的小红点靠它
       onLogChange(() => this.syncLogErrors());

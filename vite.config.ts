@@ -1,7 +1,14 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 
-// 构build时间戳：单文件产物会发给别人玩，界面上标出来才能确认手上是哪个版本。
+// 版本号只有一个来源：package.json 的 version。发新版改这里，界面与诊断日志自动跟上。
+function appVersion(): string {
+  const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+  return String(pkg.version);
+}
+
+// 构建时间戳：版本号可能一天里改很多次，时间戳用来看手上这份是不是最新的。
 function buildStamp(): string {
   const now = new Date();
   const pad = (value: number) => String(value).padStart(2, '0');
@@ -13,6 +20,7 @@ export default defineConfig({
   plugins: [vue()],
   base: './',
   define: {
+    __APP_VERSION__: JSON.stringify(appVersion()),
     __BUILD_STAMP__: JSON.stringify(buildStamp()),
   },
   build: {

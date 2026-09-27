@@ -310,6 +310,12 @@ h1 .small {
   font-weight: 400;
 }
 
+h2 .small {
+  margin-left: 6px;
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
 .row {
   display: flex;
   align-items: center;
