@@ -32,7 +32,7 @@ GTNH（GregTech: New Horizons）主题的增量 / 放置游戏：从超低压 UL
 | 机型目录（类别 / 等级 / 成本系数 / 燃料效率） | `src/game/models.ts` |
 | 算力与研究解锁公式 | `src/numeric/research.ts` |
 | 暂定数值（成本、产出、解锁价…） | `src/game/constants.ts` |
-| 版本号（界面与诊断日志都读它） | `package.json` 的 `version` |
+| 版本号（界面与诊断日志都读它） | `package.json` 的 `version`；非 master 分支构建时自动加 `-dev` 后缀 |
 | 平衡曲线 | `docs/balance.md`（由 `scripts/balance.ts` 生成，**不要手改**） |
 | 日志与反馈（记录什么、怎么给作者） | `src/game/log.ts`、`src/game/diagnostics.ts` |
 | 贴图来源与合成方式 | `scripts/texture-sources.md` |
