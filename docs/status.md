@@ -259,6 +259,9 @@ GTNH（GregTech: New Horizons）主题的增量 / 放置游戏：从超低压 UL
 
 **打包**
 
+- 产物 `dist/GTNH增量.html` 入库，由当前分支各自提交（master 提交 master 版、dev 提交 dev 版）；
+  `dist/index.html` 与 `dist/assets` 不入库。构建时间戳每次都变，所以每次构建后这份文件都会
+  显示为改动，提交它即可。
 - `scripts/inline-dist.ts` 内联后会删掉 `dist/assets`，所以贴图必须内联成 data URL
   （`vite.config.ts` 已把 `assetsInlineLimit` 提到 4 MB）。超过阈值的图会变成打不开的外部文件。
 

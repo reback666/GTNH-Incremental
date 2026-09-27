@@ -1,5 +1,9 @@
 node_modules/
-dist/
+# dist 里只有单文件产物入库：master 提交 master 版、dev 提交 dev 版。
+# 同一路径在不同分支各存各的，切分支就等于换一份游戏文件。
+# index.html 副本与 assets 都是构建中间物，不入库。
+dist/*
+!dist/GTNH增量.html
 coverage/
 __pycache__/
 *.pyc
