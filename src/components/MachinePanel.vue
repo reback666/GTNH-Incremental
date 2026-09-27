@@ -156,7 +156,7 @@ const TAB_ICON: Record<MachineKind, string> = {
   generator: 'g-lv-steam',
   machine: 'c-2',
   storage: 'b-3',
-  purifier: 'p-3',
+  purifier: 'p-2',
   research: 'x-7',
   arcane: 'n-1',
   abyss: 's-1',

@@ -146,9 +146,9 @@ const STORAGES: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => 
 }).filter((model) => model.tier >= STORAGE_FROM_TIER);
 
 // ── 净化器 ──────────────────────────────────────────────────
-// 计划书第六章：净化器能把污染压下来。和存电装置同期（MV）开放 ——
-// 前两级的机器规模还涨不出污染。
-export const PURIFIER_FROM_TIER = 3;
+// 计划书第六章：净化器能把污染压下来。从 LV（tier 2）开放：
+// 开局就有点污染的苗头，早一级给玩家一个压污染的手段。
+export const PURIFIER_FROM_TIER = 2;
 
 const PURIFIERS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
   const tier = index + 1;

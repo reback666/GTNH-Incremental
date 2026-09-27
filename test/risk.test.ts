@@ -219,9 +219,18 @@ describe('电网模式在模拟里的效果', () => {
 });
 
 describe('设施机型', () => {
-  it('净化器从 MV 起，越高级净化越快', () => {
-    expect(modelById('p-3').name).toBe('MV 净化器');
+  it('净化器从 LV 起，越高级净化越快', () => {
+    expect(modelById('p-2').name).toBe('LV 净化器');
+    expect(() => modelById('p-1')).toThrow();
     expect(modelById('p-14').tier).toBe(14);
+  });
+
+  it('LV 就能买到净化器，ULV 还不行', () => {
+    const core = new GameCore();
+    core.maxTier = 2;
+    expect(core.unlockedModels('purifier').map((model) => model.id)).toEqual(['p-2']);
+    core.maxTier = 1;
+    expect(core.unlockedModels('purifier')).toEqual([]);
   });
 
   it('净化器不参与超频（没有配方）', () => {

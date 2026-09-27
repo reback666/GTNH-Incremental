@@ -54,6 +54,8 @@ VOLTAGES = [
 
 # 存电装置从 MV（tier 3）开始，和 src/game/models.ts 的 STORAGE_FROM_TIER 对齐
 STORAGE_FROM_TIER = 3
+# 净化器从 LV（tier 2）开始，和 src/game/models.ts 的 PURIFIER_FROM_TIER 对齐
+PURIFIER_FROM_TIER = 2
 # 计算机与研究站从 LuV（tier 7）开始，和 numeric/research.ts 的 RESEARCH_FROM_TIER 对齐
 RESEARCH_FROM_TIER = 7
 
@@ -170,7 +172,7 @@ def main() -> None:
         )
         lab = Image.open(io.BytesIO(archive.read(LAB_FACE))).convert("RGBA")
         research_faces = {"x": computer, "r": lab}
-        for tier in range(STORAGE_FROM_TIER, len(VOLTAGES) + 1):
+        for tier in range(PURIFIER_FROM_TIER, len(VOLTAGES) + 1):
             voltage = VOLTAGES[tier - 1]
             casing = Image.open(
                 io.BytesIO(
@@ -178,19 +180,27 @@ def main() -> None:
                 )
             ).convert("RGBA")
             casing = tint_casing(casing, tier)
-            for prefix, face in faces.items():
+            made: list[str] = []
+            if tier >= STORAGE_FROM_TIER:
                 icon = casing.copy()
-                icon.alpha_composite(face)
+                icon.alpha_composite(faces["b"])
                 icon = icon.resize((32, 32), Image.NEAREST)
-                icon.save(OUT_DIR / f"{prefix}-{tier}.png")
-            print(f"{voltage}: b-{tier} 存电装置 / p-{tier} 净化器 ← 机壳 MACHINE_{voltage}_SIDE")
+                icon.save(OUT_DIR / f"b-{tier}.png")
+                made.append(f"b-{tier} 存电装置")
+            if tier >= PURIFIER_FROM_TIER:
+                icon = casing.copy()
+                icon.alpha_composite(faces["p"])
+                icon = icon.resize((32, 32), Image.NEAREST)
+                icon.save(OUT_DIR / f"p-{tier}.png")
+                made.append(f"p-{tier} 净化器")
             if tier >= RESEARCH_FROM_TIER:
                 for prefix, face in research_faces.items():
                     icon = casing.copy()
                     icon.alpha_composite(face)
                     icon = icon.resize((32, 32), Image.NEAREST)
                     icon.save(OUT_DIR / f"{prefix}-{tier}.png")
-                print(f"{voltage}: x-{tier} 计算机 / r-{tier} 研究站 ← GT 面片 + 机壳")
+                made.append(f"x-{tier} 计算机 / r-{tier} 研究站")
+            print(f"{voltage}: {' / '.join(made)} ← 机壳 MACHINE_{voltage}_SIDE")
 
         # 灵气节点：每一级都有（奥术宇宙专属），面片是自己画的灵气结晶
         for tier in range(1, len(VOLTAGES) + 1):
