@@ -1094,6 +1094,7 @@ h2 .small {
 .rebirth-node {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 1px;
   width: 108px;
   height: 40px;
@@ -1105,12 +1106,6 @@ h2 .small {
   font-family: inherit;
   text-align: center;
   cursor: default;
-}
-
-.rebirth-node b {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.1;
 }
 
 .rebirth-node span {
