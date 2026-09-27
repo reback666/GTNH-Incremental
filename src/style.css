@@ -1694,6 +1694,33 @@ h2 .small {
   margin-left: auto;
 }
 
+/* 手动停机：状态按钮靠右顶住卖机器那组 */
+.run-state {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.run-btn {
+  min-height: 30px;
+  padding: 0 8px;
+  font-size: 12px;
+  border-radius: 6px;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.run-btn.stopped {
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+/* 停机的机型在名字与图标上压低一点，一眼能看出这排没在跑 */
+.tier-bar.stopped .model-label,
+.tier-bar.stopped .tier-icons {
+  opacity: 0.5;
+}
+
 /* 买 / 卖按钮组：两个数量按钮 + 一个「买」「卖」字标签 */
 .trade {
   display: inline-flex;

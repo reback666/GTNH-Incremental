@@ -147,6 +147,10 @@ export interface MachineModelRow {
   // 单台的消耗与产出，鼠标移到机器名上时显示
   single: { label: string; value: string }[];
   count: number;
+  // 玩家手动停机：停机的一台都不产不耗，也不产生污染
+  stopped: boolean;
+  // 能不能停机。存电装置是容量型装置，没有「运行」这回事
+  stoppable: boolean;
   // 超频档位（0-3）。发电机没有配方，档位恒为 0 且不可调
   overclock: number;
   overclockable: boolean;
@@ -529,6 +533,22 @@ export const useGameStore = defineStore('game', {
       this.refresh();
       this.save();
       return fixed;
+    },
+    // 手动停机 / 恢复运行。停机的一台都不产不耗，也不产生污染
+    toggleStopped(modelId: string): boolean {
+      const core = getCore();
+      const ok = core.toggleStopped(modelId);
+      if (ok) {
+        const name = findModel(modelId)?.name ?? modelId;
+        logEvent(
+          'info',
+          'machine.run',
+          core.isStopped(modelId) ? `${name}：全部停机` : `${name}：恢复运行`,
+        );
+        this.refresh();
+        this.save();
+      }
+      return ok;
     },
     // 换电网 / 开关污染机制：都属于设置，改完立刻生效并存档
     setGrid(mode: GridMode): void {
@@ -1181,10 +1201,13 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
           visPowered: model.visPowered === true,
           single: singleStats(model, level),
           count,
+          stopped: core.isStopped(model.id),
+          stoppable: model.category !== 'storage',
           overclock: level,
           overclockable,
           faulty: core.faultyCountOf(model.id),
-          faultHint: faultHint(level, core.workingCountOf(model.id)),
+          // 停机机型的故障率按「恢复运行后」算，提示才有意义
+          faultHint: faultHint(level, Math.max(0, count - core.faultyCountOf(model.id))),
           icons: Math.min(count, TIER_ICON_LIMIT),
           overflow: Math.max(0, count - TIER_ICON_LIMIT),
           price: formatNumber(core.coinPriceOf(model)),

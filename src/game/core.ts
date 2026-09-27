@@ -173,6 +173,8 @@ export class GameCore {
   overclock: Record<string, number> = {};
   // 故障台数：机型 id → 坏了几台。坏了的机器不产不耗，要手动维护
   faults: Record<string, number> = {};
+  // 手动停机的机型（只记停掉的那些，数量为 0 时不留记录）
+  stopped: Record<string, true> = {};
   // 存电装置的存量（EU），所有电池共用一个池子
   storedEU = ZERO;
   // 污染值 0-100。设置里关掉污染机制后它不涨、也不产生任何影响
@@ -283,9 +285,27 @@ export class GameCore {
     return Math.min(this.faults[modelId] ?? 0, this.countOf(modelId));
   }
 
-  // 能干活（没坏）的台数：停机的那几台既不产出也不耗电
+  // 能干活（没坏、也没被玩家手动停机）的台数：这些台数既不产出也不耗电。
+  // 产矿、产币、发电、净化、污染、故障判定全部走这一份，停机只改这一个口子
   workingCountOf(modelId: string): number {
+    if (this.isStopped(modelId)) return 0;
     return Math.max(0, this.countOf(modelId) - this.faultyCountOf(modelId));
+  }
+
+  isStopped(modelId: string): boolean {
+    return this.stopped[modelId] === true;
+  }
+
+  // 手动停机 / 恢复运行。这一台机型一台都没建过时，没什么可停的
+  setStopped(modelId: string, stopped: boolean): boolean {
+    if (this.countOf(modelId) <= 0) return false;
+    if (stopped) this.stopped[modelId] = true;
+    else delete this.stopped[modelId];
+    return true;
+  }
+
+  toggleStopped(modelId: string): boolean {
+    return this.setStopped(modelId, !this.isStopped(modelId));
   }
 
   repair(modelId: string): number {
@@ -567,6 +587,7 @@ export class GameCore {
     this.counts = {};
     this.overclock = {};
     this.faults = {};
+    this.stopped = {};
     this.storedEU = ZERO;
     return true;
   }
@@ -628,6 +649,7 @@ export class GameCore {
     this.counts = {};
     this.overclock = {};
     this.faults = {};
+    this.stopped = {};
     this.storedEU = ZERO;
     this.pollution = ZERO;
     this.siphoned = ZERO;
@@ -818,11 +840,11 @@ export class GameCore {
   }
 
   generatorOutputRated(model: MachineModel): Decimal {
-    return outputOf(model).times(this.countOf(model.id));
+    return outputOf(model).times(this.workingCountOf(model.id));
   }
 
   generatorFuelDrain(model: MachineModel): Decimal {
-    return this.generatorFuelRateOf(model).times(this.countOf(model.id));
+    return this.generatorFuelRateOf(model).times(this.workingCountOf(model.id));
   }
 
   // 单台发电机的烧矿速率。永久加成里的「燃料效率」直接乘在机型的效率上
@@ -1159,6 +1181,8 @@ export class GameCore {
       // 坏掉的台数不能比剩下的台数还多
       const faulty = this.faults[model.id];
       if (faulty !== undefined && faulty > have - 1) this.faults[model.id] = have - 1;
+      // 卖光了就不留停机记录，免得以后重新买回来还是停着的
+      if (have - 1 === 0) delete this.stopped[model.id];
       if (payWith === 'ore') this.ores[index] = this.ores[index]!.plus(refund);
       else this.coins[index] = this.coins[index]!.plus(refund);
       sold += 1;

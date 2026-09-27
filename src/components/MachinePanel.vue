@@ -72,6 +72,7 @@ function showTip(event: Event, model: MachineModelRow) {
     lines.push({ label: '超频', value: `${model.overclock} 档（速度 +${model.overclock * 60}%）` });
     lines.push({ label: '故障率', value: model.faultHint });
   }
+  if (model.stopped) lines.push({ label: '状态', value: '已停机（不产、不耗、不污染）' });
   const width = 178;
   const height = 36 + (lines.length + (model.traits.length ? 1 : 0)) * 19;
   tip.value = {
@@ -236,7 +237,12 @@ function canBuy(model: MachineModelRow): boolean {
           </div>
 
           <!-- 一行一个机型：等级 → 机型名 → 机器图标横排 → 数量 → 单价 → 建造按钮 -->
-          <div v-for="bar in bars" :key="bar.model.id" class="tier-bar">
+          <div
+            v-for="bar in bars"
+            :key="bar.model.id"
+            class="tier-bar"
+            :class="{ stopped: bar.model.stopped }"
+          >
             <div class="tier-line">
               <span class="tier-name">{{ bar.group.voltage }}</span>
 
@@ -295,7 +301,6 @@ function canBuy(model: MachineModelRow): boolean {
               <span
                 class="oc-label"
                 tabindex="0"
-                title="每升一档：速度 +60%、耗电翻倍"
                 @mouseenter="showOverclockTip($event, bar.model)"
                 @mouseleave="hideTip"
                 @focus="showOverclockTip($event, bar.model)"
@@ -324,6 +329,20 @@ function canBuy(model: MachineModelRow): boolean {
                 故障 {{ bar.model.faulty }} 台
                 <button title="修理这台机型的所有故障机器" @click="store.repair(bar.model.id)">
                   维护
+                </button>
+              </span>
+              <span v-if="bar.model.stoppable && bar.model.count > 0" class="run-state">
+                <button
+                  class="run-btn"
+                  :class="{ stopped: bar.model.stopped }"
+                  :title="
+                    bar.model.stopped
+                      ? '这一机型全部停机：不产、不耗、不污染。点一下恢复运行'
+                      : '点一下让这一机型全部停机（不产、不耗、不污染）'
+                  "
+                  @click="store.toggleStopped(bar.model.id)"
+                >
+                  {{ bar.model.stopped ? '已停机' : '运行中' }}
                 </button>
               </span>
               <span class="trade">
