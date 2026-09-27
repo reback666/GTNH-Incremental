@@ -22,7 +22,7 @@ function adjustResource(sign: 1 | -1): void {
   const target: DevResourceTarget =
     head === 'ore' || head === 'coin'
       ? { scope: head, tier: Number(tierText) }
-      : { scope: head as 'ores' | 'coins' | 'both' };
+      : { scope: head as 'ores' | 'coins' | 'both' | 'cables' };
   store.devAdjustResource(target, resAmount.value, sign);
 }
 </script>
@@ -125,6 +125,7 @@ function adjustResource(sign: 1 | -1): void {
           <option value="both">每级矿石+币</option>
           <option value="ores">每级矿石</option>
           <option value="coins">每级 GT 币</option>
+          <option value="cables">时空线缆</option>
           <option v-for="(name, index) in VOLTAGE_TIERS" :key="`ore-${name}`" :value="`ore:${index + 1}`">
             {{ name }} 矿石
           </option>
@@ -141,11 +142,6 @@ function adjustResource(sign: 1 | -1): void {
         />
         <button @click="adjustResource(1)">增加</button>
         <button @click="adjustResource(-1)">减少</button>
-      </div>
-      <div class="row">
-        <div class="name">时空线缆</div>
-        <button @click="store.devGrantCables('10')">+10 条</button>
-        <button @click="store.devGrantCables('1')">+1 条</button>
       </div>
       <div class="row">
         <div class="name">时间</div>

@@ -588,20 +588,8 @@ export const useGameStore = defineStore('game', {
       this.save();
       return ok;
     },
-    devGrantResources(amount = '1e12'): boolean {
-      const ok = getCore().devGrantResources(amount);
-      this.refresh();
-      this.save();
-      return ok;
-    },
     devAdjustResource(target: DevResourceTarget, amount: string, sign: 1 | -1): boolean {
       const ok = getCore().devAdjustResource(target, amount, sign);
-      this.refresh();
-      this.save();
-      return ok;
-    },
-    devGrantCables(amount: string): boolean {
-      const ok = getCore().devGrantCables(amount);
       this.refresh();
       this.save();
       return ok;

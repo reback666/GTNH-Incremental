@@ -83,6 +83,14 @@ describe('开发者模式', () => {
     expect(core.devAdjustResource({ scope: 'both' }, '2', 1)).toBe(true);
     expect(core.ores[1]!.toString()).toBe('999999');
     expect(core.coins[0]!.toString()).toBe('2');
+
+    // 时空线缆也在同一套里：能加能减，减到 0 就停
+    expect(core.devAdjustResource({ scope: 'cables' }, '10', 1)).toBe(true);
+    expect(core.cables.toString()).toBe('10');
+    expect(core.devAdjustResource({ scope: 'cables' }, '4', -1)).toBe(true);
+    expect(core.cables.toString()).toBe('6');
+    expect(core.devAdjustResource({ scope: 'cables' }, '99', -1)).toBe(true);
+    expect(core.cables.toString()).toBe('0');
   });
 
   it('指定资源与数量：非法数量、越界等级、没开开发者模式都不生效', () => {

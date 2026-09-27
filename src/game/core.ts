@@ -114,8 +114,9 @@ export type PayWith = 'coin' | 'ore';
 // 开发者模式里「指定资源增减」的目标：
 //   ores / coins / both 是每一级都给（原来那个「每级各加一笔」）
 //   ore / coin 只动指定等级的那一种
+//   cables 是时空线缆（转生货币）
 export type DevResourceTarget =
-  | { scope: 'ores' | 'coins' | 'both' }
+  | { scope: 'ores' | 'coins' | 'both' | 'cables' }
   | { scope: 'ore' | 'coin'; tier: number };
 
 export interface TickReport {
@@ -565,14 +566,15 @@ export class GameCore {
         this.ores = this.ores.map(apply);
         this.coins = this.coins.map(apply);
         break;
+      case 'cables':
+        this.cables = apply(this.cables);
+        break;
     }
     return true;
   }
 
   devGrantCables(amount: string): boolean {
-    if (!this.devMode) return false;
-    this.cables = this.cables.plus(dec(amount));
-    return true;
+    return this.devAdjustResource({ scope: 'cables' }, amount, 1);
   }
 
   // 快进：按给定的秒数跑一拍模拟
