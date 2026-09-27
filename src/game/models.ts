@@ -41,7 +41,6 @@ export interface MachineModel {
   requiresUniverse?: 'arcane' | 'abyss';
   // 灵气驱动：不耗电、改吃灵气（奥术宇宙的魔法机器）
   visPowered?: boolean;
-  traits?: string[];
 }
 
 // ── 发电机 ──────────────────────────────────────────────────
@@ -141,14 +140,13 @@ const STORAGES: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => 
     tier,
     outputFactor: '1',
     costFactor: '1.5',
-    traits: ['可存电'],
   };
 }).filter((model) => model.tier >= STORAGE_FROM_TIER);
 
 // ── 净化器 ──────────────────────────────────────────────────
-// 计划书第六章：净化器能把污染压下来。和存电装置同期（MV）开放 ——
-// 前两级的机器规模还涨不出污染。
-export const PURIFIER_FROM_TIER = 3;
+// 计划书第六章：净化器能把污染压下来。从 LV（tier 2）开放：
+// 开局就有点污染的苗头，早一级给玩家一个压污染的手段。
+export const PURIFIER_FROM_TIER = 2;
 
 const PURIFIERS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
   const tier = index + 1;
@@ -160,7 +158,6 @@ const PURIFIERS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) =>
     tier,
     outputFactor: '1',
     costFactor: '1.2',
-    traits: ['降低污染'],
   };
 }).filter((model) => model.tier >= PURIFIER_FROM_TIER);
 
@@ -179,7 +176,6 @@ const COMPUTERS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) =>
     outputFactor: '1',
     costFactor: '1',
     computeRole: 'produce' as const,
-    traits: ['提供算力'],
   };
 }).filter((model) => model.tier >= RESEARCH_FROM_TIER);
 
@@ -194,7 +190,6 @@ const LABS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
     outputFactor: '1',
     costFactor: '1',
     computeRole: 'consume' as const,
-    traits: ['消耗算力'],
   };
 }).filter((model) => model.tier >= RESEARCH_FROM_TIER);
 
@@ -212,7 +207,6 @@ const NODES: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
     outputFactor: '1',
     costFactor: '1',
     requiresUniverse: 'arcane' as const,
-    traits: ['产出灵气'],
   };
 });
 
@@ -277,7 +271,6 @@ const SUPPRESSORS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) 
     outputFactor: '1',
     costFactor: '1',
     requiresUniverse: 'abyss' as const,
-    traits: ['抑制腐蚀'],
   };
 });
 

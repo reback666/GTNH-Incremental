@@ -8,8 +8,6 @@ import MachineIcon from './MachineIcon.vue';
 const store = useGameStore();
 const snap = computed(() => store.snap);
 const tierName = computed(() => VOLTAGE_TIERS[snap.value.maxTier - 1] ?? 'ULV');
-// 打包时注入的构建时间，用来确认手上这份单文件产物是哪个版本
-const BUILD_STAMP = __BUILD_STAMP__;
 
 // 电能四格：点哪一格就从下面拉出对应的明细表
 type PowerKey = 'stored' | 'generated' | 'consumed';
@@ -35,7 +33,7 @@ function togglePower(key: PowerKey) {
   <section class="panel">
     <h1>
       GTNH 增量 · {{ tierName }}
-      <span class="muted small">已玩 {{ snap.playTime }} · 构建 {{ BUILD_STAMP }}</span>
+      <span class="muted small">已玩 {{ snap.playTime }}</span>
     </h1>
 
     <!-- ── 第一行：电能 ─────────────────────────────────────── -->

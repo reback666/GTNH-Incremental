@@ -2,11 +2,15 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useGameStore } from '../game/store';
 import { getCore } from '../game/engine';
-import { buildDiagnosticReport } from '../game/diagnostics';
+import { appVersion, buildDiagnosticReport, buildStamp } from '../game/diagnostics';
 import { clearLog, levelName, logEntries, logEvent, onLogChange, type LogEntry } from '../game/log';
 
 // 面板上最多列这么多条；复制与下载给的始终是全部日志
 const LOG_SHOWN = 60;
+
+// 版本号与构建时间都标在这里：玩家截图这一行就能说清手上是哪份产物
+const VERSION = appVersion();
+const BUILD = buildStamp();
 
 const store = useGameStore();
 // 日志不走 store 快照：它变化不频繁，订阅后直接读，省掉每 20 Hz 的比对
@@ -109,7 +113,10 @@ function fileStamp(): string {
 
 <template>
   <section class="panel">
-    <h2>日志</h2>
+    <h2>
+      日志
+      <span class="muted small">v{{ VERSION }} · 构建 {{ BUILD }}</span>
+    </h2>
     <p class="muted small" style="margin: 0 0 8px">
       遇到说不清楚的问题（数值不对、界面卡住、进度丢失）时，点「复制日志」把内容发给作者。
       日志只存在这台设备上，不会自动发送给任何人。

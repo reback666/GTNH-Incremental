@@ -12,6 +12,8 @@
 
 * {
   box-sizing: border-box;
+  /* 手机上点按钮时浏览器会盖一层默认蓝色高亮，游戏自己有效果，去掉它 */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -308,6 +310,12 @@ button.big {
 
 h1 .small {
   font-weight: 400;
+}
+
+h2 .small {
+  margin-left: 6px;
+  font-weight: 400;
+  letter-spacing: normal;
 }
 
 .row {
@@ -1008,7 +1016,8 @@ h1 .small {
   border-top: none;
 }
 
-.dev-tools select {
+.dev-tools select,
+.dev-tools input {
   font: inherit;
   min-height: 44px;
   padding: 0 10px;
@@ -1016,6 +1025,30 @@ h1 .small {
   border: 1px solid var(--line);
   background: var(--panel-2);
   color: var(--text);
+}
+
+.dev-tools .resource-row {
+  gap: 4px;
+}
+
+.dev-tools .resource-row select {
+  /* 按内容宽度走：刚好显示得下最长的那个选项，空间实在不够时才缩 */
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.dev-tools .dev-amount {
+  flex: none;
+  width: 44px;
+  min-width: 0;
+  padding: 0 6px;
+  text-align: right;
+}
+
+.dev-tools .resource-row button {
+  flex: none;
+  padding: 0 4px;
+  font-size: 13px;
 }
 
 .rebirth-tree {
@@ -1659,6 +1692,33 @@ h1 .small {
 
 .tier-line.second .trade {
   margin-left: auto;
+}
+
+/* 手动停机：状态按钮靠右顶住卖机器那组 */
+.run-state {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.run-btn {
+  min-height: 30px;
+  padding: 0 8px;
+  font-size: 12px;
+  border-radius: 6px;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.run-btn.stopped {
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+/* 停机的机型在名字与图标上压低一点，一眼能看出这排没在跑 */
+.tier-bar.stopped .model-label,
+.tier-bar.stopped .tier-icons {
+  opacity: 0.5;
 }
 
 /* 买 / 卖按钮组：两个数量按钮 + 一个「买」「卖」字标签 */

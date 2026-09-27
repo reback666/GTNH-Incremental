@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { useGameStore } from '../game/store';
 import { VOLTAGE_TIERS } from '../numeric/voltage';
+import type { DevResourceTarget } from '../game/core';
 
 // 设置：污染机制的整体开关、开发者模式（计划书第六章）。
 // 污染读数在第 1 页最下方，电网与转生在别的页面，这里只管设置项。
@@ -11,6 +12,19 @@ const snap = computed(() => store.snap);
 const devMode = computed(() => snap.value.devMode);
 // 开发者工具里「解锁到」下拉选中的等级
 const unlockTier = ref(1);
+
+// 开发者工具里「资源」那一行：目标用 'ores' / 'coins' / 'both' 或 'ore:3' / 'coin:3' 表示
+const resTarget = ref('both');
+const resAmount = ref('1e12');
+
+function adjustResource(sign: 1 | -1): void {
+  const [head, tierText] = resTarget.value.split(':');
+  const target: DevResourceTarget =
+    head === 'ore' || head === 'coin'
+      ? { scope: head, tier: Number(tierText) }
+      : { scope: head as 'ores' | 'coins' | 'both' };
+  store.devAdjustResource(target, resAmount.value, sign);
+}
 </script>
 
 <template>
@@ -105,9 +119,28 @@ const unlockTier = ref(1);
         </select>
         <button @click="store.devUnlockTo(unlockTier)">解锁</button>
       </div>
-      <div class="row">
+      <div class="row resource-row">
         <div class="name">资源</div>
-        <button @click="store.devGrantResources()">每级矿石与 GT 币各 +1e12</button>
+        <select v-model="resTarget">
+          <option value="both">每级矿石+币</option>
+          <option value="ores">每级矿石</option>
+          <option value="coins">每级 GT 币</option>
+          <option v-for="(name, index) in VOLTAGE_TIERS" :key="`ore-${name}`" :value="`ore:${index + 1}`">
+            {{ name }} 矿石
+          </option>
+          <option v-for="(name, index) in VOLTAGE_TIERS" :key="`coin-${name}`" :value="`coin:${index + 1}`">
+            {{ name }} GT 币
+          </option>
+        </select>
+        <input
+          v-model="resAmount"
+          class="dev-amount"
+          type="text"
+          inputmode="decimal"
+          aria-label="数量"
+        />
+        <button @click="adjustResource(1)">增加</button>
+        <button @click="adjustResource(-1)">减少</button>
       </div>
       <div class="row">
         <div class="name">时空线缆</div>

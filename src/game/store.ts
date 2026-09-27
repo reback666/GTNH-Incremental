@@ -46,7 +46,13 @@ import {
   researchRemaining,
   researchRequired,
 } from '../numeric/research';
-import { type GameCore, type MachineKind, type PayWith, type TickReport } from './core';
+import {
+  type DevResourceTarget,
+  type GameCore,
+  type MachineKind,
+  type PayWith,
+  type TickReport,
+} from './core';
 import {
   MACHINE_MODELS,
   canOverclock,
@@ -57,7 +63,7 @@ import {
 import { getCore, resetCore, setCore } from './engine';
 import * as C from './constants';
 import { clearStorage, loadFromStorage, saveToStorage } from './save';
-import { buildStamp, stateSnapshot } from './diagnostics';
+import { appVersion, buildStamp, stateSnapshot } from './diagnostics';
 import { errorText, logEntries, logEvent, onLogChange, setLogGameSeconds } from './log';
 
 export interface ResourceRow {
@@ -131,7 +137,6 @@ export interface MachineModelRow {
   id: string;
   name: string;
   block: BlockKind;
-  traits: string[];
   // ZPM 及以后的机型要先研究出来才能建造
   researched: boolean;
   // 是否已解锁（研究 + 所属平行宇宙都满足）；奥术宇宙的灵气节点要拥有奥术宇宙
@@ -141,6 +146,10 @@ export interface MachineModelRow {
   // 单台的消耗与产出，鼠标移到机器名上时显示
   single: { label: string; value: string }[];
   count: number;
+  // 玩家手动停机：停机的一台都不产不耗，也不产生污染
+  stopped: boolean;
+  // 能不能停机。存电装置是容量型装置，没有「运行」这回事
+  stoppable: boolean;
   // 超频档位（0-3）。发电机没有配方，档位恒为 0 且不可调
   overclock: number;
   overclockable: boolean;
@@ -448,7 +457,7 @@ export const useGameStore = defineStore('game', {
     boot() {
       const loaded = loadFromStorage();
       if (loaded) setCore(loaded);
-      logEvent('info', 'app.boot', `启动游戏（构建 ${buildStamp()}）`);
+      logEvent('info', 'app.boot', `启动游戏（版本 v${appVersion()}，构建 ${buildStamp()}）`);
       this.phase.maxTier = getCore().maxTier;
       // 日志变了就刷新错误条数：设置页按钮上的小红点靠它
       onLogChange(() => this.syncLogErrors());
@@ -524,6 +533,22 @@ export const useGameStore = defineStore('game', {
       this.save();
       return fixed;
     },
+    // 手动停机 / 恢复运行。停机的一台都不产不耗，也不产生污染
+    toggleStopped(modelId: string): boolean {
+      const core = getCore();
+      const ok = core.toggleStopped(modelId);
+      if (ok) {
+        const name = findModel(modelId)?.name ?? modelId;
+        logEvent(
+          'info',
+          'machine.run',
+          core.isStopped(modelId) ? `${name}：全部停机` : `${name}：恢复运行`,
+        );
+        this.refresh();
+        this.save();
+      }
+      return ok;
+    },
     // 换电网 / 开关污染机制：都属于设置，改完立刻生效并存档
     setGrid(mode: GridMode): void {
       getCore().setGrid(mode);
@@ -565,6 +590,12 @@ export const useGameStore = defineStore('game', {
     },
     devGrantResources(amount = '1e12'): boolean {
       const ok = getCore().devGrantResources(amount);
+      this.refresh();
+      this.save();
+      return ok;
+    },
+    devAdjustResource(target: DevResourceTarget, amount: string, sign: 1 | -1): boolean {
+      const ok = getCore().devAdjustResource(target, amount, sign);
       this.refresh();
       this.save();
       return ok;
@@ -1163,16 +1194,18 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
           id: model.id,
           name: model.name,
           block: model.block,
-          traits: model.traits ?? [],
           researched: core.isResearched(model.tier),
           unlocked: core.isModelUnlocked(model),
           visPowered: model.visPowered === true,
           single: singleStats(model, level),
           count,
+          stopped: core.isStopped(model.id),
+          stoppable: model.category !== 'storage',
           overclock: level,
           overclockable,
           faulty: core.faultyCountOf(model.id),
-          faultHint: faultHint(level, core.workingCountOf(model.id)),
+          // 停机机型的故障率按「恢复运行后」算，提示才有意义
+          faultHint: faultHint(level, Math.max(0, count - core.faultyCountOf(model.id))),
           icons: Math.min(count, TIER_ICON_LIMIT),
           overflow: Math.max(0, count - TIER_ICON_LIMIT),
           price: formatNumber(core.coinPriceOf(model)),

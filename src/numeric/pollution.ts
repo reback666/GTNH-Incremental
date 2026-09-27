@@ -1,10 +1,12 @@
 // 污染（计划书第六章）：0-100% 的环境风险。
 //
 // 污染是玩家自己扩产带来的：机器越多、电压越高，涨得越快。
+// 只有真正在跑的机器才算 —— 停电、停机调度、没燃料、没灵气的机器不产生污染，
+// 降载时按降载比例少产生（负载由 core 每拍采样）。
 // 三档效果：<30% 无影响；30-70% 产出 -20% 但可能"变异"爆一笔；>70% 产出 -40%
 // 且每 10 分钟有 10% 概率"工厂崩溃"，随机摧毁一台机器。
 // 净化器可以往下压；设置里可以整套关掉（关掉后不涨、也不产生任何影响）。
-import { Decimal, ZERO, dec, decInt } from './decimal';
+import { Decimal, ONE, ZERO, dec, decInt } from './decimal';
 
 export const POLLUTION_MAX = '100';
 export const POLLUTION_LOW = '30'; // 低于它无影响
@@ -54,12 +56,16 @@ export function pollutionBandName(value: Decimal): string {
   return '清洁：无影响';
 }
 
-// 一串机器每秒产生的污染（百分点/秒）
-export function pollutionPerSecond(running: { tier: number; count: number }[]): Decimal {
+// 一串机器每秒产生的污染（百分点/秒）。
+// load 是这些机器这一拍实际跑起来的比例：停电、没燃料、降载都靠它折算，
+// 不填按满负荷算（纯数值测试用）。
+export function pollutionPerSecond(
+  running: { tier: number; count: number; load?: Decimal }[],
+): Decimal {
   let units = ZERO;
   for (const item of running) {
     if (item.count <= 0) continue;
-    units = units.plus(decInt(item.tier, 'tier').times(item.count));
+    units = units.plus(decInt(item.tier, 'tier').times(item.count).times(item.load ?? ONE));
   }
   return units.times(POLLUTION_PER_TIER_PER_SECOND);
 }

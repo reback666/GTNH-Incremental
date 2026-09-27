@@ -9,6 +9,56 @@ const ULV_MINER = 'm-1';
 const ULV_GENERATOR = 'g-ulv';
 const ULV_MACHINE = 'c-1';
 
+describe('手动停机', () => {
+  it('停机的一台都不产不耗，恢复运行后照常', () => {
+    const core = new GameCore();
+    core.counts[ULV_MACHINE] = 3;
+    core.ores[0] = dec('1000');
+
+    const runningOutput = core.machineOutputPerSecond(modelById(ULV_MACHINE));
+    const runningDrain = core.machineEnergyDrain(modelById(ULV_MACHINE));
+    expect(runningOutput.gt(0)).toBe(true);
+
+    expect(core.toggleStopped(ULV_MACHINE)).toBe(true);
+    expect(core.isStopped(ULV_MACHINE)).toBe(true);
+    expect(core.machineOutputPerSecond(modelById(ULV_MACHINE)).toString()).toBe('0');
+    expect(core.machineEnergyDrain(modelById(ULV_MACHINE)).toString()).toBe('0');
+    expect(core.workingCountOf(ULV_MACHINE)).toBe(0);
+
+    core.tick(1);
+    expect(core.lastReport.coinsGained[0]!.isZero()).toBe(true);
+    expect(core.ores[0]!.toString()).toBe('1000'); // 停机不吃矿
+
+    expect(core.toggleStopped(ULV_MACHINE)).toBe(true);
+    expect(core.isStopped(ULV_MACHINE)).toBe(false);
+    expect(core.machineEnergyDrain(modelById(ULV_MACHINE)).toString()).toBe(
+      runningDrain.toString(),
+    );
+    expect(core.machineOutputPerSecond(modelById(ULV_MACHINE)).toString()).toBe(
+      runningOutput.toString(),
+    );
+  });
+
+  it('没建过的机型停不了；卖光之后不留停机记录', () => {
+    const core = new GameCore();
+    expect(core.setStopped(ULV_MINER, true)).toBe(false);
+
+    core.counts[ULV_MINER] = 1;
+    expect(core.setStopped(ULV_MINER, true)).toBe(true);
+    core.sell(modelById(ULV_MINER), 1, 'ore');
+    expect(core.isStopped(ULV_MINER)).toBe(false);
+  });
+
+  it('停机状态进存档', () => {
+    const core = new GameCore();
+    core.counts[ULV_MINER] = 2;
+    core.setStopped(ULV_MINER, true);
+    const restored = deserialize(serialize(core));
+    expect(restored.isStopped(ULV_MINER)).toBe(true);
+    expect(restored.workingCountOf(ULV_MINER)).toBe(0);
+  });
+});
+
 function runningCore(): GameCore {
   const core = new GameCore();
   core.ores[0] = dec('10000');

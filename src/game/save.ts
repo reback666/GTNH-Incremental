@@ -61,6 +61,8 @@ export interface SaveData {
   siliconAutoRepair?: boolean;
   siliconAutoOverclock?: boolean;
   siliconShedding?: boolean;
+  // v15：被手动停机的机型（机型 id → true）
+  stopped?: Record<string, true>;
   // v1 遗留字段：按电压等级存的数量，读到旧存档时用来迁移
   miners?: number[];
   generators?: number[];
@@ -112,6 +114,7 @@ export function serialize(core: GameCore): SaveData {
     siliconAutoRepair: core.siliconAutoRepair,
     siliconAutoOverclock: core.siliconAutoOverclock,
     siliconShedding: core.siliconShedding,
+    stopped: { ...core.stopped },
     siphoned: toSaveString(core.siphoned),
     maxTier: core.maxTier,
     unlockedVeins: [...core.unlockedVeins],
@@ -171,6 +174,7 @@ export function deserialize(data: SaveData): GameCore {
   core.siliconAutoRepair = data.siliconAutoRepair ?? true;
   core.siliconAutoOverclock = data.siliconAutoOverclock ?? true;
   core.siliconShedding = data.siliconShedding ?? true;
+  core.stopped = { ...(data.stopped ?? {}) };
   core.playSeconds = data.playSeconds;
   core.totalOre = dec(data.totalOre ?? '0');
   core.totalCoins = dec(data.totalCoins ?? '0');
