@@ -1826,9 +1826,6 @@ function powerStats(core: GameCore): PowerStats {
       value: core.hasUniverse('arcane') ? '0 EU/t' : `${formatNumber(demand)} EU/t`,
       rows: consumed,
       emptyText: '还没建耗电机器',
-      ...(core.hasUniverse('arcane')
-        ? { note: '奥术宇宙：机器吃灵气不耗电，下面只是各机型的额定耗电；实际供电看灵气一栏' }
-        : {}),
     },
     ratio: `${(ratio * 100).toFixed(0)}%`,
     ratioShort: ratio < 1,
