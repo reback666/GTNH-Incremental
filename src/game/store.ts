@@ -1604,26 +1604,28 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
   let fuel = ZERO;
   let vis = ZERO;
   let essentia = ZERO;
+  // 电网模式直接改耗电机器的耗电：界面上的耗电读数也用折后值，和模拟一致
+  const gridMul = gridEnergyMultiplier(core.grid);
   for (const model of core.unlockedModels(kind)) {
     if (core.countOf(model.id) === 0) continue;
     if (kind === 'miner') {
       ore = ore.plus(core.minerOutputPerSecond(model));
-      eu = eu.plus(core.minerEnergyDrain(model));
+      eu = eu.plus(core.minerEnergyDrain(model).times(gridMul));
     } else if (kind === 'generator') {
       eu = eu.plus(core.generatorOutputRated(model));
       fuel = fuel.plus(core.generatorFuelDrain(model));
     } else if (kind === 'machine') {
       const output = core.machineOutputPerSecond(model);
       coins = coins.plus(output);
-      eu = eu.plus(core.machineEnergyDrain(model));
+      eu = eu.plus(core.machineEnergyDrain(model).times(gridMul));
       ore = ore.plus(output.div(C.COINS_PER_ORE));
     } else if (kind === 'purifier') {
-      eu = eu.plus(core.purifierEnergyDrain(model));
+      eu = eu.plus(core.purifierEnergyDrain(model).times(gridMul));
     } else if (kind === 'arcane') {
       vis = vis.plus(nodeVisPerSecond(model.tier).times(core.workingCountOf(model.id)));
       essentia = essentia.plus(nodeEssentiaDemand(decInt(core.workingCountOf(model.id), 'count')));
     } else if (kind === 'abyss') {
-      eu = eu.plus(core.purifierEnergyDrain(model));
+      eu = eu.plus(core.purifierEnergyDrain(model).times(gridMul));
     }
   }
   if (kind === 'miner') {
@@ -1737,6 +1739,8 @@ function powerStats(core: GameCore): PowerStats {
   const consumed: PowerDetailRow[] = [];
   let rated = ZERO;
   let demand = ZERO;
+  // 电网模式的耗电倍率作用在耗电机器上：明细与合计都按折后值显示
+  const gridMul = gridEnergyMultiplier(core.grid);
 
   const push = (
     list: PowerDetailRow[],
@@ -1767,26 +1771,26 @@ function powerStats(core: GameCore): PowerStats {
     if (model.visPowered) continue;
     const n = core.countOf(model.id);
     if (n === 0) continue;
-    demand = push(consumed, model, n, core.minerEnergyDrain(model), demand);
+    demand = push(consumed, model, n, core.minerEnergyDrain(model).times(gridMul), demand);
   }
   for (const model of core.unlockedModels('machine')) {
     if (model.visPowered) continue;
     const n = core.countOf(model.id);
     if (n === 0) continue;
-    demand = push(consumed, model, n, core.machineEnergyDrain(model), demand);
+    demand = push(consumed, model, n, core.machineEnergyDrain(model).times(gridMul), demand);
   }
   for (const model of core.unlockedModels('purifier')) {
     if (model.visPowered) continue;
     const n = core.countOf(model.id);
     if (n === 0) continue;
-    demand = push(consumed, model, n, core.purifierEnergyDrain(model), demand);
+    demand = push(consumed, model, n, core.purifierEnergyDrain(model).times(gridMul), demand);
   }
   for (const model of core.unlockedModels('research')) {
     if (model.visPowered) continue;
     if (model.computeRole !== 'produce') continue;
     const n = core.countOf(model.id);
     if (n === 0) continue;
-    demand = push(consumed, model, n, core.computerEnergyDrain(model), demand);
+    demand = push(consumed, model, n, core.computerEnergyDrain(model).times(gridMul), demand);
   }
 
   // 存电装置：每台容量 × 台数，合起来是一个池子
@@ -1848,10 +1852,11 @@ function productionOf(core: GameCore): {
   let euNet = ZERO;
   let coins = ZERO;
   let fuel = ZERO;
+  const gridMul = gridEnergyMultiplier(core.grid);
   for (const model of core.unlockedModels('miner')) {
     if (core.countOf(model.id) === 0) continue;
     oreNet = oreNet.plus(core.minerOutputPerSecond(model));
-    euNet = euNet.minus(core.minerEnergyDrain(model));
+    euNet = euNet.minus(core.minerEnergyDrain(model).times(gridMul));
   }
   for (const model of core.unlockedModels('generator')) {
     if (core.countOf(model.id) === 0) continue;
@@ -1862,12 +1867,12 @@ function productionOf(core: GameCore): {
     if (core.countOf(model.id) === 0) continue;
     const output = core.machineOutputPerSecond(model);
     coins = coins.plus(output);
-    euNet = euNet.minus(core.machineEnergyDrain(model));
+    euNet = euNet.minus(core.machineEnergyDrain(model).times(gridMul));
     oreNet = oreNet.minus(output.div(C.COINS_PER_ORE));
   }
   for (const model of core.unlockedModels('research')) {
     if (model.computeRole !== 'produce' || core.countOf(model.id) === 0) continue;
-    euNet = euNet.minus(core.computerEnergyDrain(model));
+    euNet = euNet.minus(core.computerEnergyDrain(model).times(gridMul));
   }
   return { oreNet, euNet, coins, fuel };
 }

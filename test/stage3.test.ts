@@ -344,4 +344,27 @@ describe('界面购买入口', () => {
     store.refresh();
     expect(kinds()).toContain('arcane');
   });
+
+  // 电网省电是作用在耗电机器上的：面板上的耗电读数必须跟着一起变，
+  // 否则模拟里省了电、界面上看不出来（曾经就是这样）。
+  it('耗电读数跟着电网倍率走', () => {
+    const store = useGameStore();
+    store.boot();
+    const core = getCore();
+    core.maxTier = 4;
+    core.counts = { 'c-2': 10 }; // 10 台 LV 制造机，额定 32 EU/t 一台
+    core.grids = ['normal', 'stable', 'volatile', 'black'];
+
+    core.grid = 'normal';
+    store.refresh();
+    expect(store.snap.power.consumed.value).toBe('320 EU/t');
+
+    core.grid = 'black'; // -15%
+    store.refresh();
+    expect(store.snap.power.consumed.value).toBe('272 EU/t');
+
+    core.grid = 'stable'; // +8%
+    store.refresh();
+    expect(store.snap.power.consumed.value).toBe('346 EU/t');
+  });
 });
