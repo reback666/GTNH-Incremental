@@ -242,6 +242,18 @@ export interface ResearchStats {
   percent: number;
   eta: string;
   note: string;
+  // 可以选的研究项目（已解锁电压、还没研究出来的等级）
+  options: ResearchOptionRow[];
+}
+
+// 研究项目列表里的一行
+export interface ResearchOptionRow {
+  tier: number;
+  name: string;
+  selected: boolean;
+  progress: string;
+  required: string;
+  percent: number;
 }
 
 // 永久加成树上的一个节点
@@ -544,6 +556,18 @@ export const useGameStore = defineStore('game', {
           'machine.run',
           core.isStopped(modelId) ? `${name}：全部停机` : `${name}：恢复运行`,
         );
+        this.refresh();
+        this.save();
+      }
+      return ok;
+    },
+    // 手选研究项目：算力只往选中的那一项上投
+    setResearchTarget(tier: number): boolean {
+      const core = getCore();
+      const ok = core.setResearchTarget(tier);
+      if (ok) {
+        const name = VOLTAGE_TIERS[tier - 1] ?? `T${tier}`;
+        logEvent('info', 'research.target', `研究项目改成 ${name} 级机型`);
         this.refresh();
         this.save();
       }
@@ -1222,7 +1246,8 @@ function researchStats(core: GameCore): ResearchStats {
   const report = core.lastReport;
   const target = core.researchTargetTier();
   const required = target === null ? ZERO : researchRequired(target);
-  const remaining = researchRemaining(core.researchProgress, required);
+  const progress = target === null ? ZERO : core.researchProgressOf(target);
+  const remaining = researchRemaining(progress, required);
   const targetName = target === null ? '' : (VOLTAGE_TIERS[target - 1] ?? `T${target}`);
   const used = report.computeUsed;
 
@@ -1236,16 +1261,18 @@ function researchStats(core: GameCore): ResearchStats {
 
   const percent =
     target !== null && required.gt(0)
-      ? Math.min(100, core.researchProgress.div(required).times(100).toNumber())
+      ? Math.min(100, progress.div(required).times(100).toNumber())
       : 0;
 
   let note: string;
-  if (target === null && core.maxTier < RESEARCH_GATE_FROM_TIER) {
+  if (core.maxTier < RESEARCH_GATE_FROM_TIER) {
     note = `还没到 ${VOLTAGE_TIERS[RESEARCH_GATE_FROM_TIER - 1]}：计算机可以先建起来，但研究站现在空转，算力会浪费掉。`;
-  } else if (target === null) {
+  } else if (core.researchOptions().length === 0) {
     note = '当前已解锁的机型都研究完了。';
+  } else if (target === null) {
+    note = '还没选研究项目：挑一个，算力才会往它上面投。';
   } else {
-    note = `正在研究 ${targetName} 级机型：工程进度 ${formatNumber(core.researchProgress)} / ${formatNumber(required)}。`;
+    note = `正在研究 ${targetName} 级机型：工程进度 ${formatNumber(progress)} / ${formatNumber(required)}。`;
   }
 
   return {
@@ -1258,11 +1285,23 @@ function researchStats(core: GameCore): ResearchStats {
     hasTarget: target !== null,
     targetTier: target,
     targetName,
-    progress: formatNumber(core.researchProgress),
+    progress: formatNumber(progress),
     required: target === null ? '—' : formatNumber(required),
     percent,
     eta: target !== null && used.gt(0) ? formatDuration(remaining.div(used).toNumber()) : '—',
     note,
+    options: core.researchOptions().map((tier) => {
+      const need = core.researchRequiredFor(tier);
+      const have = core.researchProgressOf(tier);
+      return {
+        tier,
+        name: VOLTAGE_TIERS[tier - 1] ?? `T${tier}`,
+        selected: tier === target,
+        progress: formatNumber(have),
+        required: formatNumber(need),
+        percent: need.gt(0) ? Math.min(100, have.div(need).times(100).toNumber()) : 0,
+      };
+    }),
   };
 }
 
@@ -1645,7 +1684,7 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
   }
   if (kind === 'research') {
     const target = core.researchTargetTier();
-    const required = target === null ? ZERO : researchRequired(target);
+    const required = target === null ? ZERO : core.researchRequiredFor(target);
     return [
       { label: '算力产出', value: `${formatNumber(core.computerComputeRated())}/秒` },
       { label: '算力消耗', value: `${formatNumber(core.labComputeDemand())}/秒` },
@@ -1654,7 +1693,7 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
         value:
           target === null
             ? '—'
-            : `${formatNumber(core.researchProgress)} / ${formatNumber(required)}`,
+            : `${formatNumber(core.researchProgressOf(target))} / ${formatNumber(required)}`,
       },
     ];
   }

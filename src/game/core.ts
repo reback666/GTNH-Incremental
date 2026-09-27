@@ -236,8 +236,10 @@ export class GameCore {
   collapseTimer = 0;
   maxTier = 1;
   unlockedVeins: number[] = [0];
-  // 当前研究目标已经攒下的进度（研究完一级就清零重来）
-  researchProgress = ZERO;
+  // 研究是手选项目：只有选中的那一级在推进（researchTarget），
+  // 每个等级各自记自己的进度，中途换项目不会把已攒的进度丢掉
+  researchTarget: number | null = null;
+  researchProgress: Record<number, Decimal> = {};
   // 已经研究出来、可以建造的电压等级。LuV 及以前不用研究，开局就在里面
   researched: number[] = Array.from(
     { length: RESEARCH_GATE_FROM_TIER - 1 },
@@ -521,7 +523,8 @@ export class GameCore {
     this.peakTier = Math.max(this.peakTier, tier);
     this.unlockedVeins = Array.from({ length: tier }, (_, index) => index);
     this.researched = Array.from({ length: tier }, (_, index) => index + 1);
-    this.researchProgress = ZERO;
+    this.researchTarget = null;
+    this.researchProgress = {};
     return true;
   }
 
@@ -667,7 +670,8 @@ export class GameCore {
     this.pickaxeVajra = 0;
     this.pickaxeCollect = 0;
     this.pickaxeBlast = 0;
-    this.researchProgress = ZERO;
+    this.researchTarget = null;
+    this.researchProgress = {};
     this.researched = Array.from(
       { length: RESEARCH_GATE_FROM_TIER - 1 },
       (_, index) => index + 1,
@@ -694,13 +698,33 @@ export class GameCore {
     return model.requiresUniverse === undefined || this.hasUniverse(model.requiresUniverse);
   }
 
-  // 当前研究目标：已解锁电压里最低的那个还没研究出来的等级。
-  // 没有目标（还没到 ZPM，或目标都研究完了）时返回 null
-  researchTargetTier(): number | null {
+  // 可以选的研究项目：解锁了电压、还没研究出来的等级
+  researchOptions(): number[] {
+    const out: number[] = [];
     for (let tier = RESEARCH_GATE_FROM_TIER; tier <= this.maxTier; tier += 1) {
-      if (!this.researched.includes(tier)) return tier;
+      if (!this.researched.includes(tier)) out.push(tier);
     }
-    return null;
+    return out;
+  }
+
+  // 手选研究项目：算力只往选中的那一项上投。只想研究已解锁且还没研究出来的等级
+  setResearchTarget(tier: number): boolean {
+    if (!isValidTier(tier) || tier > this.maxTier || this.researched.includes(tier)) return false;
+    this.researchTarget = tier;
+    return true;
+  }
+
+  // 当前选中的项目（没选、已经研究完、电压被重置时返回 null）
+  researchTargetTier(): number | null {
+    const target = this.researchTarget;
+    if (target === null || target > this.maxTier) return null;
+    if (this.researched.includes(target)) return null;
+    return target;
+  }
+
+  // 某个研究项目已经攒下的进度
+  researchProgressOf(tier: number): Decimal {
+    return this.researchProgress[tier] ?? ZERO;
   }
 
   // 计算机的算力总产量（额定值，不含供电降载）
@@ -1503,13 +1527,18 @@ export class GameCore {
     if (researchTarget !== null) {
       const gain = researchGain(computeSettlement.used, dtSeconds).times(this.researchSpeedBonus());
       if (gain.gt(0)) {
-        this.researchProgress = this.researchProgress.plus(gain);
         report.researchGained = gain;
         const required = this.researchRequiredFor(researchTarget);
-        if (this.researchProgress.gte(required)) {
-          this.researchProgress = this.researchProgress.minus(required);
+        const done = this.researchProgressOf(researchTarget).plus(gain);
+        if (done.gte(required)) {
+          // 项目完成：这一级机型解锁，选中的项目清空，等玩家自己挑下一个。
+          // 多出来的算力不结转 —— 研究是手动排的，攒够那一刻就该停。
           this.researched.push(researchTarget);
+          delete this.researchProgress[researchTarget];
+          this.researchTarget = null;
           report.researchUnlocked = researchTarget;
+        } else {
+          this.researchProgress[researchTarget] = done;
         }
       }
     }

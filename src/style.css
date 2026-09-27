@@ -1180,6 +1180,35 @@ h2 .small {
   margin-top: 10px;
 }
 
+/* 研究项目列表：点一行就把算力投到那一级上 */
+.research-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.research-item {
+  display: grid;
+  gap: 4px;
+  min-height: 0;
+  padding: 6px 8px;
+  text-align: left;
+  border-color: var(--line);
+}
+
+.research-item.active {
+  border-color: var(--accent);
+  background: rgba(88, 196, 163, 0.12);
+}
+
+.research-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
 .research-head {
   display: flex;
   align-items: baseline;

@@ -44,7 +44,8 @@ export const UI_REFRESH_MS = 50;
 // v13：加了镐子的三条升级线（金刚杵 / 连锁采集 / 连锁爆破）
 // v14：加了硅基宇宙的三项 AI 开关
 // v15：加了每个机型的手动停机开关
-export const SAVE_VERSION = 15;
+// v16：研究改成手选项目（选中等级 + 各等级各自进度）
+export const SAVE_VERSION = 16;
 export const SAVE_KEY = 'gtnh-incremental-save';
 
 export function unlockCost(machineTier: number): Decimal {

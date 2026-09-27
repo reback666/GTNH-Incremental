@@ -27,8 +27,12 @@ export interface SaveData {
   // v5：已解锁的电网（解锁要花对应等级的 GT 币）
   grids?: string[];
   // v6：研究进度与已研究出来的电压等级（ZPM 及以后要先研究）
+  // v15 及以前是自动研究：这里记的是当时那个自动目标的进度，读到旧存档时迁移用
   researchProgress?: string;
   researched?: number[];
+  // v16：研究改成手选项目：选中的等级 + 各等级各自的进度
+  researchTarget?: number | null;
+  researchProgressByTier?: Record<string, string>;
   // v7：转生：时空线缆、永久加成节点、转生次数、本周目累计 EU
   cables?: string;
   rebirthCount?: number;
@@ -88,7 +92,10 @@ export function serialize(core: GameCore): SaveData {
     pollutionEnabled: core.pollutionEnabled,
     grid: core.grid,
     grids: [...core.grids],
-    researchProgress: toSaveString(core.researchProgress),
+    researchTarget: core.researchTarget,
+    researchProgressByTier: Object.fromEntries(
+      Object.entries(core.researchProgress).map(([tier, amount]) => [tier, toSaveString(amount)]),
+    ),
     researched: [...core.researched],
     cables: toSaveString(core.cables),
     rebirthCount: core.rebirthCount,
@@ -144,10 +151,24 @@ export function deserialize(data: SaveData): GameCore {
   core.maxTier = data.maxTier;
   core.unlockedVeins = [...data.unlockedVeins];
   // v5 及以前没有研究概念：默认只有 LuV 及以前不用研究的那几级
-  core.researchProgress = fromSaveString(data.researchProgress ?? '0');
   core.researched = data.researched
     ? [...data.researched]
     : Array.from({ length: RESEARCH_GATE_FROM_TIER - 1 }, (_, index) => index + 1);
+  // v16 起研究是手选项目：每个等级各自记进度。旧存档只有一个进度数字，
+  // 那是「当时自动挑的目标」攒的，迁移时挂回同一级并把目标也选上，进度不白攒
+  core.researchTarget = data.researchTarget ?? null;
+  core.researchProgress = {};
+  for (const [tier, amount] of Object.entries(data.researchProgressByTier ?? {})) {
+    core.researchProgress[Number(tier)] = fromSaveString(amount);
+  }
+  if (!data.researchProgressByTier) {
+    const legacy = fromSaveString(data.researchProgress ?? '0');
+    const auto = core.researchOptions()[0];
+    if (legacy.gt(0) && auto !== undefined) {
+      core.researchProgress[auto] = legacy;
+      core.researchTarget = auto;
+    }
+  }
   core.cables = fromSaveString(data.cables ?? '0');
   core.rebirthCount = data.rebirthCount ?? 0;
   core.rebirthNodes = [...(data.rebirthNodes ?? [])];

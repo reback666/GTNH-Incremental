@@ -19,11 +19,13 @@ describe('第三阶段：研究硬墙', () => {
     const zpmMachine = modelById('c-8');
 
     expect(core.isResearched(8)).toBe(false);
-    expect(core.researchTargetTier()).toBe(8);
+    expect(core.researchTargetTier()).toBe(null); // 手选：没选项目就没有目标
     expect(core.canAfford(zpmMachine)).toBe(false);
     expect(core.buy(zpmMachine, 1)).toBe(0);
     expect(core.countOf('c-8')).toBe(0);
 
+    expect(core.setResearchTarget(8)).toBe(true);
+    expect(core.researchTargetTier()).toBe(8);
     core.researched.push(8);
     expect(core.researchTargetTier()).toBe(null);
     expect(core.canAfford(zpmMachine)).toBe(true);
@@ -39,7 +41,7 @@ describe('第三阶段：研究硬墙', () => {
     expect(core.researchTargetTier()).toBe(null); // 还没解锁 ZPM，没有目标
   });
 
-  it('计算机产算力、研究站吃算力推进进度，攒满自动解锁该级', () => {
+  it('计算机产算力、研究站吃算力推进选中的项目，攒满解锁该级', () => {
     const core = new GameCore();
     core.maxTier = 8;
     core.counts['x-7'] = 1; // 一台 LuV 计算机：1 算力/秒、32768 EU/t
@@ -47,24 +49,26 @@ describe('第三阶段：研究硬墙', () => {
     core.storedEU = dec('100000000'); // 拿存电顶住耗电，便于单独验证研究
     // 普通电网每 5 分钟有 5% 概率断电，断电那一拍算力为 0；这里固定成不会触发
     core.random = () => 0.999;
+    expect(core.setResearchTarget(8)).toBe(true);
 
     const report = core.tick(1);
     expect(report.computeProduced.toString()).toBe('1');
     expect(report.computeUsed.toString()).toBe('1');
     expect(report.computeWasted.toString()).toBe('0');
     expect(report.researchGained.toString()).toBe('1');
-    expect(core.researchProgress.toString()).toBe('1');
+    expect(core.researchProgressOf(8).toString()).toBe('1');
     expect(report.researchUnlocked).toBe(null);
 
     const done = core.tick(999);
     expect(done.researchUnlocked).toBe(8);
     expect(core.isResearched(8)).toBe(true);
-    expect(core.researchProgress.toString()).toBe('0');
+    expect(core.researchProgressOf(8).toString()).toBe('0');
+    expect(core.researchTargetTier()).toBe(null); // 研究完就清空，等玩家挑下一个
   });
 
-  it('没有研究目标时研究站空转，算力白产', () => {
+  it('没选项目时研究站空转，算力白产', () => {
     const core = new GameCore();
-    core.maxTier = 7; // 还没解锁 ZPM，没有目标
+    core.maxTier = 8; // ZPM 已经解锁，但玩家还没挑研究项目
     core.counts['x-7'] = 1;
     core.counts['r-7'] = 1;
     core.storedEU = dec('1000000');
@@ -73,7 +77,7 @@ describe('第三阶段：研究硬墙', () => {
     expect(core.labComputeDemand().toString()).toBe('0');
     expect(report.computeUsed.toString()).toBe('0');
     expect(report.computeWasted.toString()).toBe('1');
-    expect(core.researchProgress.toString()).toBe('0');
+    expect(Object.keys(core.researchProgress)).toEqual([]);
   });
 
   it('缺电时算力按供电比例少产，研究跟着变慢', () => {
@@ -95,30 +99,73 @@ describe('第三阶段：研究硬墙', () => {
     const core = new GameCore();
     core.maxTier = 9;
     core.researched.push(8);
-    core.researchProgress = dec('123.456');
+    core.researchTarget = 9;
+    core.researchProgress = { 9: dec('123.456') };
     core.counts['x-7'] = 2;
     core.counts['r-8'] = 1;
 
     const restored = deserialize(serialize(core));
     expect(restored.researched).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(restored.researchProgress.toString()).toBe('123.456');
+    expect(restored.researchProgressOf(9).toString()).toBe('123.456');
     expect(restored.countOf('x-7')).toBe(2);
     expect(restored.countOf('r-8')).toBe(1);
     expect(restored.researchTargetTier()).toBe(9);
     expect(serialize(restored)).toEqual(serialize(core));
   });
 
-  it('旧存档（v5）读进来时默认只有 LuV 及以前已研究', () => {
+  it('旧存档读进来：v5 默认只有 LuV 及以前已研究，v15 的进度挂回原目标', () => {
     const core = new GameCore();
     core.maxTier = 8;
     const legacy = { ...serialize(core), version: 5 } as Record<string, unknown>;
     delete legacy.researched;
     delete legacy.researchProgress;
+    delete legacy.researchTarget;
+    delete legacy.researchProgressByTier;
 
     const restored = deserialize(legacy as never);
     expect(restored.researched).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    expect(restored.researchTargetTier()).toBe(8);
+    expect(restored.researchTargetTier()).toBe(null); // 手选：默认没选项目
     expect(restored.isResearched(8)).toBe(false);
+
+    // v15 的存档只有一个进度数字，那是当时自动挑的目标攒的
+    const older = {
+      ...serialize(core),
+      version: 15,
+      researchProgress: '500',
+    } as Record<string, unknown>;
+    delete older.researchTarget;
+    delete older.researchProgressByTier;
+
+    const migrated = deserialize(older as never);
+    expect(migrated.researchTargetTier()).toBe(8);
+    expect(migrated.researchProgressOf(8).toString()).toBe('500');
+  });
+
+  it('手选研究项目：只能选已解锁且没研究过的等级，各项目进度各记各的', () => {
+    const core = new GameCore();
+    core.maxTier = 9;
+    core.counts['x-7'] = 1;
+    core.counts['r-7'] = 1;
+    core.storedEU = dec('100000000');
+    core.random = () => 0.999;
+
+    expect(core.researchOptions()).toEqual([8, 9]);
+    expect(core.setResearchTarget(7)).toBe(false); // 不用研究的等级
+    expect(core.setResearchTarget(10)).toBe(false); // 还没解锁
+    expect(core.setResearchTarget(8)).toBe(true);
+
+    core.tick(10);
+    expect(core.researchProgressOf(8).toString()).toBe('10');
+
+    // 换到 UV：ZPM 那份进度留在自己名下，不会被搬过去
+    expect(core.setResearchTarget(9)).toBe(true);
+    core.tick(10);
+    expect(core.researchProgressOf(8).toString()).toBe('10');
+    expect(core.researchProgressOf(9).toString()).toBe('10');
+
+    // 已经研究出来的等级不能再选
+    core.researched.push(9);
+    expect(core.setResearchTarget(9)).toBe(false);
   });
 });
 
@@ -181,7 +228,8 @@ describe('第三阶段：转生与永久加成', () => {
     core.grid = 'black';
     core.grids = ['normal', 'black'];
     core.siphoned = dec('9');
-    core.researchProgress = dec('500');
+    core.researchTarget = 9;
+    core.researchProgress = { 9: dec('500') };
     core.researched.push(8);
     core.cables = dec('3');
     core.rebirthNodes = ['speed-1'];
@@ -203,7 +251,8 @@ describe('第三阶段：转生与永久加成', () => {
     expect(core.grid).toBe('normal');
     expect(core.grids).toEqual(['normal']);
     expect(core.siphoned.toString()).toBe('0');
-    expect(core.researchProgress.toString()).toBe('0');
+    expect(core.researchTargetTier()).toBe(null);
+    expect(Object.keys(core.researchProgress)).toEqual([]);
     expect(core.researched).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(core.runEU.toString()).toBe('0');
 

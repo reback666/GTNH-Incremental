@@ -184,9 +184,30 @@ function togglePower(key: PowerKey) {
       </div>
       <div class="stat">
         <dt>研究目标</dt>
-        <dd>{{ snap.research.hasTarget ? snap.research.targetName + ' 级机型' : '暂无' }}</dd>
+        <dd>{{ snap.research.hasTarget ? snap.research.targetName + ' 级机型' : '未选' }}</dd>
       </div>
     </dl>
+
+    <!-- 手选研究项目：算力只往选中的那一项上投 -->
+    <div v-if="snap.research.options.length" class="research-list">
+      <button
+        v-for="option in snap.research.options"
+        :key="option.tier"
+        type="button"
+        class="research-item"
+        :class="{ active: option.selected }"
+        @click="store.setResearchTarget(option.tier)"
+      >
+        <span class="research-item-head">
+          <b>{{ option.name }} 级机型</b>
+          <span class="muted small">{{ option.progress }} / {{ option.required }}</span>
+        </span>
+        <span class="research-bar">
+          <span :style="{ width: option.percent + '%' }" />
+        </span>
+      </button>
+    </div>
+
     <div class="research">
       <div class="research-head">
         <span>研究进度</span>
