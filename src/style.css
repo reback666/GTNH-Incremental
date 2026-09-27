@@ -12,6 +12,8 @@
 
 * {
   box-sizing: border-box;
+  /* 手机上点按钮时浏览器会盖一层默认蓝色高亮，游戏自己有效果，去掉它 */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
