@@ -46,7 +46,13 @@ import {
   researchRemaining,
   researchRequired,
 } from '../numeric/research';
-import { type GameCore, type MachineKind, type PayWith, type TickReport } from './core';
+import {
+  type DevResourceTarget,
+  type GameCore,
+  type MachineKind,
+  type PayWith,
+  type TickReport,
+} from './core';
 import {
   MACHINE_MODELS,
   canOverclock,
@@ -565,6 +571,12 @@ export const useGameStore = defineStore('game', {
     },
     devGrantResources(amount = '1e12'): boolean {
       const ok = getCore().devGrantResources(amount);
+      this.refresh();
+      this.save();
+      return ok;
+    },
+    devAdjustResource(target: DevResourceTarget, amount: string, sign: 1 | -1): boolean {
+      const ok = getCore().devAdjustResource(target, amount, sign);
       this.refresh();
       this.save();
       return ok;

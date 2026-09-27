@@ -1016,7 +1016,8 @@ h2 .small {
   border-top: none;
 }
 
-.dev-tools select {
+.dev-tools select,
+.dev-tools input {
   font: inherit;
   min-height: 44px;
   padding: 0 10px;
@@ -1024,6 +1025,11 @@ h2 .small {
   border: 1px solid var(--line);
   background: var(--panel-2);
   color: var(--text);
+}
+
+.dev-tools .dev-amount {
+  width: 110px;
+  min-width: 0;
 }
 
 .rebirth-tree {

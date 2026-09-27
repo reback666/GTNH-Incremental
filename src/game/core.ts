@@ -108,6 +108,13 @@ export const RIFT_CABLES = '1';
 // 两种方式都保留，矿石价 = 币价 ÷ COINS_PER_ORE。
 export type PayWith = 'coin' | 'ore';
 
+// 开发者模式里「指定资源增减」的目标：
+//   ores / coins / both 是每一级都给（原来那个「每级各加一笔」）
+//   ore / coin 只动指定等级的那一种
+export type DevResourceTarget =
+  | { scope: 'ores' | 'coins' | 'both' }
+  | { scope: 'ore' | 'coin'; tier: number };
+
 export interface TickReport {
   euGenerated: Decimal;
   euConsumed: Decimal;
@@ -494,10 +501,46 @@ export class GameCore {
 
   // 每一级矿石与 GT 币各加一笔，方便直接测后面的机器
   devGrantResources(amount = '1e12'): boolean {
+    return this.devAdjustResource({ scope: 'both' }, amount, 1);
+  }
+
+  // 按指定的资源与数量增减。数量取绝对值，方向由 sign 决定；
+  // 减到 0 就停 —— 负资源会让后面所有公式失真，那不是「测试」而是把存档弄坏。
+  devAdjustResource(target: DevResourceTarget, amount: string, sign: 1 | -1): boolean {
     if (!this.devMode) return false;
-    const grant = dec(amount);
-    this.ores = this.ores.map((held) => held.plus(grant));
-    this.coins = this.coins.map((held) => held.plus(grant));
+    let delta: Decimal;
+    try {
+      delta = dec(amount).abs();
+    } catch {
+      return false;
+    }
+    if (!delta.isFinite() || delta.isZero()) return false;
+    if ('tier' in target && !isValidTier(target.tier)) return false;
+
+    const step = sign < 0 ? delta.neg() : delta;
+    const apply = (held: Decimal): Decimal => {
+      const next = held.plus(step);
+      return next.lt(0) ? ZERO : next;
+    };
+
+    switch (target.scope) {
+      case 'ore':
+        this.ores[target.tier - 1] = apply(this.ores[target.tier - 1]!);
+        break;
+      case 'coin':
+        this.coins[target.tier - 1] = apply(this.coins[target.tier - 1]!);
+        break;
+      case 'ores':
+        this.ores = this.ores.map(apply);
+        break;
+      case 'coins':
+        this.coins = this.coins.map(apply);
+        break;
+      case 'both':
+        this.ores = this.ores.map(apply);
+        this.coins = this.coins.map(apply);
+        break;
+    }
     return true;
   }
 

@@ -61,6 +61,44 @@ describe('开发者模式', () => {
     expect(core.playSeconds).toBe(60);
   });
 
+  it('指定资源与数量：单种、整档都能增能减，减到 0 就停', () => {
+    const core = new GameCore();
+    core.setDevMode(true);
+
+    expect(core.devAdjustResource({ scope: 'ore', tier: 2 }, '1e6', 1)).toBe(true);
+    expect(core.ores[1]!.toString()).toBe('1000000');
+    expect(core.ores[0]!.toString()).toBe('0');
+
+    expect(core.devAdjustResource({ scope: 'coin', tier: 14 }, '500', 1)).toBe(true);
+    expect(core.coins[13]!.toString()).toBe('500');
+    expect(core.coins[0]!.toString()).toBe('0');
+
+    expect(core.devAdjustResource({ scope: 'ores' }, '3', -1)).toBe(true);
+    expect(core.ores[1]!.toString()).toBe('999997');
+    expect(core.ores[0]!.toString()).toBe('0'); // 减到 0 就停，不会变成负数
+
+    expect(core.devAdjustResource({ scope: 'coins' }, '500', -1)).toBe(true);
+    expect(core.coins[13]!.toString()).toBe('0');
+
+    expect(core.devAdjustResource({ scope: 'both' }, '2', 1)).toBe(true);
+    expect(core.ores[1]!.toString()).toBe('999999');
+    expect(core.coins[0]!.toString()).toBe('2');
+  });
+
+  it('指定资源与数量：非法数量、越界等级、没开开发者模式都不生效', () => {
+    const core = new GameCore();
+    core.setDevMode(true);
+    expect(core.devAdjustResource({ scope: 'ore', tier: 1 }, 'abc', 1)).toBe(false);
+    expect(core.devAdjustResource({ scope: 'ore', tier: 1 }, '0', 1)).toBe(false);
+    expect(core.devAdjustResource({ scope: 'ore', tier: 1 }, 'Infinity', 1)).toBe(false);
+    expect(core.devAdjustResource({ scope: 'ore', tier: 99 }, '1', 1)).toBe(false);
+    expect(core.ores.every((ore) => ore.isZero())).toBe(true);
+
+    const off = new GameCore();
+    expect(off.devAdjustResource({ scope: 'both' }, '1e12', 1)).toBe(false);
+    expect(off.ores.every((ore) => ore.isZero())).toBe(true);
+  });
+
   it('开关进存档，旧存档读进来默认是关的', () => {
     const core = new GameCore();
     core.setDevMode(true);
