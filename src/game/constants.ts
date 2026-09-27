@@ -45,7 +45,8 @@ export const UI_REFRESH_MS = 50;
 // v14：加了硅基宇宙的三项 AI 开关
 // v15：加了每个机型的手动停机开关
 // v16：研究改成手选项目（选中等级 + 各等级各自进度）
-export const SAVE_VERSION = 16;
+// v17：研究细到机型（每个机型单独研究）
+export const SAVE_VERSION = 17;
 export const SAVE_KEY = 'gtnh-incremental-save';
 
 export function unlockCost(machineTier: number): Decimal {

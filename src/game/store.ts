@@ -228,15 +228,10 @@ export interface PickaxeStats {
 export interface ResearchStats {
   // 到 LuV 才解锁研究，之前资源条上不显示这一块
   unlocked: boolean;
-  // 每秒产出 / 被研究站吃掉 / 直接浪费的算力
-  computeProduced: string;
-  computeUsed: string;
-  computeWasted: string;
-  computers: number;
-  labs: number;
   hasTarget: boolean;
-  targetTier: number | null;
   targetName: string;
+  // 目标机型所属的电压等级名（研究区提示用）
+  targetTierName: string;
   progress: string;
   required: string;
   percent: number;
@@ -248,8 +243,11 @@ export interface ResearchStats {
 
 // 待研究机型列表里的一行
 export interface ResearchOptionRow {
-  tier: number;
+  id: string;
+  // 机型名，例如「黑洞发电机」
   name: string;
+  // 所属电压等级名，例如 MAX
+  tierName: string;
   // 电压够不够：不够也能先研究，只是这一级还不能建造
   voltageReady: boolean;
   // 这一项已经攒下的进度（没动过就是 0）
@@ -564,12 +562,13 @@ export const useGameStore = defineStore('game', {
       return ok;
     },
     // 手选研究项目：算力只往选中的那一项上投
-    setResearchTarget(tier: number): boolean {
+    // 手选研究项目：算力只往选中的那台机器上投
+    setResearchTarget(modelId: string): boolean {
       const core = getCore();
-      const ok = core.setResearchTarget(tier);
+      const ok = core.setResearchTarget(modelId);
       if (ok) {
-        const name = VOLTAGE_TIERS[tier - 1] ?? `T${tier}`;
-        logEvent('info', 'research.target', `研究项目改成 ${name} 级机型`);
+        const name = findModel(modelId)?.name ?? modelId;
+        logEvent('info', 'research.target', `研究项目改成 ${name}`);
         this.refresh();
         this.save();
       }
@@ -739,10 +738,11 @@ export const useGameStore = defineStore('game', {
         logEvent('info', 'voltage.unlock', `电压上限变为 ${VOLTAGE_TIERS[core.maxTier - 1]}`);
       }
       if (report.researchUnlocked !== null) {
+        const done = MACHINE_MODELS.find((item) => item.id === report.researchUnlocked);
         logEvent(
           'info',
           'research.done',
-          `研究完成：${VOLTAGE_TIERS[report.researchUnlocked - 1]} 的机型可以建造了`,
+          `研究完成：${done?.name ?? report.researchUnlocked} 可以建造了`,
         );
       }
       const band = core.pollutionEnabled ? pollutionBand(core.pollution) : 'clean';
@@ -1208,7 +1208,7 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
           id: model.id,
           name: model.name,
           block: model.block,
-          researched: core.isResearched(model.tier),
+          researched: core.isModelResearched(model),
           unlocked: core.isModelUnlocked(model),
           visPowered: model.visPowered === true,
           single: singleStats(model, level),
@@ -1246,59 +1246,48 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
 // 上报的是「上一拍」的实际数据，和电能四格同一个口径。
 function researchStats(core: GameCore): ResearchStats {
   const report = core.lastReport;
-  const target = core.researchTargetTier();
-  const required = target === null ? ZERO : researchRequired(target);
-  const progress = target === null ? ZERO : core.researchProgressOf(target);
+  const target = core.researchTargetModel();
+  const required = target === null ? ZERO : core.researchRequiredFor(target);
+  const progress = target === null ? ZERO : core.researchProgressOf(target.id);
   const remaining = researchRemaining(progress, required);
-  const targetName = target === null ? '' : (VOLTAGE_TIERS[target - 1] ?? `T${target}`);
+  const targetName = target?.name ?? '';
+  const targetTierName = target === null ? '' : (VOLTAGE_TIERS[target.tier - 1] ?? `T${target.tier}`);
   const used = report.computeUsed;
-
-  let computers = 0;
-  let labs = 0;
-  for (const model of core.unlockedModels('research')) {
-    const count = core.countOf(model.id);
-    if (model.computeRole === 'produce') computers += count;
-    else labs += count;
-  }
 
   const percent =
     target !== null && required.gt(0)
       ? Math.min(100, progress.div(required).times(100).toNumber())
       : 0;
 
-  const pendingTiers = core.researchOptions().filter((tier) => tier !== target);
+  const pending = core.researchOptions().filter((model) => model.id !== target?.id);
 
   let note: string;
-  if (target === null && pendingTiers.length === 0) {
+  if (target === null && pending.length === 0) {
     note = '所有机型都研究完了。';
   } else if (target === null) {
-    note = '还没选研究项目：从下面的列表里挑一个，算力才会往它上面投。';
+    note = '还没选研究项目：从下面的列表里挑一台机器，算力才会往它上面投。';
   } else {
-    note = `正在研究 ${targetName} 级机型：工程进度 ${formatNumber(progress)} / ${formatNumber(required)}。`;
+    note = `正在研究 ${targetName}：工程进度 ${formatNumber(progress)} / ${formatNumber(required)}。`;
   }
 
   return {
     unlocked: core.maxTier >= RESEARCH_FROM_TIER,
-    computeProduced: `${formatNumber(report.computeProduced)}/秒`,
-    computeUsed: `${formatNumber(used)}/秒`,
-    computeWasted: `${formatNumber(report.computeWasted)}/秒`,
-    computers,
-    labs,
     hasTarget: target !== null,
-    targetTier: target,
     targetName,
+    targetTierName,
     progress: formatNumber(progress),
     required: target === null ? '—' : formatNumber(required),
     percent,
     eta: target !== null && used.gt(0) ? formatDuration(remaining.div(used).toNumber()) : '—',
     note,
-    pending: pendingTiers.map((tier) => {
-      const need = core.researchRequiredFor(tier);
-      const have = core.researchProgressOf(tier);
+    pending: pending.map((model) => {
+      const need = core.researchRequiredFor(model);
+      const have = core.researchProgressOf(model.id);
       return {
-        tier,
-        name: VOLTAGE_TIERS[tier - 1] ?? `T${tier}`,
-        voltageReady: tier <= core.maxTier,
+        id: model.id,
+        name: model.name,
+        tierName: VOLTAGE_TIERS[model.tier - 1] ?? `T${model.tier}`,
+        voltageReady: model.tier <= core.maxTier,
         progress: formatNumber(have),
         required: formatNumber(need),
         percent: need.gt(0) ? Math.min(100, have.div(need).times(100).toNumber()) : 0,
@@ -1685,17 +1674,18 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
     ];
   }
   if (kind === 'research') {
-    const target = core.researchTargetTier();
+    const target = core.researchTargetModel();
     const required = target === null ? ZERO : core.researchRequiredFor(target);
     return [
       { label: '算力产出', value: `${formatNumber(core.computerComputeRated())}/秒` },
       { label: '算力消耗', value: `${formatNumber(core.labComputeDemand())}/秒` },
+      { label: '算力浪费', value: `${formatNumber(core.lastReport.computeWasted)}/秒` },
       {
         label: '研究进度',
         value:
           target === null
             ? '—'
-            : `${formatNumber(core.researchProgressOf(target))} / ${formatNumber(required)}`,
+            : `${formatNumber(core.researchProgressOf(target.id))} / ${formatNumber(required)}`,
       },
     ];
   }

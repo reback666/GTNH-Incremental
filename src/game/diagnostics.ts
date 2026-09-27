@@ -65,12 +65,12 @@ export function stateSnapshot(core: GameCore): string[] {
     `电网：${gridMode(core.grid).name}｜污染：${formatNumber(core.pollution)}%` +
       `${core.pollutionEnabled ? '' : '（机制已关闭）'}`,
   );
-  const researchTarget = core.researchTargetTier();
+  const researchTarget = core.researchTargetModel();
   lines.push(
-    `已研究：${core.researched.map(voltage).join('、') || '无'}` +
-      `｜研究项目：${researchTarget === null ? '未选' : voltage(researchTarget)}` +
+    `已研究机型：${core.researchedModels.join('、') || '无'}` +
+      `｜研究项目：${researchTarget === null ? '未选' : researchTarget.name}` +
       `｜研究进度：${formatNumber(
-        researchTarget === null ? ZERO : core.researchProgressOf(researchTarget),
+        researchTarget === null ? ZERO : core.researchProgressOf(researchTarget.id),
       )}`,
   );
 

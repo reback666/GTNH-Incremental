@@ -37,7 +37,7 @@ describe('平行宇宙', () => {
   it('没有工业宇宙时，低等级的币买不了高级机器', () => {
     const core = new GameCore();
     core.maxTier = 8;
-    core.researched.push(8);
+    core.researchedModels.push('c-8');
     const model = modelById('c-8');
     const need = core.coinPriceOf(model).times(coinValueInTier1(7));
     core.coins[0] = need.plus('1000'); // 只有 ULV 铜币
@@ -49,7 +49,7 @@ describe('平行宇宙', () => {
   it('工业宇宙：跨电压结算，低级币按币值顶钱，且精确扣款', () => {
     const core = new GameCore();
     core.maxTier = 8;
-    core.researched.push(8);
+    core.researchedModels.push('c-8');
     core.addUniverse('industry');
     const model = modelById('c-8');
     const need = core.coinPriceOf(model).times(coinValueInTier1(7));

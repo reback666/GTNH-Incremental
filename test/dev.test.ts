@@ -26,9 +26,10 @@ describe('开发者模式', () => {
 
     expect(core.maxTier).toBe(14);
     expect(core.unlockedVeins).toEqual(Array.from({ length: 14 }, (_, index) => index));
-    expect(core.researched).toEqual(Array.from({ length: 14 }, (_, index) => index + 1));
-    expect(core.researchTargetTier()).toBe(null);
-    expect(core.isResearched(14)).toBe(true);
+    // 开发者模式一口气把 ZPM 及以后的机型都标成已研究
+    expect(core.researchedModels.length).toBeGreaterThan(0);
+    expect(core.researchTargetModel()).toBe(null);
+    expect(core.isModelResearched(modelById('c-14'))).toBe(true);
 
     // 补一笔资源之后，MAX 的机器直接可买
     core.devGrantResources();
