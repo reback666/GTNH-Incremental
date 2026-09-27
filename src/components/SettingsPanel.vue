@@ -119,7 +119,7 @@ function adjustResource(sign: 1 | -1): void {
         </select>
         <button @click="store.devUnlockTo(unlockTier)">解锁</button>
       </div>
-      <div class="row">
+      <div class="row resource-row">
         <div class="name">资源</div>
         <select v-model="resTarget">
           <option value="both">每级矿石与 GT 币</option>
@@ -132,10 +132,13 @@ function adjustResource(sign: 1 | -1): void {
             {{ name }} GT 币
           </option>
         </select>
-      </div>
-      <div class="row">
-        <div class="name">数量</div>
-        <input v-model="resAmount" class="dev-amount" type="text" inputmode="decimal" />
+        <input
+          v-model="resAmount"
+          class="dev-amount"
+          type="text"
+          inputmode="decimal"
+          aria-label="数量"
+        />
         <button @click="adjustResource(1)">增加</button>
         <button @click="adjustResource(-1)">减少</button>
       </div>

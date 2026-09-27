@@ -1027,9 +1027,27 @@ h2 .small {
   color: var(--text);
 }
 
-.dev-tools .dev-amount {
-  width: 110px;
+.dev-tools .resource-row {
+  gap: 6px;
+}
+
+.dev-tools .resource-row select {
+  flex: 1 1 auto;
   min-width: 0;
+}
+
+.dev-tools .dev-amount {
+  flex: none;
+  width: 48px;
+  min-width: 0;
+  padding: 0 6px;
+  text-align: right;
+}
+
+.dev-tools .resource-row button {
+  flex: none;
+  padding: 0 6px;
+  font-size: 13px;
 }
 
 .rebirth-tree {
