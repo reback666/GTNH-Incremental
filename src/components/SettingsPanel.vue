@@ -122,7 +122,7 @@ function adjustResource(sign: 1 | -1): void {
       <div class="row resource-row">
         <div class="name">资源</div>
         <select v-model="resTarget">
-          <option value="both">每级矿石与 GT 币</option>
+          <option value="both">每级矿石+币</option>
           <option value="ores">每级矿石</option>
           <option value="coins">每级 GT 币</option>
           <option v-for="(name, index) in VOLTAGE_TIERS" :key="`ore-${name}`" :value="`ore:${index + 1}`">

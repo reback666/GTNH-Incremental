@@ -1028,17 +1028,18 @@ h2 .small {
 }
 
 .dev-tools .resource-row {
-  gap: 6px;
+  gap: 4px;
 }
 
 .dev-tools .resource-row select {
-  flex: 1 1 auto;
+  /* 按内容宽度走：刚好显示得下最长的那个选项，空间实在不够时才缩 */
+  flex: 0 1 auto;
   min-width: 0;
 }
 
 .dev-tools .dev-amount {
   flex: none;
-  width: 48px;
+  width: 44px;
   min-width: 0;
   padding: 0 6px;
   text-align: right;
@@ -1046,7 +1047,7 @@ h2 .small {
 
 .dev-tools .resource-row button {
   flex: none;
-  padding: 0 6px;
+  padding: 0 4px;
   font-size: 13px;
 }
 
