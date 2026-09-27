@@ -41,7 +41,6 @@ export interface MachineModel {
   requiresUniverse?: 'arcane' | 'abyss';
   // 灵气驱动：不耗电、改吃灵气（奥术宇宙的魔法机器）
   visPowered?: boolean;
-  traits?: string[];
 }
 
 // ── 发电机 ──────────────────────────────────────────────────
@@ -141,7 +140,6 @@ const STORAGES: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => 
     tier,
     outputFactor: '1',
     costFactor: '1.5',
-    traits: ['可存电'],
   };
 }).filter((model) => model.tier >= STORAGE_FROM_TIER);
 
@@ -160,7 +158,6 @@ const PURIFIERS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) =>
     tier,
     outputFactor: '1',
     costFactor: '1.2',
-    traits: ['降低污染'],
   };
 }).filter((model) => model.tier >= PURIFIER_FROM_TIER);
 
@@ -179,7 +176,6 @@ const COMPUTERS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) =>
     outputFactor: '1',
     costFactor: '1',
     computeRole: 'produce' as const,
-    traits: ['提供算力'],
   };
 }).filter((model) => model.tier >= RESEARCH_FROM_TIER);
 
@@ -194,7 +190,6 @@ const LABS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
     outputFactor: '1',
     costFactor: '1',
     computeRole: 'consume' as const,
-    traits: ['消耗算力'],
   };
 }).filter((model) => model.tier >= RESEARCH_FROM_TIER);
 
@@ -212,7 +207,6 @@ const NODES: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) => {
     outputFactor: '1',
     costFactor: '1',
     requiresUniverse: 'arcane' as const,
-    traits: ['产出灵气'],
   };
 });
 
@@ -277,7 +271,6 @@ const SUPPRESSORS: MachineModel[] = Array.from({ length: MAX_TIER }, (_, index) 
     outputFactor: '1',
     costFactor: '1',
     requiresUniverse: 'abyss' as const,
-    traits: ['抑制腐蚀'],
   };
 });
 

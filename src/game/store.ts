@@ -137,7 +137,6 @@ export interface MachineModelRow {
   id: string;
   name: string;
   block: BlockKind;
-  traits: string[];
   // ZPM 及以后的机型要先研究出来才能建造
   researched: boolean;
   // 是否已解锁（研究 + 所属平行宇宙都满足）；奥术宇宙的灵气节点要拥有奥术宇宙
@@ -1195,7 +1194,6 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
           id: model.id,
           name: model.name,
           block: model.block,
-          traits: model.traits ?? [],
           researched: core.isResearched(model.tier),
           unlocked: core.isModelUnlocked(model),
           visPowered: model.visPowered === true,

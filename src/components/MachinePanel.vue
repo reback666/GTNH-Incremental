@@ -74,11 +74,11 @@ function showTip(event: Event, model: MachineModelRow) {
   }
   if (model.stopped) lines.push({ label: '状态', value: '已停机（不产、不耗、不污染）' });
   const width = 178;
-  const height = 36 + (lines.length + (model.traits.length ? 1 : 0)) * 19;
+  const height = 36 + lines.length * 19;
   tip.value = {
     name: model.name,
     lines,
-    traits: model.traits,
+    traits: [],
     x: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
     y: rect.bottom + 8 + height > window.innerHeight ? rect.top - height - 6 : rect.bottom + 6,
   };
@@ -256,12 +256,6 @@ function canBuy(model: MachineModelRow): boolean {
               >
                 <span class="model-label">{{ bar.model.name }}</span>
                 <span v-if="bar.model.block === 'multiblock'" class="badge mb" title="多方块：产出与效率更高，成本系数也更高">多方块</span>
-                <span
-                  v-for="trait in bar.model.traits"
-                  :key="trait"
-                  class="badge warn"
-                  >{{ trait }}</span
-                >
                 <span v-if="!bar.model.researched" class="badge warn" title="要先在研究里解锁这一级机型">需研究</span>
                 <span
                   v-if="bar.model.visPowered"
