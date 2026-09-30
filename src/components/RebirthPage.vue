@@ -23,10 +23,6 @@ function doRebirth() {
   store.rebirth('max', pickedUniverse.value || undefined);
 }
 
-function doRiftRebirth() {
-  store.rebirth('rift', pickedUniverse.value || undefined);
-}
-
 interface Link {
   key: string;
   x1: number;

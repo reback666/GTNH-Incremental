@@ -27,7 +27,6 @@ import {
   SILICON_DOWNGRADE_RATIO,
   SILICON_UPGRADE_HEADROOM,
   type SiliconKind,
-  isSheddableKind,
 } from '../numeric/silicon';
 import { MAX_OVERCLOCK_LEVEL } from '../numeric/overclock';
 import { batteryCapacityEU, settleStorage } from '../numeric/storage';
@@ -69,7 +68,6 @@ import {
   gridEnergyMultiplier,
   gridOutageRule,
   gridMode,
-  isGridUnlocked,
   type GridMode,
 } from '../numeric/grid';
 import {
@@ -511,6 +509,8 @@ export class GameCore {
 
   // 每拍检查一次，第一次成立就记下时间（成就跨周目保留）
   private checkAchievements(): void {
+    // 全达成之后就没必要每拍再扫一遍 20 条判定
+    if (achievedCount(this.achieved) >= ACHIEVEMENTS.length) return;
     const state = this.achievementState();
     for (const achievement of ACHIEVEMENTS) {
       if (this.achieved[achievement.id] !== undefined) continue;

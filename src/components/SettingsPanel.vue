@@ -113,7 +113,7 @@ function cleanAmount(text: string): string | null {
       </div>
       <p class="muted small" style="margin: 6px 0 0">
         自动维护：故障机器当拍修好。自动超频：电力扛得住翻倍时才升档，明显缺电就降档。
-        按优先级停机：缺电时整组停掉优先级最低的机器（研究 → 制造机 → 采矿机 → 净化器），
+        按优先级停机：缺电时整组停掉优先级最低的机器（{{ snap.silicon.sheddingOrder }}），
         而不是全厂一起减半。三件事都有 5% 误判率，做错了下一拍自己纠正。
       </p>
       <p class="muted small" style="margin: 6px 0 0">{{ snap.silicon.note }}</p>

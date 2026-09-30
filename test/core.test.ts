@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GameCore } from '../src/game/core';
 import { deserialize, serialize, type SaveData } from '../src/game/save';
-import { modelById, modelsOf } from '../src/game/models';
+import { modelById, modelsOf, type MachineModel } from '../src/game/models';
 import { dec } from '../src/numeric/decimal';
 import { MAX_TIER, MIN_TIER, VOLTAGE_TIERS } from '../src/numeric/voltage';
 
@@ -239,5 +239,16 @@ describe('游戏核心：ULV → LV 完整循环', () => {
     expect(core.countOf('g-lv-steam')).toBe(1);
     expect(core.countOf(ULV_MACHINE)).toBe(2);
     expect(core.maxTier).toBe(2);
+  });
+});
+
+describe('机型清单', () => {
+  it('按类别预生成一份，调用方改不动它', () => {
+    const miners = modelsOf('miner');
+    // 同一个类别每次都拿同一份，不再每次去全表筛 140 多个机型
+    expect(modelsOf('miner')).toBe(miners);
+    expect(miners.length).toBeGreaterThan(0);
+    // 冻结的清单：谁想就地排序 / 塞东西都会立刻炸出来，而不是悄悄影响全局
+    expect(() => (miners as MachineModel[]).push(miners[0]!)).toThrow();
   });
 });

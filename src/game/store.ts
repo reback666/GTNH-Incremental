@@ -2,7 +2,9 @@ import { defineStore } from 'pinia';
 import { Decimal, ZERO, dec, decInt } from '../numeric/decimal';
 import { MAX_TIER, VOLTAGE_TIERS } from '../numeric/voltage';
 import { coinName, oreName } from '../numeric/credit';
+import { SILICON_KEEP_PRIORITY } from '../numeric/silicon';
 import { formatNumber } from '../numeric/format';
+import { formatDuration } from '../numeric/time';
 import { machineEnergy, machineOutput } from '../numeric/output';
 import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../numeric/generator';
 import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
@@ -17,14 +19,13 @@ import { batteryCapacityEU } from '../numeric/storage';
 import {
   COLLAPSE_CHANCE_PER_10_MINUTES,
   MUTATION_CHANCE_PER_MINUTE,
-  POLLUTION_HIGH,
-  POLLUTION_LOW,
   pollutionBand,
   pollutionBandName,
 } from '../numeric/pollution';
 import { GRID_MODES, gridEnergyMultiplier, gridMode, type GridMode } from '../numeric/grid';
 import { ACHIEVEMENTS } from './achievements';
 import { UNIVERSES, universeById } from './universes';
+import { VEIN_MATERIALS } from './vein-materials';
 import { essentiaFromPurify } from '../numeric/arcane';
 import {
   arcaneOutputBonus,
@@ -39,12 +40,10 @@ import { pollutionDriveFactor, suppressionOfTier } from '../numeric/abyss';
 import { REBIRTH_NODES, REBIRTH_ROOT, type RebirthEffectKind } from './rebirth';
 import {
   RESEARCH_FROM_TIER,
-  RESEARCH_GATE_FROM_TIER,
   computerComputePerSecond,
   computerEnergyEU,
   labComputeThroughput,
   researchRemaining,
-  researchRequired,
 } from '../numeric/research';
 import {
   type DevResourceTarget,
@@ -186,13 +185,11 @@ export interface MachineColumn {
   modifiers: ModifierRow[];
 }
 
-export interface ProductionRate {
-  orePerSecond: string;
-  orePerSecondRaw: string;
-  euNet: string;
-  euNetRaw: string;
-  coinsPerSecond: string;
-  fuelPerSecond: string;
+// 资源条与机器面板上的矿石名：带上矿脉材料名，和矿脉面板上写的是同一个词
+// （材料名只有 VEIN_MATERIALS 这一个来源）。
+function oreLabel(oreTier: number): string {
+  const material = VEIN_MATERIALS[oreTier]?.material;
+  return material === undefined ? oreName(oreTier) : `${oreName(oreTier)}（${material}）`;
 }
 
 // 镐子（手动开采）的一条升级线
@@ -340,6 +337,8 @@ export interface SiliconStats {
   autoRepair: boolean;
   autoOverclock: boolean;
   shedding: boolean;
+  // 缺电时按优先级停机的顺序（最先被停的排在前面），由 SILICON_KEEP_PRIORITY 生成
+  sheddingOrder: string;
   note: string;
 }
 
@@ -363,14 +362,10 @@ export interface Snapshot {
   coins: ResourceRow[];
   columns: MachineColumn[];
   maxTier: number;
-  powerGenerated: string;
-  powerConsumed: string;
-  powerRatio: number;
   powerShort: boolean;
   playTime: string;
   totalOre: string;
   totalCoins: string;
-  rate: ProductionRate;
   power: PowerStats;
   risk: RiskStats;
   research: ResearchStats;
@@ -783,9 +778,8 @@ export const useGameStore = defineStore('game', {
         if (this.simulationPaused) return;
         this.step(C.SIM_STEP_MS / 1000);
       }, C.SIM_STEP_MS);
-      setInterval(() => {
-        if (this.snapshot === null) this.refresh();
-      }, C.UI_REFRESH_MS);
+      // 界面跟着模拟拍与玩家操作刷新（数字的平滑过渡由 AnimatedNumber 负责）；
+      // 原来这里还有一个 20 Hz 的兜底轮询，实际只在快照为空时干活，等于空转，已删
       setInterval(() => this.save(), 10_000);
       window.addEventListener('beforeunload', () => this.save());
       // iOS / Android 上 beforeunload 常常不触发：切后台、页面被丢弃时也补一次存档，
@@ -861,11 +855,10 @@ function buildSnapshot(core: GameCore): Snapshot {
   const nextTier = core.maxTier < MAX_TIER ? core.maxTier + 1 : null;
   const oreRate = oreRates(core);
   const coinRate = coinRates(core);
-  const rate = productionOf(core);
   return {
     ores: core.ores.slice(0, core.maxTier).map((amount, index) => ({
       tier: index,
-      name: oreName(index),
+      name: oreLabel(index),
       amount: formatNumber(amount),
       value: amount.toString(),
       detail: [
@@ -892,21 +885,10 @@ function buildSnapshot(core: GameCore): Snapshot {
         (kind !== 'research' || core.maxTier >= RESEARCH_FROM_TIER),
     ).map((kind) => machineColumn(core, kind)),
     maxTier: core.maxTier,
-    powerGenerated: formatNumber(report.euGenerated),
-    powerConsumed: formatNumber(report.euConsumed),
-    powerRatio: report.powerRatio,
     powerShort: report.powerRatio < 1,
     playTime: formatDuration(core.playSeconds),
     totalOre: formatNumber(core.totalOre),
     totalCoins: formatNumber(core.totalCoins),
-    rate: {
-      orePerSecond: formatNumber(rate.oreNet),
-      orePerSecondRaw: rate.oreNet.toString(),
-      euNet: formatNumber(rate.euNet),
-      euNetRaw: rate.euNet.toString(),
-      coinsPerSecond: formatNumber(rate.coins),
-      fuelPerSecond: formatNumber(rate.fuel),
-    },
     power: powerStats(core),
     risk: riskStats(core),
     research: researchStats(core),
@@ -1266,17 +1248,25 @@ function pickaxeEffectNow(core: GameCore, line: PickaxeLine): string {
 
 function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
   const meta = COLUMN_META[kind];
+  // 先按等级分桶（一次遍历），再逐级取：比每个等级都去品类清单里筛一遍便宜
+  const buckets = new Map<number, MachineModel[]>();
+  for (const model of modelsOf(kind)) {
+    if (!core.universeSatisfied(model)) continue;
+    const list = buckets.get(model.tier);
+    if (list) list.push(model);
+    else buckets.set(model.tier, [model]);
+  }
   const tiers: MachineTierGroup[] = [];
   for (let tier = 1; tier <= MAX_TIER; tier += 1) {
     // 没解锁对应平行宇宙的机型（魔法机器、灵气节点、腐蚀抑制器）整个不出现，
     // 和「标签按进度出现」同一个规矩：没到那一步就不占位置
-    const models = core.modelsAt(kind, tier).filter((model) => core.universeSatisfied(model));
-    if (models.length === 0) continue;
+    const models = buckets.get(tier);
+    if (models === undefined) continue;
     const payment = paymentUnit(tier);
     tiers.push({
       tier,
       voltage: VOLTAGE_TIERS[tier - 1] ?? `T${tier}`,
-      oreLabel: oreName(tier - 1),
+      oreLabel: oreLabel(tier - 1),
       unlocked: tier <= core.maxTier,
       unit: payment,
       models: models.map((model) => {
@@ -1538,6 +1528,11 @@ function arcaneStats(core: GameCore): ArcaneStats {
 function siliconStats(core: GameCore): SiliconStats {
   const active = core.hasUniverse('silicon');
   const report = core.lastReport;
+  // 说明文案里的停机顺序直接由优先级清单反着生成：加类别时不会再漏掉一句
+  const sheddingOrder = [...SILICON_KEEP_PRIORITY]
+    .reverse()
+    .map((kind) => COLUMN_META[kind].title)
+    .join(' → ');
   const did: string[] = [];
   if (report.autoRepairs > 0) did.push(`修好 ${report.autoRepairs} 台故障`);
   if (report.autoOverclockUp > 0) did.push(`升档 ${report.autoOverclockUp} 次`);
@@ -1565,6 +1560,7 @@ function siliconStats(core: GameCore): SiliconStats {
     autoRepair: core.siliconAutoRepair,
     autoOverclock: core.siliconAutoOverclock,
     shedding: core.siliconShedding,
+    sheddingOrder,
     note,
   };
 }
@@ -1965,46 +1961,3 @@ function powerStats(core: GameCore): PowerStats {
   };
 }
 
-// 全厂合计速率：矿石净变化、电力净收支、产币、烧矿。
-function productionOf(core: GameCore): {
-  oreNet: Decimal;
-  euNet: Decimal;
-  coins: Decimal;
-  fuel: Decimal;
-} {
-  let oreNet = ZERO;
-  let euNet = ZERO;
-  let coins = ZERO;
-  let fuel = ZERO;
-  const gridMul = gridEnergyMultiplier(core.grid);
-  for (const model of core.unlockedModels('miner')) {
-    if (core.countOf(model.id) === 0) continue;
-    oreNet = oreNet.plus(core.minerOutputPerSecond(model));
-    euNet = euNet.minus(core.minerEnergyDrain(model).times(gridMul));
-  }
-  for (const model of core.unlockedModels('generator')) {
-    if (core.countOf(model.id) === 0) continue;
-    euNet = euNet.plus(core.generatorOutputRated(model));
-    fuel = fuel.plus(core.generatorFuelDrain(model));
-  }
-  for (const model of core.unlockedModels('machine')) {
-    if (core.countOf(model.id) === 0) continue;
-    const output = core.machineOutputPerSecond(model);
-    coins = coins.plus(output);
-    euNet = euNet.minus(core.machineEnergyDrain(model).times(gridMul));
-    oreNet = oreNet.minus(output.div(C.COINS_PER_ORE));
-  }
-  for (const model of core.unlockedModels('research')) {
-    if (model.computeRole !== 'produce' || core.countOf(model.id) === 0) continue;
-    euNet = euNet.minus(core.computerEnergyDrain(model).times(gridMul));
-  }
-  return { oreNet, euNet, coins, fuel };
-}
-
-function formatDuration(seconds: number): string {
-  const total = Math.floor(seconds);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  return h > 0 ? `${h} 小时 ${m} 分` : m > 0 ? `${m} 分 ${s} 秒` : `${s} 秒`;
-}

@@ -1,4 +1,4 @@
-import { Decimal, ZERO, dec, type DecimalInput } from './decimal';
+import { Decimal, dec, type DecimalInput } from './decimal';
 import { overclockEnergyMultiplier, overclockSpeedMultiplier } from './overclock';
 import { assertTier, voltageMultiplier } from './voltage';
 
@@ -37,18 +37,4 @@ export function machineEnergy(input: MachineEnergyInput): Decimal {
   return dec(input.baseEnergy)
     .times(voltageMultiplier(input.tier))
     .times(overclockEnergyMultiplier(input.overclockLevel ?? 0));
-}
-
-// 并联：多台机器同时跑同一配方时，产能直接相加。
-// 逐台机器求和，累加全程使用 Decimal。
-export function lineOutput(
-  machines: MachineOutputInput[],
-  perMachineCount: number[] = machines.map(() => 1),
-): Decimal {
-  let total = ZERO;
-  machines.forEach((machine, index) => {
-    const count = perMachineCount[index] ?? 1;
-    total = total.plus(machineOutput(machine).times(count));
-  });
-  return total;
 }

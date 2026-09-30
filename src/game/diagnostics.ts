@@ -1,12 +1,13 @@
 import { SIM_STEP_MS } from './constants';
 import { MACHINE_MODELS } from './models';
-import { formatLogEntry, logEntries, levelName, type LogEntry } from './log';
+import { formatLogEntry, logEntries, levelName } from './log';
 import { type GameCore } from './core';
 import { coinName, oreName } from '../numeric/credit';
 import { ZERO } from '../numeric/decimal';
 import { formatNumber } from '../numeric/format';
 import { gridMode } from '../numeric/grid';
 import { VOLTAGE_TIERS } from '../numeric/voltage';
+import { formatDuration, formatStamp } from '../numeric/time';
 
 // 玩家反馈问题时要交给作者的那份材料：
 // 环境信息 + 导出那一刻的游戏状态 + 日志。全部拼成纯文本，玩家能直接粘贴。
@@ -27,7 +28,7 @@ export function environmentInfo(): string[] {
   const view = typeof window === 'undefined' ? undefined : window;
   const lines = [
     `游戏版本：v${appVersion()}（构建 ${buildStamp()}）`,
-    `导出时间：${stamp(new Date())}`,
+    `导出时间：${formatStamp(new Date())}`,
     `浏览器：${nav?.userAgent ?? '未知（非浏览器环境）'}`,
     `打开方式：${
       !loc
@@ -53,7 +54,7 @@ export function stateSnapshot(core: GameCore): string[] {
   const voltage = (tier: number) => VOLTAGE_TIERS[tier - 1] ?? `T${tier}`;
 
   lines.push(
-    `游戏内时长：${duration(core.playSeconds)}｜电压上限：${voltage(core.maxTier)}` +
+    `游戏内时长：${formatDuration(core.playSeconds)}｜电压上限：${voltage(core.maxTier)}` +
       `｜历史最高：${voltage(core.peakTier)}`,
   );
   lines.push(
@@ -146,18 +147,3 @@ export function buildDiagnosticReport(core: GameCore, entries = logEntries()): s
   ].join('\n');
 }
 
-function stamp(date: Date): string {
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return (
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
-    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
-  );
-}
-
-function duration(seconds: number): string {
-  const total = Math.floor(seconds);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  return h > 0 ? `${h} 小时 ${m} 分` : m > 0 ? `${m} 分 ${s} 秒` : `${s} 秒`;
-}

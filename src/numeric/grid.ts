@@ -77,15 +77,6 @@ export function gridOutageRule(id: GridMode): OutageRule | null {
   return gridMode(id).outage;
 }
 
-// 当前电压等级下已经解锁的电网
-export function unlockedGrids(maxTier: number): GridModeInfo[] {
-  return GRID_MODES.filter((mode) => mode.unlockTier <= maxTier);
-}
-
-export function isGridUnlocked(id: GridMode, maxTier: number): boolean {
-  return gridMode(id).unlockTier <= maxTier;
-}
-
 // 黑市电网：每分钟判一次
 export const SIPHON_CHECK_SECONDS = 60;
 export const SIPHON_RATIO = '0.01';

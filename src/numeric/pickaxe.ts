@@ -1,4 +1,4 @@
-import { Decimal, dec, decInt, pow, powFraction } from './decimal';
+import { Decimal, dec, pow, powFraction } from './decimal';
 import { MAX_TIER, assertTier } from './voltage';
 
 // 镐子的三条升级线。升级机会全部由电压等级发放，不花币：

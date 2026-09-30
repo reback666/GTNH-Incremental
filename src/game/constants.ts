@@ -24,9 +24,9 @@ export const UNLOCK_COST_IN_MACHINES = 10;
 // 电网解锁价 = 该等级第一台机器价格的这个倍数，用该等级的 GT 币支付（计划书第六章）。
 export const GRID_UNLOCK_COST_MACHINES = 16;
 
-// 模拟步长与界面刷新频率（计划书第十四章：UI 20 Hz、运算 1 Hz 或更低）。
+// 模拟步长（计划书第十四章：运算 1 Hz 或更低）。
+// 界面跟着模拟拍与玩家操作刷新，数字的平滑过渡由 AnimatedNumber 负责。
 export const SIM_STEP_MS = 1000;
-export const UI_REFRESH_MS = 50;
 
 // 存档结构版本，用于迁移（计划书第十四章）。
 // v1：机器数量按电压等级存（miners/generators/machines 各 14 个）
