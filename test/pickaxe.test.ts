@@ -20,6 +20,12 @@ import { deserialize, serialize } from '../src/game/save';
 import { useGameStore } from '../src/game/store';
 import { getCore } from '../src/game/engine';
 
+// 升级现在要花对应电压的 GT 币：这些用例只关心升级本身，先把钱包填满
+function funded(core: GameCore): GameCore {
+  core.coins = core.coins.map(() => dec('1e30'));
+  return core;
+}
+
 describe('镐子的三条升级线', () => {
   it('升级机会随电压等级发放：金刚杵从 LV 起每级 1 次、连锁采集每 2 级 1 次、连锁爆破每级 2 次', () => {
     // 金刚杵在 ULV 时没有机会（开局本来就能挖 T0，第一次升级对应 LV）
@@ -121,7 +127,7 @@ describe('游戏核心里的镐子', () => {
   });
 
   it('金刚杵升级后能挖更高一级矿脉，产出按矿脉规则均分', () => {
-    const core = new GameCore();
+    const core = funded(new GameCore());
     core.maxTier = 2;
     core.unlockedVeins = [0, 1];
     core.upgradePickaxe('vajra');
@@ -133,7 +139,7 @@ describe('游戏核心里的镐子', () => {
   });
 
   it('ULV 时金刚杵还没开放，到 LV 才有第一次机会', () => {
-    const core = new GameCore();
+    const core = funded(new GameCore());
     expect(core.pickaxeCap('vajra')).toBe(0);
     expect(core.canUpgradePickaxe('vajra')).toBe(false);
     expect(core.upgradePickaxe('vajra')).toBe(false);
@@ -146,7 +152,7 @@ describe('游戏核心里的镐子', () => {
   });
 
   it('金刚杵等级不够时，挖的还是镐子够得着的那一级', () => {
-    const core = new GameCore();
+    const core = funded(new GameCore());
     core.maxTier = 4;
     core.unlockedVeins = [0, 1, 2, 3];
     expect(core.pickaxeVeinTier()).toBe(0);
@@ -155,7 +161,7 @@ describe('游戏核心里的镐子', () => {
   });
 
   it('机会用完之后不能再升', () => {
-    const core = new GameCore();
+    const core = funded(new GameCore());
     expect(core.canUpgradePickaxe('collect')).toBe(false); // ULV 时连锁采集还没有机会
     expect(core.canUpgradePickaxe('blast')).toBe(true);
     core.upgradePickaxe('blast');
@@ -165,7 +171,7 @@ describe('游戏核心里的镐子', () => {
   });
 
   it('金刚杵挖满 T13 之后不再消耗机会', () => {
-    const core = new GameCore();
+    const core = funded(new GameCore());
     core.maxTier = MAX_TIER;
     for (let i = 0; i < 13; i += 1) core.upgradePickaxe('vajra');
     expect(core.pickaxeVajra).toBe(13);
@@ -173,7 +179,7 @@ describe('游戏核心里的镐子', () => {
   });
 
   it('连锁爆破已经用掉的机会不会因为电压变高而增值', () => {
-    const core = new GameCore();
+    const core = funded(new GameCore());
     core.maxTier = 4;
     core.upgradePickaxe('blast'); // 第 1 次机会来自 ULV，加值 +2^0.5
     expect(core.pickaxeOutput().toSignificantDigits(9).toString()).toBe('2.41421356');
@@ -188,7 +194,7 @@ describe('游戏核心里的镐子', () => {
   });
 
   it('转生之后镐子回到开局状态', () => {
-    const core = new GameCore();
+    const core = funded(new GameCore());
     core.maxTier = MAX_TIER;
     core.peakTier = MAX_TIER;
     core.runEU = dec('1e30');
@@ -203,7 +209,7 @@ describe('游戏核心里的镐子', () => {
   });
 
   it('存档往返保留三条线的进度', () => {
-    const core = new GameCore();
+    const core = funded(new GameCore());
     core.maxTier = 6;
     core.upgradePickaxe('vajra');
     core.upgradePickaxe('collect');
@@ -255,7 +261,7 @@ describe('镐子面板拿到的数据', () => {
   it('点了升级就立刻反映到产出、矿脉与图标上', () => {
     const store = useGameStore();
     store.boot();
-    const core = getCore();
+    const core = funded(getCore());
     core.maxTier = 4;
     core.unlockedVeins = [0, 1, 2, 3];
     store.refresh();
@@ -274,7 +280,7 @@ describe('镐子面板拿到的数据', () => {
   it('金刚杵跟不上时，面板提示已解锁更高级矿脉但挖不动', () => {
     const store = useGameStore();
     store.boot();
-    const core = getCore();
+    const core = funded(getCore());
     core.maxTier = 4;
     core.unlockedVeins = [0, 1, 2, 3];
     store.refresh();

@@ -27,8 +27,10 @@ const PICKAXE_TAB = 'pickaxe';
 
 // 镐子标签上的角标：三条线还剩几次能升
 const pickaxeLines = computed(() => store.snap.pickaxe.lines);
+// 只统计真正还能升的次数：机会没用满，且币也够。
+// 币不够时这次升级做不了，不该算进角标。
 const pickaxeChancesLeft = computed(() =>
-  pickaxeLines.value.reduce((sum, line) => sum + (line.cap - line.level), 0),
+  pickaxeLines.value.reduce((sum, line) => sum + (line.canUpgrade ? 1 : 0), 0),
 );
 const pickaxeTabIcon = computed(() =>
   pickaxeIconUrl('vajra', pickaxeLines.value[0]?.iconTier ?? 1),
@@ -461,13 +463,24 @@ function canBuy(model: MachineModelRow): boolean {
             </div>
             <div class="pickaxe-line-action">
               <span v-if="!line.locked" class="muted small">{{ line.level }} / {{ line.cap }}</span>
+              <span v-if="line.cost" class="pickaxe-cost">
+                {{ line.cost }} {{ line.coinName }}
+              </span>
               <button
                 class="pickaxe-upgrade"
                 type="button"
                 :disabled="!line.canUpgrade"
                 @click="store.upgradePickaxe(line.id)"
               >
-                {{ line.canUpgrade ? '升级' : line.locked ? '未开放' : '已满级' }}
+                {{
+                  line.locked
+                    ? '未开放'
+                    : line.level >= line.cap
+                      ? '已满级'
+                      : !line.affordable
+                        ? '币不足'
+                        : '升级'
+                }}
               </button>
             </div>
           </div>
