@@ -66,10 +66,17 @@ interface TipState {
 
 const tip = ref<TipState | null>(null);
 
+// 卖回价跟着当前的支付方式走：切到「同级矿石」时卖出去退的是矿石，提示不能还报币的数
+function refundLabel(row: MachineModelRow): string {
+  return payWith.value === 'ore'
+    ? `${row.oreRefund} 同级矿石（单价的 50%）`
+    : `${row.refund}（单价的 50%）`;
+}
+
 function showTip(event: Event, model: MachineModelRow) {
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
   const lines = [...model.single];
-  lines.push({ label: '卖回一台', value: `${model.refund}（单价的 50%）` });
+  lines.push({ label: '卖回一台', value: refundLabel(model) });
   if (model.overclock > 0) {
     lines.push({ label: '超频', value: `${model.overclock} 档（速度 +${model.overclock * 60}%）` });
     lines.push({ label: '故障率', value: model.faultHint });
@@ -345,7 +352,7 @@ function canBuy(model: MachineModelRow): boolean {
                 <button
                   class="sell-btn"
                   :disabled="bar.model.count === 0"
-                  :title="`卖回一台拿回 ${bar.model.refund}（单价的 50%）；卖出后重新买回来的价钱也会跟着降`"
+                  :title="`卖回一台拿回 ${refundLabel(bar.model)}；卖出后重新买回来的价钱也会跟着降`"
                   @click="store.sell(bar.model.id, 1, payWith)"
                 >
                   1x

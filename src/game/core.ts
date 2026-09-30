@@ -1337,8 +1337,10 @@ export class GameCore {
     for (let i = 0; i < count; i += 1) {
       const have = this.countOf(model.id);
       if (have <= 0) break;
-      const refund = this.refundOf(model, payWith);
       this.counts[model.id] = have - 1;
+      // 退款按「卖出后的台数」定价：卖掉的那一台本来就是按这一档买进来的，
+      // 这样买 N 台再全卖回去，拿回的钱正好是买价的一半（用卖出前的台数会多退一档）
+      const refund = this.refundOf(model, payWith);
       // 坏掉的台数不能比剩下的台数还多
       const faulty = this.faults[model.id];
       if (faulty !== undefined && faulty > have - 1) this.faults[model.id] = have - 1;

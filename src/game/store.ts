@@ -160,6 +160,8 @@ export interface MachineModelRow {
   price: string;
   // 卖回一台能拿回多少（币或矿石，跟着上面的支付方式）
   refund: string;
+  // 矿石支付时的卖回价：面板切到「同级矿石」时卖出的就是矿石，提示不能还按币报
+  oreRefund: string;
   orePrice: string;
   affordable: boolean;
   oreAffordable: boolean;
@@ -1333,6 +1335,7 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
           overflow: Math.max(0, count - TIER_ICON_LIMIT),
           price: formatNumber(core.coinPriceOf(model)),
           refund: formatNumber(core.refundOf(model)),
+          oreRefund: formatNumber(core.refundOf(model, 'ore')),
           orePrice: formatNumber(core.orePriceOf(model)),
           affordable: tier <= core.maxTier && core.canAfford(model, 'coin'),
           oreAffordable: tier <= core.maxTier && core.canAfford(model, 'ore'),
