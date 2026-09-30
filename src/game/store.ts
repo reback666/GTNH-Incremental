@@ -452,6 +452,8 @@ export const useGameStore = defineStore('game', {
     achievementsCollapsed: false,
     // 待研究机器列表收起来没有（纯界面状态，不进存档）
     researchListCollapsed: false,
+    // 转生页的平行宇宙列表收起来没有（纯界面状态，不进存档；默认收起）
+    universesCollapsed: true,
     // 模拟连续出错时暂停（纯运行时状态，不进存档；刷新页面即可恢复）
     simulationPaused: false,
     crashStreak: 0,
@@ -475,6 +477,9 @@ export const useGameStore = defineStore('game', {
     },
     toggleResearchList(): void {
       this.researchListCollapsed = !this.researchListCollapsed;
+    },
+    toggleUniverses(): void {
+      this.universesCollapsed = !this.universesCollapsed;
     },
     boot() {
       const loaded = loadFromStorage();

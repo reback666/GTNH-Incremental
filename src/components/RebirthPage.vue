@@ -12,6 +12,14 @@ const universes = computed(() => store.snap.universes);
 // 本次转生要带上的宇宙。选择存在存档里（rebirth.pendingUniverse），
 // 所以来回切页面、刷新都不会丢
 const pickedUniverse = computed(() => store.snap.rebirth.pendingUniverse);
+const universesCollapsed = computed(() => store.universesCollapsed);
+
+// 收起来的时候也要能一眼看出「有几个宇宙、这次带哪个」
+const universesSummary = computed(() => {
+  const owned = universes.value.filter((universe) => universe.owned).length;
+  const picked = store.snap.rebirth.pendingUniverseName;
+  return `已拥有 ${owned} 个${picked ? ` · 本次带 ${picked}` : ''}`;
+});
 
 function pickUniverse(id: string, owned: boolean, implemented: boolean) {
   if (owned || !implemented) return;
@@ -114,35 +122,45 @@ function nodeClass(node: RebirthNodeRow) {
       本周目的时空裂缝已经关掉了，这一轮只剩打到 MAX。
     </p>
 
-    <h2 class="mt">平行宇宙</h2>
-    <p class="muted small" style="margin: 0 0 8px">
-      转生时可以带一个宇宙走，选过的永久叠加 —— 下一轮开始，核心规则就多一条。
-    </p>
-    <p v-if="rebirth.pendingUniverseName" class="small" style="margin: 0 0 8px">
-      本次转生将带上：<b>{{ rebirth.pendingUniverseName }}</b>
-    </p>
-    <div class="universe-list">
-      <button
-        v-for="universe in universes"
-        :key="universe.id"
-        type="button"
-        class="universe"
-        :class="{ picked: pickedUniverse === universe.id, owned: universe.owned, todo: !universe.implemented }"
-        :disabled="universe.owned || !universe.implemented"
-        @click="pickUniverse(universe.id, universe.owned, universe.implemented)"
-      >
-        <b>
-          {{ universe.name }}
-          <span v-if="universe.owned" class="tag-owned">已拥有</span>
-          <span v-else-if="!universe.implemented" class="tag-todo">未实现</span>
-          <span v-else-if="pickedUniverse === universe.id" class="tag-picked">本次选择</span>
-        </b>
-        <span class="muted small">{{ universe.summary }}</span>
-        <span v-for="effect in universe.effects" :key="effect" class="muted small effect">
-          · {{ effect }}
-        </span>
-      </button>
-    </div>
+    <button
+      type="button"
+      class="rebirth-toggle"
+      :aria-expanded="!universesCollapsed"
+      @click="store.toggleUniverses()"
+    >
+      <span>{{ universesCollapsed ? '▸' : '▾' }} 平行宇宙</span>
+      <span class="muted small">{{ universesSummary }}</span>
+    </button>
+    <template v-if="!universesCollapsed">
+      <p class="muted small" style="margin: 4px 0 8px">
+        转生时可以带一个宇宙走，选过的永久叠加 —— 下一轮开始，核心规则就多一条。
+      </p>
+      <p v-if="rebirth.pendingUniverseName" class="small" style="margin: 0 0 8px">
+        本次转生将带上：<b>{{ rebirth.pendingUniverseName }}</b>
+      </p>
+      <div class="universe-list">
+        <button
+          v-for="universe in universes"
+          :key="universe.id"
+          type="button"
+          class="universe"
+          :class="{ picked: pickedUniverse === universe.id, owned: universe.owned, todo: !universe.implemented }"
+          :disabled="universe.owned || !universe.implemented"
+          @click="pickUniverse(universe.id, universe.owned, universe.implemented)"
+        >
+          <b>
+            {{ universe.name }}
+            <span v-if="universe.owned" class="tag-owned">已拥有</span>
+            <span v-else-if="!universe.implemented" class="tag-todo">未实现</span>
+            <span v-else-if="pickedUniverse === universe.id" class="tag-picked">本次选择</span>
+          </b>
+          <span class="muted small">{{ universe.summary }}</span>
+          <span v-for="effect in universe.effects" :key="effect" class="muted small effect">
+            · {{ effect }}
+          </span>
+        </button>
+      </div>
+    </template>
 
     <h2 class="mt">永久加成</h2>
 

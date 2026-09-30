@@ -475,6 +475,14 @@ export class GameCore {
 
   // 组装给成就判断用的状态快照
   achievementState(): AchievementState {
+    // 按条件数台数：成就里那几条「有名有姓」的机器都用它
+    const countWhere = (predicate: (model: MachineModel) => boolean): number =>
+      MACHINE_MODELS.reduce(
+        (sum, model) => (predicate(model) ? sum + this.countOf(model.id) : sum),
+        0,
+      );
+    const fuelGenerators = (suffix: string): number =>
+      countWhere((model) => model.category === 'generator' && model.id.endsWith(suffix));
     return {
       manualMines: this.manualMines,
       machineCount: MACHINE_MODELS.reduce((sum, model) => sum + this.countOf(model.id), 0),
@@ -500,6 +508,32 @@ export class GameCore {
       totalCoins: this.totalCoins,
       totalEU: this.totalEU,
       totalCables: this.totalCables,
+      playSeconds: this.playSeconds,
+      totalOre: this.totalOre,
+      totalOreSpent: this.totalOreSpent,
+      siphoned: this.siphoned,
+      // 手里最高一级的币：币的种类按等级排，拿过哪一级就算到哪一级
+      topCoinTier: this.coins.reduce((top, amount, index) => (amount.gt(0) ? index + 1 : top), 0),
+      universeCount: this.universes.length,
+      topOverclock: MACHINE_MODELS.reduce(
+        (top, model) => Math.max(top, this.overclockOf(model.id)),
+        0,
+      ),
+      pickaxeVajra: this.pickaxeVajra,
+      pickaxeCollect: this.pickaxeCollect,
+      pickaxeBlast: this.pickaxeBlast,
+      researchedTotal: this.researchedModels.length,
+      researchTotal: MACHINE_MODELS.filter((model) => needsResearch(model.tier)).length,
+      essentia: this.essentia,
+      specials: {
+        steam: fuelGenerators('-steam'),
+        plasma: fuelGenerators('-plasma'),
+        dyson: fuelGenerators('-dyson'),
+        blackhole: fuelGenerators('-blackhole'),
+        multiblock: countWhere((model) => model.block === 'multiblock'),
+        arcane: countWhere((model) => model.visPowered === true),
+        suppressor: countWhere((model) => model.category === 'abyss'),
+      },
     };
   }
 
