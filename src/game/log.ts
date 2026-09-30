@@ -7,6 +7,8 @@
 
 export type LogLevel = 'info' | 'warn' | 'error';
 
+import { formatDuration, formatStamp } from '../numeric/time';
+
 export interface LogEntry {
   seq: number;
   // 真实本地时间，导出后给人看
@@ -52,7 +54,7 @@ export function logEvent(
 ): LogEntry {
   const entry: LogEntry = {
     seq: nextSeq,
-    at: stamp(new Date()),
+    at: formatStamp(new Date()),
     gameSeconds,
     level,
     code,
@@ -100,7 +102,7 @@ export function errorText(error: unknown): string {
 export function formatLogEntry(entry: LogEntry): string {
   const head =
     `[${entry.at}] [${levelName(entry.level)}] ${entry.message} (${entry.code})` +
-    (entry.gameSeconds > 0 ? ` 游戏内 ${duration(entry.gameSeconds)}` : '');
+    (entry.gameSeconds > 0 ? ` 游戏内 ${formatDuration(entry.gameSeconds)}` : '');
   if (!entry.detail) return head;
   return `${head}\n${entry.detail
     .split('\n')
@@ -198,20 +200,4 @@ function isEntry(value: unknown): value is LogEntry {
 
 function clip(text: string, limit: number): string {
   return text.length <= limit ? text : `${text.slice(0, limit)}…（已截断）`;
-}
-
-function stamp(date: Date): string {
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return (
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
-    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
-  );
-}
-
-function duration(seconds: number): string {
-  const total = Math.floor(seconds);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  return h > 0 ? `${h} 小时 ${m} 分` : m > 0 ? `${m} 分 ${s} 秒` : `${s} 秒`;
 }

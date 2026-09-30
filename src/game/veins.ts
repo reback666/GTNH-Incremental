@@ -8,6 +8,9 @@
 //   宇宙中子素 → CosmicNeutroniumRenderer：毛边白光晕（HALO_FUZZY，白色 30% 透明）
 //   无尽       → InfinityRenderer：方形光晕 + 60% 透明度的脉动重影
 import { VEIN_FX_META, VEIN_META, type VeinTierMeta } from './vein-meta';
+import { VEIN_MATERIALS, type VeinFx } from './vein-materials';
+
+export type { VeinFx };
 
 const tierFiles = import.meta.glob('../assets/veins/t*.png', {
   eager: true,
@@ -33,40 +36,15 @@ function urlsByPattern(files: Record<string, string>, pattern: RegExp): Record<s
 const TIER_URLS = urlsByPattern(tierFiles, /t(\d+)\.png$/i);
 const FX_URLS = urlsByPattern(fxFiles, /fx\/([^/]+)\.png$/i);
 
-// 原版把特殊渲染绑在材料上，这里换成中文材料名，并标出用哪个渲染
-export type VeinFx = 'none' | 'halo' | 'fuzzy';
-
 export interface VeinTierInfo extends VeinTierMeta {
   // 该阶段代表材料
   material: string;
   fx: VeinFx;
 }
 
-interface VeinDesign {
-  material: string;
-  fx: VeinFx;
-}
-
-const DESIGN: VeinDesign[] = [
-  { material: '锻铁', fx: 'none' },
-  { material: '铜', fx: 'none' },
-  { material: '铝', fx: 'none' },
-  { material: '不锈钢', fx: 'none' },
-  { material: '钛', fx: 'none' },
-  { material: '钨钢', fx: 'none' },
-  { material: '钯', fx: 'none' },
-  { material: '硅岩', fx: 'none' },
-  { material: '中子素', fx: 'none' },
-  { material: '宇宙中子素', fx: 'fuzzy' },
-  { material: '无尽', fx: 'halo' },
-  { material: '龙芯', fx: 'none' },
-  { material: '海珀珍', fx: 'none' },
-  { material: '时空', fx: 'none' },
-];
-
 export const VEIN_TIERS: VeinTierInfo[] = VEIN_META.map((meta) => ({
   ...meta,
-  ...(DESIGN[meta.tier] as VeinDesign),
+  ...VEIN_MATERIALS[meta.tier]!,
 }));
 
 export function veinIconUrl(oreTier: number): string | undefined {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dec } from '../src/numeric/decimal';
 import { formatNumber } from '../src/numeric/format';
-import { baseOutputAtTier, lineOutput, machineEnergy, machineOutput } from '../src/numeric/output';
+import { baseOutputAtTier, machineEnergy, machineOutput } from '../src/numeric/output';
 
 describe('产出与能耗', () => {
   it('基础产出 = 基础值 × 4^(tier-1)', () => {
@@ -25,19 +25,8 @@ describe('产出与能耗', () => {
     expect(machineEnergy({ baseEnergy: '32', tier: 5 }).toString()).toBe('8192');
   });
 
-  it('并联：多台机器同时跑同一配方，产能直接相加', () => {
-    const total = lineOutput(
-      [
-        { baseOutput: '10', tier: 1 },
-        { baseOutput: '10', tier: 2, overclockLevel: 1 },
-      ],
-      [3, 2],
-    );
-    expect(total.toString()).toBe('158');
-  });
-
   it('1e900 量级的产出照常计算并格式化', () => {
-    const total = lineOutput([{ baseOutput: '1e900', tier: 14 }], [1]);
+    const total = machineOutput({ baseOutput: '1e900', tier: 14 });
     expect(total.eq(dec('1e900').times('67108864'))).toBe(true);
     expect(formatNumber(total)).toBe('6.71e907');
   });

@@ -2,7 +2,9 @@ import { defineStore } from 'pinia';
 import { Decimal, ZERO, dec, decInt } from '../numeric/decimal';
 import { MAX_TIER, VOLTAGE_TIERS } from '../numeric/voltage';
 import { coinName, oreName } from '../numeric/credit';
+import { SILICON_KEEP_PRIORITY } from '../numeric/silicon';
 import { formatNumber } from '../numeric/format';
+import { formatDuration } from '../numeric/time';
 import { machineEnergy, machineOutput } from '../numeric/output';
 import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../numeric/generator';
 import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
@@ -17,14 +19,13 @@ import { batteryCapacityEU } from '../numeric/storage';
 import {
   COLLAPSE_CHANCE_PER_10_MINUTES,
   MUTATION_CHANCE_PER_MINUTE,
-  POLLUTION_HIGH,
-  POLLUTION_LOW,
   pollutionBand,
   pollutionBandName,
 } from '../numeric/pollution';
 import { GRID_MODES, gridEnergyMultiplier, gridMode, type GridMode } from '../numeric/grid';
-import { ACHIEVEMENTS } from './achievements';
+import { ACHIEVEMENTS, type AchievementIcon } from './achievements';
 import { UNIVERSES, universeById } from './universes';
+import { VEIN_MATERIALS } from './vein-materials';
 import { essentiaFromPurify } from '../numeric/arcane';
 import {
   arcaneOutputBonus,
@@ -39,12 +40,10 @@ import { pollutionDriveFactor, suppressionOfTier } from '../numeric/abyss';
 import { REBIRTH_NODES, REBIRTH_ROOT, type RebirthEffectKind } from './rebirth';
 import {
   RESEARCH_FROM_TIER,
-  RESEARCH_GATE_FROM_TIER,
   computerComputePerSecond,
   computerEnergyEU,
   labComputeThroughput,
   researchRemaining,
-  researchRequired,
 } from '../numeric/research';
 import {
   type DevResourceTarget,
@@ -62,7 +61,7 @@ import {
 } from './models';
 import { getCore, resetCore, setCore } from './engine';
 import * as C from './constants';
-import { clearStorage, loadFromStorage, saveToStorage } from './save';
+import { clearStorage, loadFromStorage, saveToStorage, secondsSinceLastSave } from './save';
 import { appVersion, buildStamp, stateSnapshot } from './diagnostics';
 import { errorText, logEntries, logEvent, onLogChange, setLogGameSeconds } from './log';
 
@@ -186,13 +185,11 @@ export interface MachineColumn {
   modifiers: ModifierRow[];
 }
 
-export interface ProductionRate {
-  orePerSecond: string;
-  orePerSecondRaw: string;
-  euNet: string;
-  euNetRaw: string;
-  coinsPerSecond: string;
-  fuelPerSecond: string;
+// 资源条与机器面板上的矿石名：带上矿脉材料名，和矿脉面板上写的是同一个词
+// （材料名只有 VEIN_MATERIALS 这一个来源）。
+function oreLabel(oreTier: number): string {
+  const material = VEIN_MATERIALS[oreTier]?.material;
+  return material === undefined ? oreName(oreTier) : `${oreName(oreTier)}（${material}）`;
 }
 
 // 镐子（手动开采）的一条升级线
@@ -290,7 +287,7 @@ export interface RebirthStats {
   bonuses: { label: string; value: string }[];
 }
 
-// 成就：一行一条
+// 成就：一个方块一条
 export interface AchievementRow {
   id: string;
   name: string;
@@ -298,6 +295,8 @@ export interface AchievementRow {
   achieved: boolean;
   // 达成时间（游戏内时长），未达成是空串
   at: string;
+  // 配图：机型 / 矿脉 / 镐子贴图，或代码画的像素图标
+  icon: AchievementIcon;
 }
 
 export interface AchievementStats {
@@ -340,6 +339,8 @@ export interface SiliconStats {
   autoRepair: boolean;
   autoOverclock: boolean;
   shedding: boolean;
+  // 缺电时按优先级停机的顺序（最先被停的排在前面），由 SILICON_KEEP_PRIORITY 生成
+  sheddingOrder: string;
   note: string;
 }
 
@@ -363,14 +364,10 @@ export interface Snapshot {
   coins: ResourceRow[];
   columns: MachineColumn[];
   maxTier: number;
-  powerGenerated: string;
-  powerConsumed: string;
-  powerRatio: number;
   powerShort: boolean;
   playTime: string;
   totalOre: string;
   totalCoins: string;
-  rate: ProductionRate;
   power: PowerStats;
   risk: RiskStats;
   research: ResearchStats;
@@ -398,6 +395,12 @@ export const TIER_ICON_LIMIT = 24;
 
 // 模拟连续崩这么多拍就停下来，并在日志里写明已暂停
 const CRASH_STREAK_LIMIT = 5;
+
+// 离线收益：最多补算这么久，按这么久一片分次跑
+const OFFLINE_CAP_SECONDS = 24 * 60 * 60;
+const OFFLINE_CHUNK_SECONDS = 60;
+// 每一片最多占用主线程这么久（毫秒），跑完让出一帧再继续
+const OFFLINE_SLICE_MS = 8;
 
 const POLLUTION_BAND_NAME = {
   clean: '清洁',
@@ -451,9 +454,15 @@ export const useGameStore = defineStore('game', {
     achievementsCollapsed: false,
     // 待研究机器列表收起来没有（纯界面状态，不进存档）
     researchListCollapsed: false,
+    // 转生页的平行宇宙列表收起来没有（纯界面状态，不进存档；默认收起）
+    universesCollapsed: true,
     // 模拟连续出错时暂停（纯运行时状态，不进存档；刷新页面即可恢复）
     simulationPaused: false,
     crashStreak: 0,
+    // 这次启动补算了多少离线收益（纯界面提示，不进存档）
+    offlineNote: '',
+    // 正在补算离线收益（这期间不让在线模拟叠上去）
+    catchingUp: false,
     // 日志里的错误条数，以及玩家已经看过的条数（设置页按钮上的小红点用它）
     logErrors: 0,
     seenErrors: 0,
@@ -471,8 +480,13 @@ export const useGameStore = defineStore('game', {
     toggleResearchList(): void {
       this.researchListCollapsed = !this.researchListCollapsed;
     },
+    toggleUniverses(): void {
+      this.universesCollapsed = !this.universesCollapsed;
+    },
     boot() {
       const loaded = loadFromStorage();
+      // 先读时间戳再补算：补算之后马上会写一次档，时间戳会被刷新
+      const away = loaded ? secondsSinceLastSave() : 0;
       if (loaded) setCore(loaded);
       logEvent('info', 'app.boot', `启动游戏（版本 v${appVersion()}，构建 ${buildStamp()}）`);
       this.phase.maxTier = getCore().maxTier;
@@ -480,6 +494,47 @@ export const useGameStore = defineStore('game', {
       onLogChange(() => this.syncLogErrors());
       this.syncLogErrors();
       this.refresh();
+      void this.catchUp(away);
+    },
+    // 离线收益：关掉页面期间按同样的规则继续跑，最多补 24 小时（不到 1 秒不算补算）。
+    // 分片跑（默认 60 秒一片）而不是一口气 tick 一整段，是为了让断电 / 变异 /
+    // 工厂崩溃 / 黑市窃取这些按时间判定的随机事件保持和在线同一个量级。
+    // 每片跑一小会儿就把主线程还给界面：晚期存档机器多，一口气补 24 小时要好几秒。
+    async catchUp(seconds: number): Promise<void> {
+      const total = Math.min(Math.max(0, seconds), OFFLINE_CAP_SECONDS);
+      if (total < 1) return;
+      const core = getCore();
+      const oreBefore = core.totalOre;
+      const coinsBefore = core.totalCoins;
+      const away = formatDuration(total);
+      this.catchingUp = true;
+      this.offlineNote = `离线 ${away}，正在按离线期间的规则补算…`;
+      let remaining = total;
+      try {
+        while (remaining > 0) {
+          const sliceStart = Date.now();
+          while (remaining > 0 && Date.now() - sliceStart < OFFLINE_SLICE_MS) {
+            const step = Math.min(OFFLINE_CHUNK_SECONDS, remaining);
+            core.tick(step);
+            remaining -= step;
+          }
+          if (remaining > 0) await nextFrame();
+        }
+      } catch (error) {
+        // 补算中途出错就停在这里：已经算出来的部分是好的，剩下的交给玩家自己继续玩
+        logEvent('error', 'offline.crash', '离线补算中途出错，已停在出错前的那一拍', errorText(error));
+      } finally {
+        this.catchingUp = false;
+      }
+      this.watch(core, core.lastReport);
+      this.refresh();
+      this.save();
+      const gainedOre = core.totalOre.minus(oreBefore);
+      const gainedCoins = core.totalCoins.minus(coinsBefore);
+      this.offlineNote =
+        `离线 ${away}，已按同样的规则补算：矿石 +${formatNumber(gainedOre)}、GT 币 +${formatNumber(gainedCoins)}` +
+        (total < seconds ? '（超过 24 小时的部分不计）' : '');
+      logEvent('info', 'offline.catchup', `离线补算 ${away}`, this.offlineNote);
     },
     syncLogErrors(): void {
       this.logErrors = logEntries().filter((entry) => entry.level === 'error').length;
@@ -683,6 +738,8 @@ export const useGameStore = defineStore('game', {
       return ok;
     },
     step(dtSeconds: number) {
+      // 补算离线收益时不让在线模拟叠上去，否则同一段时间会被算两遍
+      if (this.catchingUp) return;
       const core = getCore();
       try {
         const report = core.tick(dtSeconds);
@@ -728,11 +785,16 @@ export const useGameStore = defineStore('game', {
         if (this.simulationPaused) return;
         this.step(C.SIM_STEP_MS / 1000);
       }, C.SIM_STEP_MS);
-      setInterval(() => {
-        if (this.snapshot === null) this.refresh();
-      }, C.UI_REFRESH_MS);
+      // 界面跟着模拟拍与玩家操作刷新（数字的平滑过渡由 AnimatedNumber 负责）；
+      // 原来这里还有一个 20 Hz 的兜底轮询，实际只在快照为空时干活，等于空转，已删
       setInterval(() => this.save(), 10_000);
       window.addEventListener('beforeunload', () => this.save());
+      // iOS / Android 上 beforeunload 常常不触发：切后台、页面被丢弃时也补一次存档，
+      // 否则最后几秒的进度会丢（10 秒自动存档兜底，最多丢 10 秒）
+      window.addEventListener('pagehide', () => this.save());
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') this.save();
+      });
     },
     // 关键状态变化各记一笔：玩家来问「产出为什么不对」时，
     // 「什么时候断电的、什么时候进重度污染的」比最后一刻的数值更能说明问题
@@ -787,16 +849,23 @@ function findModel(id: string): MachineModel | undefined {
     .find((model) => model.id === id);
 }
 
+// 让出一帧再继续补算：浏览器里跟着刷新走，非浏览器环境（测试）退化成 setTimeout
+function nextFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => resolve());
+    else setTimeout(resolve, 0);
+  });
+}
+
 function buildSnapshot(core: GameCore): Snapshot {
   const report = core.lastReport;
   const nextTier = core.maxTier < MAX_TIER ? core.maxTier + 1 : null;
   const oreRate = oreRates(core);
   const coinRate = coinRates(core);
-  const rate = productionOf(core);
   return {
     ores: core.ores.slice(0, core.maxTier).map((amount, index) => ({
       tier: index,
-      name: oreName(index),
+      name: oreLabel(index),
       amount: formatNumber(amount),
       value: amount.toString(),
       detail: [
@@ -823,21 +892,10 @@ function buildSnapshot(core: GameCore): Snapshot {
         (kind !== 'research' || core.maxTier >= RESEARCH_FROM_TIER),
     ).map((kind) => machineColumn(core, kind)),
     maxTier: core.maxTier,
-    powerGenerated: formatNumber(report.euGenerated),
-    powerConsumed: formatNumber(report.euConsumed),
-    powerRatio: report.powerRatio,
     powerShort: report.powerRatio < 1,
     playTime: formatDuration(core.playSeconds),
     totalOre: formatNumber(core.totalOre),
     totalCoins: formatNumber(core.totalCoins),
-    rate: {
-      orePerSecond: formatNumber(rate.oreNet),
-      orePerSecondRaw: rate.oreNet.toString(),
-      euNet: formatNumber(rate.euNet),
-      euNetRaw: rate.euNet.toString(),
-      coinsPerSecond: formatNumber(rate.coins),
-      fuelPerSecond: formatNumber(rate.fuel),
-    },
     power: powerStats(core),
     risk: riskStats(core),
     research: researchStats(core),
@@ -1124,9 +1182,14 @@ function modifierRows(core: GameCore, kind: MachineKind | 'pickaxe'): ModifierRo
       (sum, model) => sum.plus(core.generatorOutputRated(model)),
       ZERO,
     );
-    const actual = report.euGenerated.div(C.SIM_STEP_MS / 1000);
-    if (rated.gt(0) && actual.lt(rated)) {
-      add('出力', pct(actual.div(rated)), '矿石不够烧', 'bad');
+    const step = dec(String(report.stepSeconds));
+    const capacity = step.gt(0) ? report.euCapacity.div(step) : rated;
+    const actual = step.gt(0) ? report.euGenerated.div(step) : ZERO;
+    // 拿不出额定出力 = 缺燃料；拿得出却发得少 = 发电机按需发电，不是故障
+    if (rated.gt(0) && capacity.lt(rated)) {
+      add('出力', pct(capacity.div(rated)), '矿石不够烧', 'bad');
+    } else if (capacity.gt(0) && actual.lt(capacity)) {
+      add('出力', pct(actual.div(capacity)), '按需发电（富余出力没开）', 'flat');
     }
   }
   if (kind === 'purifier') {
@@ -1192,17 +1255,25 @@ function pickaxeEffectNow(core: GameCore, line: PickaxeLine): string {
 
 function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
   const meta = COLUMN_META[kind];
+  // 先按等级分桶（一次遍历），再逐级取：比每个等级都去品类清单里筛一遍便宜
+  const buckets = new Map<number, MachineModel[]>();
+  for (const model of modelsOf(kind)) {
+    if (!core.universeSatisfied(model)) continue;
+    const list = buckets.get(model.tier);
+    if (list) list.push(model);
+    else buckets.set(model.tier, [model]);
+  }
   const tiers: MachineTierGroup[] = [];
   for (let tier = 1; tier <= MAX_TIER; tier += 1) {
     // 没解锁对应平行宇宙的机型（魔法机器、灵气节点、腐蚀抑制器）整个不出现，
     // 和「标签按进度出现」同一个规矩：没到那一步就不占位置
-    const models = core.modelsAt(kind, tier).filter((model) => core.universeSatisfied(model));
-    if (models.length === 0) continue;
+    const models = buckets.get(tier);
+    if (models === undefined) continue;
     const payment = paymentUnit(tier);
     tiers.push({
       tier,
       voltage: VOLTAGE_TIERS[tier - 1] ?? `T${tier}`,
-      oreLabel: oreName(tier - 1),
+      oreLabel: oreLabel(tier - 1),
       unlocked: tier <= core.maxTier,
       unit: payment,
       models: models.map((model) => {
@@ -1375,6 +1446,7 @@ function achievementStats(core: GameCore): AchievementStats {
       desc: achievement.desc,
       achieved: at !== undefined,
       at: at === undefined ? '' : formatDuration(at),
+      icon: achievement.icon,
     };
   });
   return { rows, done: rows.filter((row) => row.achieved).length, total: rows.length };
@@ -1464,6 +1536,11 @@ function arcaneStats(core: GameCore): ArcaneStats {
 function siliconStats(core: GameCore): SiliconStats {
   const active = core.hasUniverse('silicon');
   const report = core.lastReport;
+  // 说明文案里的停机顺序直接由优先级清单反着生成：加类别时不会再漏掉一句
+  const sheddingOrder = [...SILICON_KEEP_PRIORITY]
+    .reverse()
+    .map((kind) => COLUMN_META[kind].title)
+    .join(' → ');
   const did: string[] = [];
   if (report.autoRepairs > 0) did.push(`修好 ${report.autoRepairs} 台故障`);
   if (report.autoOverclockUp > 0) did.push(`升档 ${report.autoOverclockUp} 次`);
@@ -1491,6 +1568,7 @@ function siliconStats(core: GameCore): SiliconStats {
     autoRepair: core.siliconAutoRepair,
     autoOverclock: core.siliconAutoOverclock,
     shedding: core.siliconShedding,
+    sheddingOrder,
     note,
   };
 }
@@ -1721,7 +1799,20 @@ function fuelRateOf(model: MachineModel): Decimal {
 }
 
 // 各矿石等级的产出与消耗（枚/秒）。
+// 口径和电能格一致：报「上一拍实际」，缺电降载、污染惩罚、灵气不足、停机都算在里面。
+// 还没跑过第一拍（刚开局、刚读档）时才回退到额定值，免得读数先闪一下 0。
 function oreRates(core: GameCore): { gross: Decimal; spent: Decimal }[] {
+  const step = dec(String(core.lastReport.stepSeconds));
+  if (step.gt(0)) {
+    return core.lastReport.oreGained.map((gained, index) => ({
+      gross: gained.div(step),
+      spent: core.lastReport.oreSpent[index]!.div(step),
+    }));
+  }
+  return ratedOreRates(core);
+}
+
+function ratedOreRates(core: GameCore): { gross: Decimal; spent: Decimal }[] {
   const gross = Array.from({ length: 14 }, () => ZERO) as Decimal[];
   const spent = Array.from({ length: 14 }, () => ZERO) as Decimal[];
   for (const model of core.unlockedModels('miner')) {
@@ -1745,7 +1836,14 @@ function oreRates(core: GameCore): { gross: Decimal; spent: Decimal }[] {
 }
 
 // 各 GT 币等级的产出（枚/秒）。
+// 同样报上一拍实际：变异奖励那一笔也算「产出」，和玩家看到的入库数字对得上。
 function coinRates(core: GameCore): Decimal[] {
+  const step = dec(String(core.lastReport.stepSeconds));
+  if (step.gt(0)) return core.lastReport.coinsGained.map((gained) => gained.div(step));
+  return ratedCoinRates(core);
+}
+
+function ratedCoinRates(core: GameCore): Decimal[] {
   return Array.from({ length: MAX_TIER }, (_, index) => {
     const tier = index + 1;
     let total = ZERO;
@@ -1827,9 +1925,19 @@ function powerStats(core: GameCore): PowerStats {
   }
   const settled = core.lastReport;
 
-  const actualPerSecond = core.lastReport.euGenerated.div(C.SIM_STEP_MS / 1000);
-  const starved = rated.gt(0) && actualPerSecond.lt(rated);
-  const ratio = core.lastReport.powerRatio;
+  const stepSeconds = dec(String(settled.stepSeconds));
+  const hasTick = stepSeconds.gt(0);
+  const actualPerSecond = hasTick ? settled.euGenerated.div(stepSeconds) : ZERO;
+  const capacityPerSecond = hasTick ? settled.euCapacity.div(stepSeconds) : ZERO;
+  // 拿不出额定出力 = 缺燃料；拿得出却发得少 = 按需发电（需求就只有这么多）
+  const fuelShort = hasTick && rated.gt(0) && capacityPerSecond.lt(rated);
+  const throttled = !fuelShort && capacityPerSecond.gt(0) && actualPerSecond.lt(capacityPerSecond);
+  const ratio = settled.powerRatio;
+  const generatedNote = fuelShort
+    ? `缺燃料：额定 ${formatNumber(rated)} EU/t，燃料只够发 ${formatNumber(capacityPerSecond)} EU/t`
+    : throttled
+      ? `按需发电：额定 ${formatNumber(rated)} EU/t，这一拍按需求只开了 ${formatNumber(actualPerSecond)} EU/t`
+      : '';
   const storedNote = (): string => {
     if (capacity.lte(0)) return '';
     if (settled.euCharged.gt(0)) return `上一拍充入 ${formatNumber(settled.euCharged)} EU`;
@@ -1848,11 +1956,7 @@ function powerStats(core: GameCore): PowerStats {
       value: `${formatNumber(rated)} EU/t`,
       rows: generated,
       emptyText: '还没建发电机',
-      ...(starved
-        ? {
-            note: `缺燃料：额定 ${formatNumber(rated)} EU/t，上一步实际只发出 ${formatNumber(actualPerSecond)} EU/t`,
-          }
-        : {}),
+      ...(generatedNote ? { note: generatedNote } : {}),
     },
     consumed: {
       // 只算接电网的机型：奥术宇宙的魔法机器吃灵气，不计在这一栏
@@ -1865,46 +1969,3 @@ function powerStats(core: GameCore): PowerStats {
   };
 }
 
-// 全厂合计速率：矿石净变化、电力净收支、产币、烧矿。
-function productionOf(core: GameCore): {
-  oreNet: Decimal;
-  euNet: Decimal;
-  coins: Decimal;
-  fuel: Decimal;
-} {
-  let oreNet = ZERO;
-  let euNet = ZERO;
-  let coins = ZERO;
-  let fuel = ZERO;
-  const gridMul = gridEnergyMultiplier(core.grid);
-  for (const model of core.unlockedModels('miner')) {
-    if (core.countOf(model.id) === 0) continue;
-    oreNet = oreNet.plus(core.minerOutputPerSecond(model));
-    euNet = euNet.minus(core.minerEnergyDrain(model).times(gridMul));
-  }
-  for (const model of core.unlockedModels('generator')) {
-    if (core.countOf(model.id) === 0) continue;
-    euNet = euNet.plus(core.generatorOutputRated(model));
-    fuel = fuel.plus(core.generatorFuelDrain(model));
-  }
-  for (const model of core.unlockedModels('machine')) {
-    if (core.countOf(model.id) === 0) continue;
-    const output = core.machineOutputPerSecond(model);
-    coins = coins.plus(output);
-    euNet = euNet.minus(core.machineEnergyDrain(model).times(gridMul));
-    oreNet = oreNet.minus(output.div(C.COINS_PER_ORE));
-  }
-  for (const model of core.unlockedModels('research')) {
-    if (model.computeRole !== 'produce' || core.countOf(model.id) === 0) continue;
-    euNet = euNet.minus(core.computerEnergyDrain(model).times(gridMul));
-  }
-  return { oreNet, euNet, coins, fuel };
-}
-
-function formatDuration(seconds: number): string {
-  const total = Math.floor(seconds);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  return h > 0 ? `${h} 小时 ${m} 分` : m > 0 ? `${m} 分 ${s} 秒` : `${s} 秒`;
-}

@@ -70,12 +70,14 @@ export function pollutionPerSecond(
   return units.times(POLLUTION_PER_TIER_PER_SECOND);
 }
 
-// 净化器每秒压下去的污染（百分点/秒）
-export function purifyPerSecond(running: { tier: number; count: number }[]): Decimal {
+// 净化器每秒压下去的污染（百分点/秒）。
+// load 和污染产生同一个口径：停电、被停机调度、缺电降载时净化器也跟着停或降，
+// 不填按满负荷算（纯数值测试用）。
+export function purifyPerSecond(running: { tier: number; count: number; load?: Decimal }[]): Decimal {
   let units = ZERO;
   for (const item of running) {
     if (item.count <= 0) continue;
-    units = units.plus(decInt(item.tier, 'tier').times(item.count));
+    units = units.plus(decInt(item.tier, 'tier').times(item.count).times(item.load ?? ONE));
   }
   return units.times(PURIFY_PER_TIER_PER_SECOND);
 }

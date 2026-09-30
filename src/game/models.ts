@@ -289,14 +289,23 @@ export const MACHINE_MODELS: MachineModel[] = [
 
 const BY_ID = new Map(MACHINE_MODELS.map((model) => [model.id, model]));
 
+// 类别 → 该类的全部机型。模拟与快照每秒要问几十次，预生成一份就够，
+// 不必每次都筛一遍 140 多个机型。数组冻结：调用方一律只读。
+const BY_CATEGORY = new Map<MachineCategory, readonly MachineModel[]>();
+for (const model of MACHINE_MODELS) {
+  const list = BY_CATEGORY.get(model.category);
+  BY_CATEGORY.set(model.category, list ? [...list, model] : [model]);
+}
+for (const [category, list] of BY_CATEGORY) BY_CATEGORY.set(category, Object.freeze(list));
+
 export function modelById(id: string): MachineModel {
   const model = BY_ID.get(id);
   if (!model) throw new Error(`没有这个机型：${id}`);
   return model;
 }
 
-export function modelsOf(category: MachineCategory): MachineModel[] {
-  return MACHINE_MODELS.filter((model) => model.category === category);
+export function modelsOf(category: MachineCategory): readonly MachineModel[] {
+  return BY_CATEGORY.get(category) ?? [];
 }
 
 // 基准机型：取该类别下 id 最短的（也就是每级第一个），用于同等级内的倍率基准

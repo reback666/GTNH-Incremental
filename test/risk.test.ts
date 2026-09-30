@@ -78,8 +78,9 @@ describe('污染在模拟里的效果', () => {
     const core = factory();
     expect(core.pollution.toString()).toBe('0');
     core.tick(1);
-    // 40 台 MV 发电机 + 20 台 MV 制造机 + 20 台 MV 采矿机 = 80 台 × 3 级 × 0.0008
-    expect(core.pollution.toNumber()).toBeCloseTo(80 * 3 * 0.0008, 6);
+    // 40 台 MV 发电机额定 5120 EU/t，但需求只有 3200 EU/t：按需发电只开 62.5% 负载，
+    // 污染也按 62.5% 折算 → 40×0.625 + 20 台制造机 + 20 台采矿机 = 65 台 × 3 级 × 0.0008
+    expect(core.pollution.toNumber()).toBeCloseTo(65 * 3 * 0.0008, 6);
   });
 
   it('机器不工作时污染不涨：没电、没燃料、停电都不算干活', () => {
@@ -132,6 +133,37 @@ describe('污染在模拟里的效果', () => {
     core.tick(1);
     expect(core.pollution.lt(50)).toBe(true);
     expect(core.purifyPerSecond().gt(core.pollutionPerSecond())).toBe(true);
+  });
+
+  it('停电/被停机调度时净化器也停，不再出现「断电反而把污染压下去」', () => {
+    // 富余电力，先把「有电时确实在净化」钉住
+    const core = factory('50');
+    core.counts['p-3'] = 60;
+    core.counts['g-mv-comb'] = 200;
+    core.tick(1);
+    expect(core.purifyPerSecond().gt(0)).toBe(true);
+
+    // 停电那一拍：净化归零，污染原样留在 50
+    core.outageSeconds = 10;
+    core.pollution = dec('50');
+    core.tick(1);
+    expect(core.lastReport.outage).toBe(true);
+    expect(core.purifyPerSecond().toString()).toBe('0');
+    expect(core.pollution.toString()).toBe('50');
+  });
+
+  it('硅基宇宙把净化器整组停掉时，净化也跟着停', () => {
+    const core = new GameCore();
+    core.universes = ['silicon'];
+    core.maxTier = 2;
+    core.ores[1] = dec('1e6');
+    core.counts['g-ulv'] = 1; // 只有 8 EU/t
+    core.counts['p-2'] = 1; // LV 净化器要 32 EU/t，装不下
+    core.random = () => 0.5;
+
+    const report = core.tick(1);
+    expect(report.sheddedKinds).toContain('purifier');
+    expect(core.purifyPerSecond().toString()).toBe('0');
   });
 
   it('重度污染会工厂崩溃：随机摧毁一台机器', () => {

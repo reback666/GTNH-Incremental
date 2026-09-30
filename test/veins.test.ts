@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
 import { VEIN_TIERS, fxIconLoopMs, veinLoopMs, veinTierInfo } from '../src/game/veins';
 import { VEIN_FX_META } from '../src/game/vein-meta';
+import { VEIN_MATERIALS } from '../src/game/vein-materials';
+import { GameCore } from '../src/game/core';
+import { getCore, setCore } from '../src/game/engine';
+import { useGameStore } from '../src/game/store';
 
 // 贴图条带、帧长、材料表是分开维护的，最容易出的错是对不上号（帧数与帧长列表不等长、等级缺项）。
 describe('矿脉贴图与特殊渲染', () => {
@@ -37,5 +42,25 @@ describe('矿脉贴图与特殊渲染', () => {
       [9, 'fuzzy'],
       [10, 'halo'],
     ]);
+  });
+
+  it('材料表盖满 14 级，而且是唯一一份来源', () => {
+    expect(VEIN_MATERIALS).toHaveLength(14);
+    expect(VEIN_TIERS.map((info) => info.material)).toEqual(
+      VEIN_MATERIALS.map((item) => item.material),
+    );
+  });
+
+  it('资源条上的矿石名带上同一个材料名', () => {
+    setActivePinia(createPinia());
+    setCore(new GameCore());
+    const store = useGameStore();
+    const core = getCore();
+    core.maxTier = 3;
+
+    store.refresh();
+    // 「T0 矿石」和矿脉面板上的「锻铁」是同一座矿脉，名字要对得上
+    expect(store.snap.ores[0]!.name).toBe('T0 矿石（锻铁）');
+    expect(store.snap.ores[1]!.name).toBe('T1 矿石（铜）');
   });
 });

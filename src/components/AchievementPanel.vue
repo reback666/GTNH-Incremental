@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useGameStore } from '../game/store';
+import { useGameStore, type AchievementRow } from '../game/store';
+import AchievementIcon from './AchievementIcon.vue';
 
-// 成就清单：达成的排在前面，未达成的灰着显示目标
+// 成就清单：一张小方块一条，一行摆多个；达成的排在前面并点亮
 const store = useGameStore();
 const achievements = computed(() => store.snap.achievements);
 const collapsed = computed(() => store.achievementsCollapsed);
@@ -12,6 +13,11 @@ const sorted = computed(() =>
     return a.achieved ? -1 : 1;
   }),
 );
+
+// 方块放不下完整的说明，悬停时用 title 补全
+function tip(row: AchievementRow): string {
+  return row.achieved ? `${row.name}：${row.desc}（达成于 ${row.at}）` : `${row.name}：${row.desc}`;
+}
 </script>
 
 <template>
@@ -24,15 +30,21 @@ const sorted = computed(() =>
     </div>
     <p class="muted small" style="margin: 0 0 8px">
       已达成 {{ achievements.done }} / {{ achievements.total }}。成就跨周目保留，转生不会清掉。
+      鼠标移到方块上可以看达成条件。
     </p>
     <div v-if="!collapsed" class="achievements">
-      <div v-for="row in sorted" :key="row.id" class="achievement" :class="{ done: row.achieved }">
+      <div
+        v-for="row in sorted"
+        :key="row.id"
+        class="achievement"
+        :class="{ done: row.achieved }"
+        tabindex="0"
+        :title="tip(row)"
+      >
         <span class="mark">{{ row.achieved ? '√' : '·' }}</span>
-        <span class="text">
-          <b>{{ row.name }}</b>
-          <span class="muted small">{{ row.desc }}</span>
-        </span>
-        <span class="at muted small">{{ row.at }}</span>
+        <AchievementIcon :icon="row.icon" :size="34" />
+        <b class="name">{{ row.name }}</b>
+        <span class="meta">{{ row.achieved ? row.at : row.desc }}</span>
       </div>
     </div>
   </section>

@@ -209,6 +209,57 @@ describe('存电装置', () => {
   });
 });
 
+describe('发电机按需发电', () => {
+  it('没有耗电需求就不烧矿：富余出力不再空转', () => {
+    const core = new GameCore();
+    core.counts[ULV_GENERATOR] = 3; // 额定 24 EU/t
+    core.ores[0] = dec('1000');
+
+    const report = core.tick(60);
+    expect(report.euGenerated.toString()).toBe('0');
+    expect(report.oreSpent[0]!.toString()).toBe('0');
+    expect(core.ores[0]!.toString()).toBe('1000');
+  });
+
+  it('只烧够用的那部分：额定 24 EU/t 只用了 8', () => {
+    const core = new GameCore();
+    core.counts[ULV_GENERATOR] = 3;
+    core.counts[ULV_MACHINE] = 1; // 制造机要 8 EU/t
+    core.ores[0] = dec('1000');
+
+    const report = core.tick(1);
+    expect(report.euGenerated.toString()).toBe('8');
+    expect(report.powerRatio).toBe(1);
+    // 三台发电机合起来只按 1/3 的负载烧矿
+    expect(report.oreSpent[0]!.lt(dec('1'))).toBe(true);
+  });
+
+  it('电池还有空间时按额定满发：存下来的电不算浪费', () => {
+    const core = new GameCore();
+    core.maxTier = 3;
+    core.counts['g-mv-comb'] = 10; // 额定 1280 EU/t
+    core.counts['b-3'] = 1; // 16000 EU 容量，空着
+    core.ores[2] = dec('1e6');
+
+    const report = core.tick(1);
+    expect(report.euGenerated.toString()).toBe('1280');
+    expect(report.euCharged.toString()).toBe('1280');
+  });
+
+  it('停电那一拍不烧矿', () => {
+    const core = new GameCore();
+    core.counts[ULV_GENERATOR] = 3;
+    core.counts[ULV_MACHINE] = 1;
+    core.ores[0] = dec('1000');
+    core.outageSeconds = 5;
+
+    const report = core.tick(1);
+    expect(report.outage).toBe(true);
+    expect(report.oreSpent[0]!.toString()).toBe('0');
+    expect(core.ores[0]!.toString()).toBe('1000');
+  });
+});
+
 describe('存档 v3', () => {
   it('超频档位、故障台数、存量都能存下来', () => {
     const core = new GameCore();

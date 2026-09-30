@@ -24,9 +24,9 @@ export const UNLOCK_COST_IN_MACHINES = 10;
 // 电网解锁价 = 该等级第一台机器价格的这个倍数，用该等级的 GT 币支付（计划书第六章）。
 export const GRID_UNLOCK_COST_MACHINES = 16;
 
-// 模拟步长与界面刷新频率（计划书第十四章：UI 20 Hz、运算 1 Hz 或更低）。
+// 模拟步长（计划书第十四章：运算 1 Hz 或更低）。
+// 界面跟着模拟拍与玩家操作刷新，数字的平滑过渡由 AnimatedNumber 负责。
 export const SIM_STEP_MS = 1000;
-export const UI_REFRESH_MS = 50;
 
 // 存档结构版本，用于迁移（计划书第十四章）。
 // v1：机器数量按电压等级存（miners/generators/machines 各 14 个）
@@ -46,8 +46,12 @@ export const UI_REFRESH_MS = 50;
 // v15：加了每个机型的手动停机开关
 // v16：研究改成手选项目（选中等级 + 各等级各自进度）
 // v17：研究细到机型（每个机型单独研究）
-export const SAVE_VERSION = 17;
+// v18：加了随机事件计时器（波动电网断电 / 黑市窃取 / 变异 / 工厂崩溃）
+export const SAVE_VERSION = 18;
 export const SAVE_KEY = 'gtnh-incremental-save';
+// 上次写档的墙上时间单独存一个键：存档本体保持纯状态（还能逐字节比较），
+// 离线收益按这个时间戳算（见 save.ts 的 secondsSinceLastSave）
+export const SAVE_TIME_KEY = 'gtnh-incremental-save-time';
 
 export function unlockCost(machineTier: number): Decimal {
   return machineCost({ baseCost: BASE_MACHINE_COST, tier: machineTier, purchased: 0 }).times(
