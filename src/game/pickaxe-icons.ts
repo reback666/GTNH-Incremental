@@ -28,8 +28,3 @@ const FILE_NAME: Record<PickaxeLine, string> = {
 export function pickaxeIconUrl(line: PickaxeLine, tier: number): string | undefined {
   return URLS[FILE_NAME[line]]?.[tier];
 }
-
-export const PICKAXE_ICON_COUNT = Object.values(URLS).reduce(
-  (sum, byTier) => sum + Object.keys(byTier).length,
-  0,
-);

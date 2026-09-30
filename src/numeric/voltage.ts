@@ -1,4 +1,4 @@
-import { Decimal, decInt, pow } from './decimal';
+import { Decimal, pow } from './decimal';
 
 // 计划书第二章：14 个电压等级，每一级电压为前一级的 4 倍。
 export const VOLTAGE_TIERS = [
@@ -58,20 +58,11 @@ export function voltageMultiplier(tier: number): Decimal {
   return pow(String(VOLTAGE_STEP), tier - 1);
 }
 
-// 便捷换算：按名称取倍数。
-export function voltageMultiplierOf(name: VoltageName): Decimal {
-  return voltageMultiplier(tierOf(name));
-}
-
 // 相邻两级之间的倍数，等价于 4^(tierTo - tierFrom)。
 export function tierGapMultiplier(tierFrom: number, tierTo: number): Decimal {
   assertTier(tierFrom, 'tierFrom');
   assertTier(tierTo, 'tierTo');
   return pow(String(VOLTAGE_STEP), tierTo - tierFrom);
-}
-
-export function tierIndices(): number[] {
-  return VOLTAGE_TIERS.map((_, index) => index + 1);
 }
 
 // 供 UI / 日志使用的只读视图，避免调用方再次手写 4^(tier-1)。
@@ -83,7 +74,3 @@ export function voltageTable(): Array<{ tier: number; name: VoltageName; multipl
   }));
 }
 
-export function tierAsDecimal(tier: number): Decimal {
-  assertTier(tier);
-  return decInt(tier, 'tier');
-}

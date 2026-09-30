@@ -21,8 +21,3 @@ export const SILICON_KEEP_PRIORITY = [
 ] as const;
 
 export type SiliconKind = (typeof SILICON_KEEP_PRIORITY)[number];
-
-// 这些类别缺电时可以整组停掉（按上面的顺序从后往前停）
-export function isSheddableKind(kind: string): kind is SiliconKind {
-  return (SILICON_KEEP_PRIORITY as readonly string[]).includes(kind);
-}

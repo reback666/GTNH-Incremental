@@ -428,10 +428,6 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
 ];
 
-export function achievementById(id: string): Achievement | undefined {
-  return ACHIEVEMENTS.find((achievement) => achievement.id === id);
-}
-
 // 供界面显示：达成了几条
 export function achievedCount(achieved: Record<string, number>): number {
   return ACHIEVEMENTS.filter(
