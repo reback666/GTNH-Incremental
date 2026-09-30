@@ -87,12 +87,12 @@ export function collectMultiplier(level: number): Decimal {
 // 升级仍然需要「机会」（由电压发放，是上限），但每次升级还要花对应电压的 GT 币：
 // 币价锚定该级机器的基准单价（machineCost，purchased=0），再按线乘系数。
 //
-//   金刚杵   第 n 次升级 → tier = n+1，付第 n 级币，价 = 500×4^n ÷ 2
-//   连锁采集 第 n 次升级 → tier = n+1，付第 n 级币，价 = 500×4^n × 2
-//   连锁爆破 第 n 次升级 → tier = floor((n-1)/2)+1，付 paymentTier(tier) 币，价 = 500×4^(tier-1)
+//   金刚杵   每级电压 1 次机会 → 第 n 次升级来自第 n+1 级电压，价 = 基准价(tier n+1) ÷ 2
+//   连锁采集 每 2 级电压 1 次  → 第 n 次升级来自第 2n 级电压，价 = 基准价(tier 2n) × 2
+//   连锁爆破 每级电压 2 次     → 第 n 次升级来自第 floor((n-1)/2)+1 级电压，价 = 基准价(tier) × 1
 //
-// 注意币种是「第 n 级币」而不是「第 tier 级币」：金刚杵第 1 次升级（挖 T1）花的是
-// 第 1 级币（ULV 币），而 tier 记的是升级后的目标等级。
+// 币种一律是 paymentTier(tier) = max(1, tier-1)：也就是「机会是那一级电压发的，
+// 就花那一级机器用的币」。金刚杵第 1 次升级来自 LV（tier 2），花铜币（第 1 级币）。
 
 // 三条线的价格系数，乘在基准单价上
 export const PICKAXE_COST_SCALE: Record<PickaxeLine, string> = {
@@ -108,6 +108,8 @@ export function pickaxeUpgradeTier(line: PickaxeLine, level: number): number {
   if (line === 'blast') {
     return Math.floor((n - 1) / BLAST_CHANCES_PER_TIER) + 1;
   }
+  // 连锁采集的机会每 2 级电压才发一次，所以第 n 次升级对应的是第 2n 级电压
+  if (line === 'collect') return n * COLLECT_TIERS_PER_CHANCE;
   return n + 1;
 }
 

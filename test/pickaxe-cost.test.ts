@@ -1,19 +1,48 @@
 import { describe, expect, it } from 'vitest';
 import {
   PICKAXE_COST_SCALE,
+  blastChances,
+  collectChances,
   pickaxeUpgradeCoinTier,
   pickaxeUpgradeCost,
   pickaxeUpgradeTier,
+  vajraChances,
   type PickaxeLine,
 } from '../src/numeric/pickaxe';
 import { ZERO, dec, pow } from '../src/numeric/decimal';
 import { GameCore } from '../src/game/core';
 import { SAVE_VERSION } from '../src/game/constants';
+import { MAX_TIER } from '../src/numeric/voltage';
 
 // 基准价：machineCost({ baseCost, tier, purchased: 0 }) 里基准价就是 500×4^(tier-1)
 function baseCost(tier: number) {
   return dec('500').times(pow('4', tier - 1));
 }
+
+// 第 n 次机会（n 从 1 数）是哪一级电压发下来的
+function chanceGrantedTier(line: PickaxeLine, n: number): number {
+  for (let tier = 1; tier <= MAX_TIER; tier += 1) {
+    const chances =
+      line === 'vajra' ? vajraChances(tier) : line === 'collect' ? collectChances(tier) : blastChances(tier);
+    if (chances >= n) return tier;
+  }
+  throw new Error(`${line} 没有第 ${n} 次机会`);
+}
+
+describe('每条线都按「发机会的那一级电压」计价', () => {
+  it('vajra / collect / blast 的每一次升级都对齐', () => {
+    const totals: Record<PickaxeLine, number> = { vajra: 13, collect: 7, blast: 28 };
+    for (const line of ['vajra', 'collect', 'blast'] as PickaxeLine[]) {
+      for (let n = 1; n <= totals[line]; n += 1) {
+        const granted = chanceGrantedTier(line, n);
+        expect(pickaxeUpgradeTier(line, n - 1), `${line} 第 ${n} 次升级的计价等级`).toBe(granted);
+        expect(pickaxeUpgradeCoinTier(line, n - 1), `${line} 第 ${n} 次升级的币种`).toBe(
+          Math.max(1, granted - 1),
+        );
+      }
+    }
+  });
+});
 
 describe('pickaxeUpgradeTier 映射', () => {
   it('金刚杵：第 n 次升级 → tier = n+1', () => {
@@ -23,9 +52,11 @@ describe('pickaxeUpgradeTier 映射', () => {
     expect(pickaxeUpgradeTier('vajra', 4)).toBe(6);
   });
 
-  it('连锁采集：第 n 次升级 → tier = n+1', () => {
-    expect(pickaxeUpgradeTier('collect', 0)).toBe(2);
-    expect(pickaxeUpgradeTier('collect', 2)).toBe(4);
+  it('连锁采集：机会每 2 级电压发一次，第 n 次升级 → tier = 2n', () => {
+    expect(pickaxeUpgradeTier('collect', 0)).toBe(2); // 第 1 次来自 LV
+    expect(pickaxeUpgradeTier('collect', 1)).toBe(4); // 第 2 次来自 HV
+    expect(pickaxeUpgradeTier('collect', 2)).toBe(6); // 第 3 次来自 IV
+    expect(pickaxeUpgradeTier('collect', 6)).toBe(14); // 第 7 次来自 MAX
   });
 
   it('连锁爆破：第 n 次升级 → tier = floor((n-1)/2)+1', () => {
@@ -46,9 +77,10 @@ describe('pickaxeUpgradeCoinTier 币种', () => {
     expect(pickaxeUpgradeCoinTier('vajra', 4)).toBe(5);
   });
 
-  it('连锁采集同样用第 n 级币', () => {
+  it('连锁采集用「发机会那一级」的币：跨两级往前跳', () => {
     expect(pickaxeUpgradeCoinTier('collect', 0)).toBe(1);
-    expect(pickaxeUpgradeCoinTier('collect', 3)).toBe(4);
+    expect(pickaxeUpgradeCoinTier('collect', 1)).toBe(3);
+    expect(pickaxeUpgradeCoinTier('collect', 3)).toBe(7);
   });
 
   it('连锁爆破：paymentTier(tier) = max(1, tier-1)', () => {
@@ -85,10 +117,12 @@ describe('三线价格系数', () => {
   });
 
   it('连锁采集：价 = 500×4^n × 2', () => {
-    // 第 1 次升级：tier=2，2000 × 2 = 4000
+    // 第 1 次升级：tier=2，基准价 2000，×2 = 4000（铜币）
     expect(pickaxeUpgradeCost('collect', 0, baseCost).toNumber()).toBe(4000);
-    // 第 2 次升级：tier=3，8000 × 2 = 16000
-    expect(pickaxeUpgradeCost('collect', 1, baseCost).toNumber()).toBe(16000);
+    // 第 2 次升级：tier=4（HV 发的机会），基准价 32000，×2 = 64000（银币）
+    expect(pickaxeUpgradeCost('collect', 1, baseCost).toNumber()).toBe(64000);
+    // 第 3 次升级：tier=6，基准价 512000，×2
+    expect(pickaxeUpgradeCost('collect', 2, baseCost).toNumber()).toBe(1024000);
   });
 
   it('连锁爆破：价 = 500×4^(tier-1)', () => {
