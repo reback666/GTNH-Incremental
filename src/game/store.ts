@@ -23,7 +23,7 @@ import {
   pollutionBandName,
 } from '../numeric/pollution';
 import { GRID_MODES, gridEnergyMultiplier, gridMode, type GridMode } from '../numeric/grid';
-import { ACHIEVEMENTS } from './achievements';
+import { ACHIEVEMENTS, type AchievementIcon } from './achievements';
 import { UNIVERSES, universeById } from './universes';
 import { VEIN_MATERIALS } from './vein-materials';
 import { essentiaFromPurify } from '../numeric/arcane';
@@ -287,7 +287,7 @@ export interface RebirthStats {
   bonuses: { label: string; value: string }[];
 }
 
-// 成就：一行一条
+// 成就：一个方块一条
 export interface AchievementRow {
   id: string;
   name: string;
@@ -295,6 +295,8 @@ export interface AchievementRow {
   achieved: boolean;
   // 达成时间（游戏内时长），未达成是空串
   at: string;
+  // 配图：机型 / 矿脉 / 镐子贴图，或代码画的像素图标
+  icon: AchievementIcon;
 }
 
 export interface AchievementStats {
@@ -1444,6 +1446,7 @@ function achievementStats(core: GameCore): AchievementStats {
       desc: achievement.desc,
       achieved: at !== undefined,
       at: at === undefined ? '' : formatDuration(at),
+      icon: achievement.icon,
     };
   });
   return { rows, done: rows.filter((row) => row.achieved).length, total: rows.length };

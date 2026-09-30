@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import { PALETTE, SPRITES, SPRITE_GRID, type SpriteKind } from '../game/sprites';
+import { computed } from 'vue';
+import { PALETTE, SPRITES, SPRITE_GRID, type SpriteKind, type SpriteRect } from '../game/sprites';
 
-withDefaults(defineProps<{ kind: SpriteKind; size?: number }>(), { size: 64 });
+// 两种用法：给类别名（kind），或直接给一组方块（rects，成就配图用）
+const props = withDefaults(
+  defineProps<{ kind?: SpriteKind; rects?: SpriteRect[]; size?: number }>(),
+  { size: 64 },
+);
+const shape = computed<SpriteRect[]>(() => props.rects ?? (props.kind ? SPRITES[props.kind] : []));
 </script>
 
 <template>
@@ -14,7 +20,7 @@ withDefaults(defineProps<{ kind: SpriteKind; size?: number }>(), { size: 64 });
     aria-hidden="true"
   >
     <rect
-      v-for="(rect, index) in SPRITES[kind]"
+      v-for="(rect, index) in shape"
       :key="index"
       :x="rect[0]"
       :y="rect[1]"

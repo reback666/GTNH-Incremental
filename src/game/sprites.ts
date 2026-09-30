@@ -14,6 +14,22 @@ export type SpriteKind =
   | 'research'
   | 'arcane'
   | 'abyss';
+// 成就配图用的一组：讲不清是哪种机器的东西（超频、维修、电网、污染、币、时间…）
+export type AchievementSpriteKind =
+  | 'overclock'
+  | 'wrench'
+  | 'grid'
+  | 'lightning'
+  | 'pollution'
+  | 'coin'
+  | 'clock'
+  | 'cable'
+  | 'star'
+  | 'universe'
+  | 'atom'
+  | 'furnace'
+  | 'thief'
+  | 'essentia';
 
 export const SPRITE_GRID = 16;
 
@@ -183,4 +199,213 @@ export const SPRITES: Record<SpriteKind, SpriteRect[]> = {
   research: RESEARCH,
   arcane: ARCANE,
   abyss: ABYSS,
+};
+
+// 超频：齿轮 + 两粒火花
+const OVERCLOCK: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [6, 2, 4, 1, 'metalDark'],
+  [5, 3, 6, 1, 'metalDark'],
+  [4, 4, 8, 7, 'metalDark'],
+  [5, 11, 6, 1, 'metalDark'],
+  [6, 12, 4, 1, 'metalDark'],
+  [5, 5, 6, 5, 'metal'],
+  [6, 6, 4, 1, 'stoneLight'],
+  [6, 7, 4, 2, 'warm'],
+  [7, 7, 2, 2, 'bright'],
+  [12, 2, 2, 2, 'warm'],
+  [14, 5, 1, 1, 'warm'],
+];
+
+// 维修：扳手（头在右上，柄斜到左下）
+const WRENCH: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [10, 2, 3, 1, 'metal'],
+  [9, 3, 5, 1, 'metal'],
+  [9, 4, 1, 2, 'metal'],
+  [13, 4, 1, 2, 'metal'],
+  [10, 4, 3, 1, 'metalDark'],
+  [3, 10, 2, 2, 'metalDark'],
+  [5, 9, 2, 2, 'metal'],
+  [7, 8, 2, 2, 'metal'],
+  [9, 7, 2, 2, 'metal'],
+  [4, 11, 1, 1, 'metalDark'],
+];
+
+// 电网：输电塔 + 电火花
+const GRID: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [2, 11, 12, 1, 'metalDark'],
+  [7, 4, 2, 7, 'metal'],
+  [3, 3, 10, 1, 'metalDark'],
+  [4, 6, 8, 1, 'metalDark'],
+  [3, 9, 10, 1, 'metalDark'],
+  [2, 1, 2, 1, 'warm'],
+  [7, 1, 2, 1, 'bright'],
+  [12, 1, 2, 1, 'warm'],
+  [5, 12, 6, 1, 'accent'],
+];
+
+// 闪电：一整条折线
+const LIGHTNING: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [8, 2, 4, 1, 'warm'],
+  [7, 3, 4, 2, 'warm'],
+  [6, 5, 4, 2, 'bright'],
+  [8, 7, 5, 1, 'warm'],
+  [7, 8, 4, 2, 'warm'],
+  [6, 10, 4, 2, 'warmDark'],
+  [5, 12, 3, 1, 'warmDark'],
+];
+
+// 污染：烟囱往外吐烟
+const POLLUTION: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [3, 7, 4, 6, 'metalDark'],
+  [4, 8, 2, 5, 'metal'],
+  [3, 6, 4, 1, 'metal'],
+  [8, 3, 3, 1, 'stoneDark'],
+  [10, 4, 3, 1, 'stoneDark'],
+  [8, 5, 4, 1, 'stoneDark'],
+  [11, 6, 3, 1, 'stoneDark'],
+  [12, 7, 3, 1, 'stoneDark'],
+  [4, 11, 2, 1, 'warm'],
+  [6, 12, 1, 1, 'red'],
+];
+
+// 币：一摞 GT 币
+const COIN: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [5, 3, 6, 1, 'warmDark'],
+  [4, 4, 8, 1, 'warm'],
+  [5, 5, 6, 1, 'warmDark'],
+  [4, 6, 8, 1, 'warm'],
+  [5, 7, 6, 1, 'warmDark'],
+  [4, 8, 8, 1, 'warm'],
+  [5, 9, 6, 1, 'warmDark'],
+  [4, 10, 8, 1, 'warm'],
+  [7, 4, 2, 1, 'bright'],
+  [7, 8, 2, 1, 'bright'],
+  [6, 11, 4, 1, 'warmDark'],
+];
+
+// 时间：一块表
+const CLOCK: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [3, 3, 10, 10, 'metalDark'],
+  [4, 4, 8, 8, 'dark'],
+  [7, 4, 2, 5, 'bright'],
+  [8, 7, 5, 2, 'bright'],
+  [7, 7, 2, 2, 'accent'],
+  [3, 3, 1, 1, 'metal'],
+  [12, 3, 1, 1, 'metal'],
+  [3, 12, 1, 1, 'metal'],
+  [12, 12, 1, 1, 'metal'],
+];
+
+// 时空线缆：一根两头带接头的线
+const CABLE: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [1, 4, 3, 4, 'metalDark'],
+  [12, 4, 3, 4, 'metalDark'],
+  [2, 5, 12, 1, 'ore'],
+  [2, 6, 12, 1, 'accent'],
+  [3, 7, 10, 1, 'oreDark'],
+  [1, 5, 1, 1, 'metal'],
+  [14, 5, 1, 1, 'metal'],
+  [6, 4, 1, 1, 'bright'],
+  [10, 8, 1, 1, 'bright'],
+];
+
+// 加成节点：一颗四角星
+const STAR: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [7, 2, 2, 2, 'bright'],
+  [5, 4, 6, 2, 'ore'],
+  [2, 6, 12, 3, 'ore'],
+  [5, 9, 6, 2, 'ore'],
+  [7, 11, 2, 2, 'oreDark'],
+  [6, 6, 4, 2, 'bright'],
+];
+
+// 平行宇宙：一颗带光环的星球
+const UNIVERSE: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [6, 3, 4, 1, 'accent'],
+  [5, 4, 6, 6, 'ore'],
+  [7, 6, 2, 2, 'bright'],
+  [6, 8, 4, 2, 'oreDark'],
+  [2, 9, 12, 1, 'metal'],
+  [1, 8, 2, 1, 'metalDark'],
+  [13, 10, 2, 1, 'metalDark'],
+];
+
+// 普朗克 / 量子：原子
+const ATOM: SpriteRect[] = [
+  [2, 12, 12, 1, 'shadow'],
+  [3, 5, 10, 1, 'accent'],
+  [4, 4, 2, 1, 'accent'],
+  [10, 4, 2, 1, 'accent'],
+  [3, 10, 10, 1, 'accent'],
+  [4, 11, 2, 1, 'accent'],
+  [10, 11, 2, 1, 'accent'],
+  [6, 2, 4, 1, 'oreDark'],
+  [6, 13, 4, 1, 'oreDark'],
+  [7, 7, 2, 2, 'bright'],
+];
+
+// 烧矿发电：炉子里的火
+const FURNACE: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [3, 2, 10, 1, 'metalDark'],
+  [3, 3, 10, 10, 'metalDark'],
+  [4, 4, 8, 8, 'stoneDark'],
+  [4, 4, 8, 1, 'stoneLight'],
+  [6, 7, 4, 4, 'dark'],
+  [7, 8, 2, 2, 'warm'],
+  [5, 11, 1, 1, 'warmDark'],
+  [10, 11, 1, 1, 'warmDark'],
+];
+
+// 被薅：钱包里飞走一枚币
+const THIEF: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [2, 8, 8, 5, 'metalDark'],
+  [3, 9, 6, 3, 'metal'],
+  [2, 7, 8, 1, 'stoneLight'],
+  [4, 9, 1, 1, 'dark'],
+  [5, 9, 1, 1, 'dark'],
+  [12, 3, 2, 2, 'warm'],
+  [11, 5, 1, 1, 'warmDark'],
+  [9, 4, 2, 1, 'bright'],
+];
+
+// 源质：一瓶发光的液体
+const ESSENTIA: SpriteRect[] = [
+  [2, 13, 12, 1, 'shadow'],
+  [6, 2, 4, 1, 'metal'],
+  [6, 3, 4, 1, 'metalDark'],
+  [5, 4, 6, 1, 'metal'],
+  [5, 5, 6, 7, 'oreDark'],
+  [6, 6, 4, 5, 'ore'],
+  [7, 7, 2, 3, 'bright'],
+  [5, 12, 6, 1, 'metalDark'],
+];
+
+// 成就配图用的一组：讲不清是哪种机器的东西
+export const ACHIEVEMENT_SPRITES: Record<AchievementSpriteKind, SpriteRect[]> = {
+  overclock: OVERCLOCK,
+  wrench: WRENCH,
+  grid: GRID,
+  lightning: LIGHTNING,
+  pollution: POLLUTION,
+  coin: COIN,
+  clock: CLOCK,
+  cable: CABLE,
+  star: STAR,
+  universe: UNIVERSE,
+  atom: ATOM,
+  furnace: FURNACE,
+  thief: THIEF,
+  essentia: ESSENTIA,
 };

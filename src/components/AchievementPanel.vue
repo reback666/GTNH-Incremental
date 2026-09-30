@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useGameStore, type AchievementRow } from '../game/store';
+import AchievementIcon from './AchievementIcon.vue';
 
 // 成就清单：一张小方块一条，一行摆多个；达成的排在前面并点亮
 const store = useGameStore();
@@ -41,6 +42,7 @@ function tip(row: AchievementRow): string {
         :title="tip(row)"
       >
         <span class="mark">{{ row.achieved ? '√' : '·' }}</span>
+        <AchievementIcon :icon="row.icon" :size="34" />
         <b class="name">{{ row.name }}</b>
         <span class="meta">{{ row.achieved ? row.at : row.desc }}</span>
       </div>

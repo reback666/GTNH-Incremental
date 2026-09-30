@@ -3,6 +3,10 @@ import { GameCore } from '../src/game/core';
 import { deserialize, serialize } from '../src/game/save';
 import { ACHIEVEMENTS } from '../src/game/achievements';
 import { REBIRTH_NODES } from '../src/game/rebirth';
+import { modelIconUrl } from '../src/game/icons';
+import { pickaxeIconUrl } from '../src/game/pickaxe-icons';
+import { veinIconUrl } from '../src/game/veins';
+import { ACHIEVEMENT_SPRITES } from '../src/game/sprites';
 import { MACHINE_MODELS } from '../src/game/models';
 import { dec } from '../src/numeric/decimal';
 
@@ -210,6 +214,28 @@ describe('成就', () => {
     fewMagic.counts['n-2'] = 20;
     fewMagic.tick(1);
     expect(fewMagic.achieved['arcane-factory']).toBeUndefined();
+  });
+
+  it('每条成就都有能画出来的配图', () => {
+    for (const achievement of ACHIEVEMENTS) {
+      const icon = achievement.icon;
+      if (icon.kind === 'model') {
+        expect(() => modelOf(icon.id), `${achievement.id} 的机型不存在`).not.toThrow();
+        expect(modelIconUrl(icon.id), `${achievement.id} 缺机型贴图 ${icon.id}`).toBeTruthy();
+      } else if (icon.kind === 'pickaxe') {
+        expect(
+          pickaxeIconUrl(icon.line, icon.tier),
+          `${achievement.id} 缺镐子贴图 ${icon.line}-${icon.tier}`,
+        ).toBeTruthy();
+      } else if (icon.kind === 'vein') {
+        expect(veinIconUrl(icon.tier), `${achievement.id} 缺矿脉贴图 T${icon.tier}`).toBeTruthy();
+      } else {
+        expect(
+          ACHIEVEMENT_SPRITES[icon.sprite],
+          `${achievement.id} 用了不存在的像素图标 ${icon.sprite}`,
+        ).toBeTruthy();
+      }
+    }
   });
 
   it('旧存档（v8）读进来时统计归零、成就为空', () => {

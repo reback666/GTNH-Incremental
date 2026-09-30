@@ -917,6 +917,32 @@ h2 .small {
   overflow: hidden;
 }
 
+/* 配图：机型 / 矿脉贴图与代码画的图标共用这个方框 */
+.achievement-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  flex: none;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(13, 17, 22, 0.55);
+}
+
+.achievement-icon img,
+.achievement-icon svg {
+  image-rendering: pixelated;
+}
+
+.achievement-icon .vein-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  image-rendering: pixelated;
+}
+
 .achievement .meta {
   margin-top: auto;
   font-size: 10.5px;
