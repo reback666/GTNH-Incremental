@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { useGameStore } from '../game/store';
 import { VOLTAGE_TIERS } from '../numeric/voltage';
+import { dec } from '../numeric/decimal';
 import type { DevResourceTarget } from '../game/core';
 
 // 设置：污染机制的整体开关、开发者模式（计划书第六章）。
@@ -16,14 +17,34 @@ const unlockTier = ref(1);
 // 开发者工具里「资源」那一行：目标用 'ores' / 'coins' / 'both' 或 'ore:3' / 'coin:3' 表示
 const resTarget = ref('both');
 const resAmount = ref('1e12');
+// 输入不合法或操作没生效时把原因写在按钮旁边，不做静默失败
+const resError = ref('');
 
 function adjustResource(sign: 1 | -1): void {
+  const amount = cleanAmount(resAmount.value);
+  if (amount === null) {
+    resError.value = '数量要是大于 0 的数字，可以写 1e12 这种科学计数法';
+    return;
+  }
   const [head, tierText] = resTarget.value.split(':');
   const target: DevResourceTarget =
     head === 'ore' || head === 'coin'
       ? { scope: head, tier: Number(tierText) }
       : { scope: head as 'ores' | 'coins' | 'both' | 'cables' };
-  store.devAdjustResource(target, resAmount.value, sign);
+  resError.value = store.devAdjustResource(target, amount, sign) ? '' : '这次调整没有生效';
+}
+
+// 数量校验交给 Decimal：整数、小数、1e12 都收，空串 / 乱写 / 0 一律拒绝。
+// 返回清理后的文本，交给 core 再解析一次。
+function cleanAmount(text: string): string | null {
+  const trimmed = text.trim();
+  if (trimmed === '') return null;
+  try {
+    const value = dec(trimmed);
+    return value.isFinite() && value.gt(0) ? trimmed : null;
+  } catch {
+    return null;
+  }
 }
 </script>
 
@@ -143,6 +164,7 @@ function adjustResource(sign: 1 | -1): void {
         <button @click="adjustResource(1)">增加</button>
         <button @click="adjustResource(-1)">减少</button>
       </div>
+      <p v-if="resError" class="danger small" style="margin: 2px 0 0">{{ resError }}</p>
       <div class="row">
         <div class="name">时间</div>
         <button @click="store.devAdvance(60)">快进 1 分钟</button>

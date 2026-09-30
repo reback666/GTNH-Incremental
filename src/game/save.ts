@@ -1,9 +1,15 @@
-import { Decimal, ZERO, dec, fromSaveString, toSaveString } from '../numeric/decimal';
+import { Decimal, ZERO, fromSaveString, toSaveString } from '../numeric/decimal';
 import { MAX_TIER } from '../numeric/voltage';
-import { DEFAULT_GRID } from '../numeric/grid';
-import { RESEARCH_GATE_FROM_TIER, needsResearch } from '../numeric/research';
+import { DEFAULT_GRID, GRID_MODES, type GridMode } from '../numeric/grid';
+import { needsResearch } from '../numeric/research';
+import { isValidOverclockLevel } from '../numeric/overclock';
+import { clampPollution } from '../numeric/pollution';
+import { blastChances, collectChances, vajraMaxLevel } from '../numeric/pickaxe';
 import { GameCore, RIFT_FROM_TIER, type MachineKind } from './core';
-import { MACHINE_MODELS, baseModelOf } from './models';
+import { MACHINE_MODELS, baseModelOf, type MachineModel } from './models';
+import { ACHIEVEMENTS } from './achievements';
+import { REBIRTH_NODES } from './rebirth';
+import { UNIVERSES } from './universes';
 import { SAVE_KEY, SAVE_VERSION } from './constants';
 import { errorText, logEvent } from './log';
 
@@ -136,31 +142,47 @@ export function serialize(core: GameCore): SaveData {
   };
 }
 
+// 读档：存档是玩家机器上的数据，可能被手改、被旧版本写坏、被别的工具截断，
+// 所以每个字段都先过一遍清洗（见文件末尾的 clean* 一组），坏值退回默认值。
+// 目标是「宁可少一点内容，也不要让越界数字进到模拟里」，同时不因为一个字段坏掉
+// 就把整份存档丢掉。
 export function deserialize(data: SaveData): GameCore {
   const core = new GameCore();
-  core.ores = pad(data.ores, 14).map((text) => dec(text ?? '0'));
-  core.coins = pad(data.coins, MAX_TIER).map((text) => dec(text ?? '0'));
-  core.counts = data.counts ? { ...data.counts } : migrateFromV1(data);
-  core.overclock = { ...(data.overclock ?? {}) };
-  core.faults = { ...(data.faults ?? {}) };
-  core.storedEU = fromSaveString(data.storedEU ?? '0');
-  core.pollution = fromSaveString(data.pollution ?? '0');
-  core.pollutionEnabled = data.pollutionEnabled ?? true;
-  core.grid = (data.grid as GameCore['grid']) ?? 'stable';
-  // v4 及以前没有「已解锁电网」的概念：把当前接的那一档当成已解锁，别让玩家白花钱
-  core.grids = data.grids
-    ? (data.grids as GameCore['grids'])
-    : ([DEFAULT_GRID, ...(core.grid !== DEFAULT_GRID ? [core.grid] : [])] as GameCore['grids']);
-  core.siphoned = fromSaveString(data.siphoned ?? '0');
-  core.maxTier = data.maxTier;
-  core.unlockedVeins = [...data.unlockedVeins];
+  // 等级要先定下来：矿脉、机型、台数的清洗都以它为准
+  core.maxTier = clampInt(data.maxTier, 1, MAX_TIER, 1);
+  // v9 及以前没有这个字段：按当时的最高电压兜底（只会低估，不会凭空抬高）
+  core.peakTier = clampInt(data.peakTier, 1, MAX_TIER, core.maxTier);
+  core.unlockedVeins = cleanVeins(data.unlockedVeins);
+  core.playSeconds = nonNegativeInt(data.playSeconds);
+
+  core.ores = pad(data.ores, 14).map((text) => safeDec(text));
+  core.coins = pad(data.coins, MAX_TIER).map((text) => safeDec(text));
+  const counts = data.counts ? cleanCounts(data.counts) : migrateFromV1(data);
+  core.counts = counts;
+  core.overclock = cleanOverclock(data.overclock);
+  core.faults = cleanFaults(data.faults, counts);
+  core.stopped = cleanStopped(data.stopped, counts);
+  core.storedEU = safeDec(data.storedEU);
+  core.pollution = clampPollution(safeDec(data.pollution));
+  core.pollutionEnabled = booleanOr(data.pollutionEnabled, true);
+  core.grid = cleanGridId(data.grid);
+  core.grids = cleanGrids(data.grids, core.grid);
+  core.siphoned = safeDec(data.siphoned);
   // v17 起研究细到机型：一台机器一张研究单。旧存档记的是「哪几个等级研究过」，
   // 迁移时把那些等级的全部机型都标成已研究，解锁范围不变
-  core.researchedModels = data.researchedModels ? [...data.researchedModels] : [];
+  core.researchedModels = data.researchedModels
+    ? cleanModelIds(data.researchedModels, (model) => needsResearch(model.tier))
+    : [];
   core.researchProgress = {};
-  core.researchTarget = data.researchTargetModel ?? null;
+  core.researchTarget = cleanModelId(
+    data.researchTargetModel,
+    (model) => needsResearch(model.tier),
+  );
   for (const [id, amount] of Object.entries(data.researchProgressByModel ?? {})) {
-    core.researchProgress[id] = fromSaveString(amount);
+    const model = MODEL_BY_ID.get(id);
+    if (!model || !needsResearch(model.tier)) continue;
+    const progress = safeDec(amount);
+    if (progress.gt(0)) core.researchProgress[id] = progress;
   }
 
   if (!data.researchedModels) {
@@ -180,14 +202,14 @@ export function deserialize(data: SaveData): GameCore {
       return model?.id;
     };
     for (const [tier, amount] of Object.entries(data.researchProgressByTier ?? {})) {
-      core.researchTarget = attach(Number(tier), fromSaveString(amount)) ?? core.researchTarget;
+      core.researchTarget = attach(Number(tier), safeDec(amount)) ?? core.researchTarget;
     }
     if (data.researchTarget !== undefined && data.researchTarget !== null) {
       core.researchTarget = attach(data.researchTarget, ZERO) ?? core.researchTarget;
     }
     if (!data.researchProgressByTier && !data.researchTarget) {
       // 更早的存档只有一个进度数字：那是当时自动挑的目标攒的
-      const legacy = fromSaveString(data.researchProgress ?? '0');
+      const legacy = safeDec(data.researchProgress);
       const auto = core.researchOptions()[0];
       if (legacy.gt(0) && auto) {
         core.researchProgress[auto.id] = legacy;
@@ -195,38 +217,205 @@ export function deserialize(data: SaveData): GameCore {
       }
     }
   }
-  core.cables = fromSaveString(data.cables ?? '0');
-  core.rebirthCount = data.rebirthCount ?? 0;
-  core.rebirthNodes = [...(data.rebirthNodes ?? [])];
-  core.runEU = fromSaveString(data.runEU ?? '0');
-  core.totalEU = fromSaveString(data.totalEU ?? '0');
+  core.cables = safeDec(data.cables);
+  core.rebirthCount = nonNegativeInt(data.rebirthCount);
+  core.rebirthNodes = cleanRebirthNodes(data.rebirthNodes);
+  core.runEU = safeDec(data.runEU);
+  core.totalEU = safeDec(data.totalEU);
   // v6 及以前没有裂缝：已经在 LuV 以上存档说明这一趟早就过了这个点，
   // 默认按「已处理」算，免得读档就弹窗；下一周目会正常弹。
-  core.riftOffered = data.riftOffered ?? core.maxTier >= RIFT_FROM_TIER;
-  core.devMode = data.devMode ?? false;
-  core.peakTier = data.peakTier ?? core.maxTier;
-  core.manualMines = data.manualMines ?? 0;
-  core.builtMachines = data.builtMachines ?? 0;
-  core.overclockUsed = data.overclockUsed ?? false;
-  core.repairs = data.repairs ?? 0;
-  core.maxPollution = fromSaveString(data.maxPollution ?? '0');
-  core.totalCables = fromSaveString(data.totalCables ?? '0');
-  core.achieved = { ...(data.achieved ?? {}) };
-  core.universes = [...((data.universes ?? []) as GameCore['universes'])];
-  core.essentia = fromSaveString(data.essentia ?? '0');
-  core.pendingUniverse = (data.pendingUniverse ?? null) as GameCore['pendingUniverse'];
-  core.pickaxeVajra = data.pickaxeVajra ?? 0;
-  core.pickaxeCollect = data.pickaxeCollect ?? 0;
-  core.pickaxeBlast = data.pickaxeBlast ?? 0;
-  core.siliconAutoRepair = data.siliconAutoRepair ?? true;
-  core.siliconAutoOverclock = data.siliconAutoOverclock ?? true;
-  core.siliconShedding = data.siliconShedding ?? true;
-  core.stopped = { ...(data.stopped ?? {}) };
-  core.playSeconds = data.playSeconds;
-  core.totalOre = dec(data.totalOre ?? '0');
-  core.totalCoins = dec(data.totalCoins ?? '0');
-  core.totalOreSpent = dec(data.totalOreSpent ?? '0');
+  core.riftOffered = booleanOr(data.riftOffered, core.maxTier >= RIFT_FROM_TIER);
+  core.devMode = booleanOr(data.devMode, false);
+  core.manualMines = nonNegativeInt(data.manualMines);
+  core.builtMachines = nonNegativeInt(data.builtMachines);
+  core.overclockUsed = booleanOr(data.overclockUsed, false);
+  core.repairs = nonNegativeInt(data.repairs);
+  core.maxPollution = clampPollution(safeDec(data.maxPollution));
+  core.totalCables = safeDec(data.totalCables);
+  core.achieved = cleanAchieved(data.achieved);
+  core.universes = cleanUniverses(data.universes);
+  core.essentia = safeDec(data.essentia);
+  core.pendingUniverse = cleanPendingUniverse(data.pendingUniverse, core.universes);
+  core.pickaxeVajra = clampInt(data.pickaxeVajra, 0, vajraMaxLevel(), 0);
+  core.pickaxeCollect = clampInt(data.pickaxeCollect, 0, collectChances(MAX_TIER), 0);
+  core.pickaxeBlast = clampInt(data.pickaxeBlast, 0, blastChances(MAX_TIER), 0);
+  core.siliconAutoRepair = booleanOr(data.siliconAutoRepair, true);
+  core.siliconAutoOverclock = booleanOr(data.siliconAutoOverclock, true);
+  core.siliconShedding = booleanOr(data.siliconShedding, true);
+  core.totalOre = safeDec(data.totalOre);
+  core.totalCoins = safeDec(data.totalCoins);
+  core.totalOreSpent = safeDec(data.totalOreSpent);
   return core;
+}
+
+// ── 读档清洗用的小工具 ───────────────────────────────────────
+// 命名里的 clean* 都是「只信合法值」：认不出来的一律丢回默认值，不抛错、不猜。
+const MODEL_BY_ID = new Map(MACHINE_MODELS.map((model) => [model.id, model]));
+const MODEL_IDS = new Set(MODEL_BY_ID.keys());
+const GRID_IDS = new Set(GRID_MODES.map((mode) => mode.id));
+const UNIVERSE_IDS = new Set<string>(UNIVERSES.map((universe) => universe.id));
+const REBIRTH_NODE_IDS = new Set(REBIRTH_NODES.map((node) => node.id));
+const ACHIEVEMENT_IDS = new Set(ACHIEVEMENTS.map((achievement) => achievement.id));
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function clampInt(value: unknown, min: number, max: number, fallback: number): number {
+  const size = typeof value === 'number' ? Math.floor(value) : Number.NaN;
+  if (!Number.isFinite(size)) return fallback;
+  return Math.min(max, Math.max(min, size));
+}
+
+function nonNegativeInt(value: unknown): number {
+  return clampInt(value, 0, Number.MAX_SAFE_INTEGER, 0);
+}
+
+function booleanOr(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+// 存档里的大数值统一走这里：不是合法十进制字符串就退回 0，负数也当 0。
+function safeDec(value: unknown): Decimal {
+  if (typeof value !== 'string' && typeof value !== 'number') return ZERO;
+  try {
+    const parsed = fromSaveString(String(value));
+    return parsed.isFinite() && parsed.gte(0) ? parsed : ZERO;
+  } catch {
+    return ZERO;
+  }
+}
+
+// 矿脉表只做「去重 + 范围收敛 + 非空」，不替存档补内容：合法的存档原样保留，
+// 手改坏的（负数、超过 14 级、重复、空表）在这里抹平，不让贴图和名称查到表外。
+function cleanVeins(value: unknown): number[] {
+  const veins = new Set<number>();
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const tier = typeof item === 'number' ? Math.floor(item) : Number.NaN;
+      if (Number.isFinite(tier) && tier >= 0 && tier < MAX_TIER) veins.add(tier);
+    }
+  }
+  // 开局就有的 T0：矿脉表不能是空的，否则界面会拿不到当前矿脉
+  if (veins.size === 0) veins.add(0);
+  return [...veins].sort((a, b) => a - b);
+}
+
+function cleanCounts(value: unknown): Record<string, number> {
+  const counts: Record<string, number> = {};
+  if (!isRecord(value)) return counts;
+  for (const [id, raw] of Object.entries(value)) {
+    if (!MODEL_IDS.has(id)) continue;
+    const count = nonNegativeInt(raw);
+    if (count > 0) counts[id] = count;
+  }
+  return counts;
+}
+
+// 档位可以挂在还没建过机器的机型上（见 core.setOverclock），所以只看档位本身合不合法
+function cleanOverclock(value: unknown): Record<string, number> {
+  const overclock: Record<string, number> = {};
+  if (!isRecord(value)) return overclock;
+  for (const [id, raw] of Object.entries(value)) {
+    const level = typeof raw === 'number' ? raw : Number.NaN;
+    if (!MODEL_IDS.has(id) || !isValidOverclockLevel(level) || level === 0) continue;
+    overclock[id] = level;
+  }
+  return overclock;
+}
+
+function cleanFaults(value: unknown, counts: Record<string, number>): Record<string, number> {
+  const faults: Record<string, number> = {};
+  if (!isRecord(value)) return faults;
+  for (const [id, raw] of Object.entries(value)) {
+    const faulty = Math.min(counts[id] ?? 0, nonNegativeInt(raw));
+    if (faulty > 0) faults[id] = faulty;
+  }
+  return faults;
+}
+
+function cleanStopped(value: unknown, counts: Record<string, number>): Record<string, true> {
+  const stopped: Record<string, true> = {};
+  if (!isRecord(value)) return stopped;
+  for (const id of Object.keys(value)) {
+    if ((counts[id] ?? 0) > 0) stopped[id] = true;
+  }
+  return stopped;
+}
+
+function cleanGridId(value: unknown): GridMode {
+  return typeof value === 'string' && GRID_IDS.has(value as GridMode)
+    ? (value as GridMode)
+    : DEFAULT_GRID;
+}
+
+// 默认电网与当前接着的那一档一定算已解锁 —— v4 及以前的存档没有这个概念，
+// 不能让玩家读档之后被自己本来就在用的电网挡在外面。
+function cleanGrids(value: unknown, current: GridMode): GridMode[] {
+  const ids = new Set<GridMode>([DEFAULT_GRID, current]);
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (typeof item === 'string' && GRID_IDS.has(item as GridMode)) ids.add(item as GridMode);
+    }
+  }
+  return GRID_MODES.filter((mode) => ids.has(mode.id)).map((mode) => mode.id);
+}
+
+function cleanModelIds(value: unknown, keep: (model: MachineModel) => boolean): string[] {
+  const ids = new Set<string>();
+  if (!Array.isArray(value)) return [];
+  for (const item of value) {
+    const model = typeof item === 'string' ? MODEL_BY_ID.get(item) : undefined;
+    if (model && keep(model)) ids.add(model.id);
+  }
+  return [...ids];
+}
+
+function cleanModelId(value: unknown, keep: (model: MachineModel) => boolean): string | null {
+  const list = value === null || value === undefined ? [] : [value];
+  return cleanModelIds(list, keep)[0] ?? null;
+}
+
+function cleanRebirthNodes(value: unknown): string[] {
+  const ids = new Set<string>();
+  if (!Array.isArray(value)) return [];
+  for (const item of value) {
+    if (typeof item === 'string' && REBIRTH_NODE_IDS.has(item)) ids.add(item);
+  }
+  return [...ids];
+}
+
+function cleanAchieved(value: unknown): Record<string, number> {
+  const achieved: Record<string, number> = {};
+  if (!isRecord(value)) return achieved;
+  for (const [id, raw] of Object.entries(value)) {
+    if (!ACHIEVEMENT_IDS.has(id)) continue;
+    const at = typeof raw === 'number' ? raw : Number.NaN;
+    if (Number.isFinite(at) && at >= 0) achieved[id] = Math.floor(at);
+  }
+  return achieved;
+}
+
+function cleanUniverses(value: unknown): GameCore['universes'] {
+  const ids = new Set<GameCore['universes'][number]>();
+  if (!Array.isArray(value)) return [];
+  for (const item of value) {
+    if (typeof item === 'string' && UNIVERSE_IDS.has(item)) {
+      ids.add(item as GameCore['universes'][number]);
+    }
+  }
+  return [...ids];
+}
+
+// 已经拿到手的宇宙不能再挂在「下次转生要带」里，否则转生时会被 addUniverse 拒掉、
+// 看起来像选择丢了。
+function cleanPendingUniverse(
+  value: unknown,
+  owned: GameCore['universes'],
+): GameCore['pendingUniverse'] {
+  if (typeof value !== 'string' || !UNIVERSE_IDS.has(value)) return null;
+  const id = value as GameCore['universes'][number];
+  return owned.includes(id) ? null : id;
 }
 
 // v1 存档只记了「第几级有多少台」，没有机型概念。

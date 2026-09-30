@@ -1004,8 +1004,10 @@ export class GameCore {
     this.pollutionLoad = new Map();
     for (const model of MACHINE_MODELS) {
       if (model.tier > this.maxTier) continue;
-      // 停电是整厂停摆：这一拍谁都不算干活
-      if (input.outage) {
+      // 停电是整厂停摆：接电网的机器这一拍都不算干活。
+      // 灵气机器不吃电（见 tick 里的 factorOf），停电照常运转，所以按灵气比例记负载，
+      // 否则会出现「一边产出、一边不算污染」的矛盾口径。
+      if (input.outage && !model.visPowered) {
         this.pollutionLoad.set(model.id, ZERO);
         continue;
       }
@@ -1025,9 +1027,21 @@ export class GameCore {
     }
   }
 
-  // 每秒净化掉的污染（百分点/秒）
+  // 每秒净化掉的污染（百分点/秒）。
+  // 和污染产生共用同一份负载采样（见 samplePollutionLoad）：停电、被停机调度、
+  // 缺电降载时净化器跟着停或降，不再出现「停电反而把污染压下去」。
+  // 采样发生在每一拍的污染结算之前，所以灵气/源质那一块读到的是上一拍的负载，
+  // 和界面上「上一拍实际」的口径一致。
   purifyPerSecond(): Decimal {
-    return purifyPerSecond(this.runningTiers('purifier'));
+    return purifyPerSecond(
+      modelsOf('purifier')
+        .filter((model) => model.tier <= this.maxTier)
+        .map((model) => ({
+          tier: model.tier,
+          count: this.workingCountOf(model.id),
+          load: this.pollutionLoad.get(model.id) ?? ONE,
+        })),
+    );
   }
 
   // 本拍的污染净变化（正数 = 在涨）
@@ -1120,14 +1134,20 @@ export class GameCore {
     this.siphoned = this.siphoned.plus(target.amount.times(SIPHON_RATIO));
   }
 
-  // 在给定电压等级上能造的机型
+  // 在给定电压等级上能造的机型。
+  // 平行宇宙被收回后，专属机型（魔法机器 / 灵气节点 / 腐蚀抑制器）整个类别失效：
+  // 模拟里不干活，这里的读数口径也要跟着排除，否则界面会把停摆的机器算进产量与耗电。
   modelsAt(category: MachineCategory, tier: number): MachineModel[] {
-    return modelsOf(category).filter((model) => model.tier === tier);
+    return modelsOf(category).filter(
+      (model) => model.tier === tier && this.universeSatisfied(model),
+    );
   }
 
   // 已解锁区间内的全部机型（按电压等级、再按目录顺序）
   unlockedModels(category: MachineCategory): MachineModel[] {
-    return modelsOf(category).filter((model) => model.tier <= this.maxTier);
+    return modelsOf(category).filter(
+      (model) => model.tier <= this.maxTier && this.universeSatisfied(model),
+    );
   }
 
   // ── 玩家操作 ───────────────────────────────────────────────

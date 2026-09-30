@@ -212,4 +212,40 @@ describe('奥术宇宙', () => {
     expect(restored.universes).toEqual(['arcane']);
     expect(serialize(restored)).toEqual(serialize(core));
   });
+
+  it('停电时灵气机器照常运转，也照常算污染', () => {
+    // 灵气机器不接电网：停电照常开工。既然在开工，污染口径就不能记 0。
+    const core = new GameCore();
+    core.universes = ['arcane'];
+    core.maxTier = 3;
+    core.ores[1] = dec('1e6');
+    core.counts['n-2'] = 20;
+    core.counts['mm-2'] = 5;
+    core.essentia = dec('1e6');
+    core.outageSeconds = 5;
+
+    const report = core.tick(1);
+    expect(report.outage).toBe(true);
+    expect(report.oreGained[1]!.gt(0)).toBe(true);
+    expect(core.pollutionPerSecond().gt(0)).toBe(true);
+  });
+
+  it('撤销宇宙后，界面口径不再把失效的专属机型算进产量与耗电', () => {
+    const core = new GameCore();
+    core.devMode = true;
+    core.maxTier = 3;
+    core.addUniverse('arcane');
+    core.counts['mm-2'] = 10;
+    core.counts['n-2'] = 10;
+    expect(core.unlockedModels('miner').some((model) => model.id === 'mm-2')).toBe(true);
+    expect(core.modelsAt('miner', 2).some((model) => model.id === 'mm-2')).toBe(true);
+
+    core.devRevokeUniverse('arcane');
+    // 模拟里已经不干活（见 tick 的 active 列表），读数口径也要跟着排除
+    expect(core.unlockedModels('miner').some((model) => model.id === 'mm-2')).toBe(false);
+    expect(core.modelsAt('miner', 2).some((model) => model.id === 'mm-2')).toBe(false);
+    expect(core.unlockedModels('arcane')).toEqual([]);
+    // 机器还在，只是不生效：台数仍然看得见，重新拿到宇宙就能继续用
+    expect(core.countOf('mm-2')).toBe(10);
+  });
 });
