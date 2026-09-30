@@ -76,7 +76,8 @@ describe('游戏核心：ULV → LV 完整循环', () => {
     const report = core.tick(1);
 
     expect(report.powerRatio).toBe(1);
-    expect(report.euGenerated.toString()).toBe('24');
+    // 按需发电：3 台 ULV 发电机额定 24 EU/t，但这套机器只要 3×2 + 8 = 14 EU/t
+    expect(report.euGenerated.toString()).toBe('14');
     expect(core.coins[0]!.toString()).toBe('1');
     expect(report.oreGained[0]!.toString()).toBe('1.5');
     // 产矿提速 8 倍后，同级采矿机产矿快于发电机烧矿，矿石转为净增长

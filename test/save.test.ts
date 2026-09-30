@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { deserialize, type SaveData } from '../src/game/save';
+import { deserialize, serialize, type SaveData } from '../src/game/save';
+import { GameCore } from '../src/game/core';
 
 // 读档清洗：存档是玩家机器上的数据，坏值不能进到模拟里，也不能因为一个字段坏了
 // 就把整份存档丢掉（见 src/game/save.ts 的 clean* 一组）。
@@ -78,5 +79,22 @@ describe('读档清洗', () => {
     expect(core.universes).toEqual(['arcane']);
     // 已经拿到的宇宙不能再挂进「下次转生带」
     expect(core.pendingUniverse).toBeNull();
+  });
+
+  it('随机事件计时器跟着存档走', () => {
+    const core = new GameCore();
+    core.outageSeconds = 3.5;
+    core.outageTimer = 120;
+    core.siphonTimer = 30;
+    core.mutationTimer = 45;
+    core.collapseTimer = 600;
+
+    const restored = deserialize(serialize(core));
+    expect(restored.outageSeconds).toBe(3.5);
+    expect(restored.outageTimer).toBe(120);
+    expect(restored.siphonTimer).toBe(30);
+    expect(restored.mutationTimer).toBe(45);
+    expect(restored.collapseTimer).toBe(600);
+    expect(serialize(restored)).toEqual(serialize(core));
   });
 });

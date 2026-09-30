@@ -17,7 +17,7 @@ const powerBoxes = computed(
   () =>
     [
       { key: 'stored' as PowerKey, label: '存电量', stat: snap.value.power.stored },
-      { key: 'generated' as PowerKey, label: '总产电量', stat: snap.value.power.generated },
+      { key: 'generated' as PowerKey, label: '发电能力', stat: snap.value.power.generated },
       { key: 'consumed' as PowerKey, label: '总耗电量', stat: snap.value.power.consumed },
     ] as const,
 );
@@ -35,6 +35,9 @@ function togglePower(key: PowerKey) {
       GTNH 增量 · {{ tierName }}
       <span class="muted small">已玩 {{ snap.playTime }}</span>
     </h1>
+    <p v-if="store.offlineNote" class="muted small" style="margin: 4px 0 0">
+      {{ store.offlineNote }}
+    </p>
 
     <!-- ── 第一行：电能 ─────────────────────────────────────── -->
     <h2>电能</h2>

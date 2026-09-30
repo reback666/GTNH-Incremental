@@ -78,8 +78,9 @@ describe('污染在模拟里的效果', () => {
     const core = factory();
     expect(core.pollution.toString()).toBe('0');
     core.tick(1);
-    // 40 台 MV 发电机 + 20 台 MV 制造机 + 20 台 MV 采矿机 = 80 台 × 3 级 × 0.0008
-    expect(core.pollution.toNumber()).toBeCloseTo(80 * 3 * 0.0008, 6);
+    // 40 台 MV 发电机额定 5120 EU/t，但需求只有 3200 EU/t：按需发电只开 62.5% 负载，
+    // 污染也按 62.5% 折算 → 40×0.625 + 20 台制造机 + 20 台采矿机 = 65 台 × 3 级 × 0.0008
+    expect(core.pollution.toNumber()).toBeCloseTo(65 * 3 * 0.0008, 6);
   });
 
   it('机器不工作时污染不涨：没电、没燃料、停电都不算干活', () => {

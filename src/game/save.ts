@@ -10,7 +10,7 @@ import { MACHINE_MODELS, baseModelOf, type MachineModel } from './models';
 import { ACHIEVEMENTS } from './achievements';
 import { REBIRTH_NODES } from './rebirth';
 import { UNIVERSES } from './universes';
-import { SAVE_KEY, SAVE_VERSION } from './constants';
+import { SAVE_KEY, SAVE_TIME_KEY, SAVE_VERSION } from './constants';
 import { errorText, logEvent } from './log';
 
 // 计划书第十四章：存档 = 状态序列化成 JSON，带版本号；
@@ -77,6 +77,14 @@ export interface SaveData {
   siliconShedding?: boolean;
   // v15：被手动停机的机型（机型 id → true）
   stopped?: Record<string, true>;
+  // v18：随机事件计时器（波动电网断电、黑市窃取、变异、工厂崩溃）
+  timers?: {
+    outageSeconds?: number;
+    outageTimer?: number;
+    siphonTimer?: number;
+    mutationTimer?: number;
+    collapseTimer?: number;
+  };
   // v1 遗留字段：按电压等级存的数量，读到旧存档时用来迁移
   miners?: number[];
   generators?: number[];
@@ -132,6 +140,13 @@ export function serialize(core: GameCore): SaveData {
     siliconAutoOverclock: core.siliconAutoOverclock,
     siliconShedding: core.siliconShedding,
     stopped: { ...core.stopped },
+    timers: {
+      outageSeconds: core.outageSeconds,
+      outageTimer: core.outageTimer,
+      siphonTimer: core.siphonTimer,
+      mutationTimer: core.mutationTimer,
+      collapseTimer: core.collapseTimer,
+    },
     siphoned: toSaveString(core.siphoned),
     maxTier: core.maxTier,
     unlockedVeins: [...core.unlockedVeins],
@@ -242,6 +257,14 @@ export function deserialize(data: SaveData): GameCore {
   core.siliconAutoRepair = booleanOr(data.siliconAutoRepair, true);
   core.siliconAutoOverclock = booleanOr(data.siliconAutoOverclock, true);
   core.siliconShedding = booleanOr(data.siliconShedding, true);
+  // 这几个计时器都是秒数，丢了只会让「距离下次判定还有多久」重新开始，
+  // 但存档往返要保持一致（见 SAVE_VERSION 注释）
+  const timers = isRecord(data.timers) ? data.timers : {};
+  core.outageSeconds = nonNegativeFloat(timers.outageSeconds);
+  core.outageTimer = nonNegativeFloat(timers.outageTimer);
+  core.siphonTimer = nonNegativeFloat(timers.siphonTimer);
+  core.mutationTimer = nonNegativeFloat(timers.mutationTimer);
+  core.collapseTimer = nonNegativeFloat(timers.collapseTimer);
   core.totalOre = safeDec(data.totalOre);
   core.totalCoins = safeDec(data.totalCoins);
   core.totalOreSpent = safeDec(data.totalOreSpent);
@@ -269,6 +292,12 @@ function clampInt(value: unknown, min: number, max: number, fallback: number): n
 
 function nonNegativeInt(value: unknown): number {
   return clampInt(value, 0, Number.MAX_SAFE_INTEGER, 0);
+}
+
+// 计时器是秒数，可能带小数（快进时按整拍给），所以这里不取整
+function nonNegativeFloat(value: unknown): number {
+  const size = typeof value === 'number' ? value : Number.NaN;
+  return Number.isFinite(size) && size > 0 ? Math.min(size, 86_400) : 0;
 }
 
 function booleanOr(value: unknown, fallback: boolean): boolean {
@@ -442,6 +471,7 @@ export function saveToStorage(core: GameCore): void {
   if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(serialize(core)));
+    writeSaveTime();
     if (writeFailureLogged) {
       writeFailureLogged = false;
       logEvent('info', 'save.write', '存档恢复正常，能写进去了');
@@ -498,6 +528,29 @@ export function loadFromStorage(): GameCore | null {
 export function clearStorage(): void {
   if (typeof localStorage === 'undefined') return;
   localStorage.removeItem(SAVE_KEY);
+  localStorage.removeItem(SAVE_TIME_KEY);
+}
+
+function writeSaveTime(): void {
+  try {
+    localStorage.setItem(SAVE_TIME_KEY, String(Date.now()));
+  } catch {
+    // 写不进去就不补算离线收益：宁可少给，也不要拿一个假时间戳去算
+  }
+}
+
+// 距离上次写档过了多少秒：没记录、解析失败、系统时间倒流都返回 0
+export function secondsSinceLastSave(): number {
+  if (typeof localStorage === 'undefined') return 0;
+  try {
+    const raw = localStorage.getItem(SAVE_TIME_KEY);
+    if (!raw) return 0;
+    const at = Number(raw);
+    if (!Number.isFinite(at)) return 0;
+    return Math.max(0, (Date.now() - at) / 1000);
+  } catch {
+    return 0;
+  }
 }
 
 function pad(list: string[] | undefined, length: number): (string | undefined)[] {

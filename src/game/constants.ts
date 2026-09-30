@@ -46,8 +46,12 @@ export const UI_REFRESH_MS = 50;
 // v15：加了每个机型的手动停机开关
 // v16：研究改成手选项目（选中等级 + 各等级各自进度）
 // v17：研究细到机型（每个机型单独研究）
-export const SAVE_VERSION = 17;
+// v18：加了随机事件计时器（波动电网断电 / 黑市窃取 / 变异 / 工厂崩溃）
+export const SAVE_VERSION = 18;
 export const SAVE_KEY = 'gtnh-incremental-save';
+// 上次写档的墙上时间单独存一个键：存档本体保持纯状态（还能逐字节比较），
+// 离线收益按这个时间戳算（见 save.ts 的 secondsSinceLastSave）
+export const SAVE_TIME_KEY = 'gtnh-incremental-save-time';
 
 export function unlockCost(machineTier: number): Decimal {
   return machineCost({ baseCost: BASE_MACHINE_COST, tier: machineTier, purchased: 0 }).times(

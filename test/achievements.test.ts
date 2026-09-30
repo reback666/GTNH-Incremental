@@ -93,6 +93,8 @@ describe('成就', () => {
     core.setDevMode(true);
     core.devGrantResources('1e12'); // MAX 机器单价 3.4e10（时空币），要给够
     core.devUnlockTo(14);
+    // devUnlockTo 是测试工具，不会顺手抬高履历统计；这里按玩家的真实路径补上
+    core.peakTier = core.maxTier;
     expect(core.buy(modelOf('c-14'), 1)).toBe(1);
     core.totalCoins = dec('1e12');
     core.totalEU = dec('1e20');

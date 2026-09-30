@@ -121,6 +121,12 @@ export type DevResourceTarget =
 
 export interface TickReport {
   euGenerated: Decimal;
+  // 这一拍「拿得出」的功率 × 步长：燃料够、灵气够时的上限。
+  // 和 euGenerated（按需发电之后的实际值）对比，能区分「缺燃料」和「按需降载」。
+  euCapacity: Decimal;
+  // 这一拍的长度（秒）。报表里的产量都是"每拍"的量，换算成每秒要看它，
+  // 不能假定就是 1 秒（开发者模式的快进会一次跑很长的一拍）。
+  stepSeconds: number;
   euConsumed: Decimal;
   powerRatio: number;
   // 算力（流量）：本拍产出、被研究站吃掉的、以及直接浪费掉的
@@ -522,7 +528,8 @@ export class GameCore {
   devUnlockTo(tier: number): boolean {
     if (!this.devMode || !isValidTier(tier)) return false;
     this.maxTier = tier;
-    this.peakTier = Math.max(this.peakTier, tier);
+    // 不动 peakTier：那是玩家的履历统计（还挂着「最高电压」成就），
+    // 开发者模式是测试工具，不该顺手把成就也刷了
     this.unlockedVeins = Array.from({ length: tier }, (_, index) => index);
     this.researchedModels = MACHINE_MODELS.filter(
       (model) => model.tier <= tier && needsResearch(model.tier),
@@ -1339,17 +1346,12 @@ export class GameCore {
         this.universeSatisfied(model),
     );
 
-    // 1) 发电能力与耗电需求。坏掉的机器不耗电，超频的机器按档位吃电
-    let capacity = ZERO;
+    // 1) 耗电需求。坏掉的机器不耗电，超频的机器按档位吃电。
     // 耗电按类别分开记：硅基宇宙的停机调度要按类别整组停
     const demandByKind = new Map<MachineKind, Decimal>();
     for (const model of active) {
-      if (model.category === 'generator') {
-        capacity = capacity.plus(this.generatorOutputRated(model));
-      } else if (model.visPowered) {
-        // 魔法机器不吃电，它们要的是灵气，见下面的灵气结算
-        continue;
-      } else {
+      // 发电机不耗电（出力在下面单独算），魔法机器要的是灵气
+      if (model.category !== 'generator' && !model.visPowered) {
         let drain = ZERO;
         if (model.category === 'miner') drain = this.minerEnergyDrain(model);
         else if (model.category === 'machine') drain = this.machineEnergyDrain(model);
@@ -1371,30 +1373,10 @@ export class GameCore {
     for (const [kind, value] of demandByKind) demandByKind.set(kind, value.times(gridMul));
     let demand = ZERO;
     for (const value of demandByKind.values()) demand = demand.plus(value);
+    const step = dec(String(dtSeconds));
 
-    // 2) 发电机按库存矿石实际烧掉多少 —— 烧不到就发不满
-    let generated = ZERO;
-    // 每台发电机这一拍烧到的燃料比例：没燃料就是 0，污染按它算
-    const fuelLoad = new Map<string, Decimal>();
-    for (const model of active) {
-      if (model.category !== 'generator') continue;
-      // 魔法发电机不烧矿，它在灵气结算那里直接按灵气出力
-      if (model.visPowered) continue;
-      const want = this.generatorFuelDrain(model).times(dtSeconds);
-      const oreTier = model.tier - 1; // 本级发电机烧本级矿石
-      const available = this.ores[oreTier]!;
-      const burned = Decimal.min(want, available);
-      if (burned.gt(0)) {
-        this.ores[oreTier] = available.minus(burned);
-        report.oreSpent[oreTier] = report.oreSpent[oreTier]!.plus(burned);
-        this.totalOreSpent = this.totalOreSpent.plus(burned);
-      }
-      const ratio = want.gt(0) ? burned.div(want) : ONE;
-      fuelLoad.set(model.id, ratio);
-      generated = generated.plus(this.generatorOutputRated(model).times(dtSeconds).times(ratio));
-    }
-
-    // 3) 电网事件：普通/波动电网都可能断电，断电期间机器全停（不产也不耗）
+    // 2) 电网事件：普通/波动电网都可能断电，断电期间接电网的机器全停（不产也不耗）。
+    //    放在发电之前算，因为发电机也要按「这一拍到底要不要干活」决定烧不烧矿。
     const outageRule = gridOutageRule(this.grid);
     if (this.outageSeconds > 0) {
       this.outageSeconds = Math.max(0, this.outageSeconds - dtSeconds);
@@ -1409,34 +1391,28 @@ export class GameCore {
         }
       }
     }
-    // 3b) 硅基宇宙的停机调度：电力不够时按类别整组停，而不是全厂等比降载。
-    //     保住优先级高的那几类满速跑，被停的那几类这一拍不产也不耗。
-    const silicon = this.hasUniverse('silicon');
-    // 调度会把这个比值修回 1，所以先记下「没调度时电力到底够不够」——
-    let shed = new Set<MachineKind>();
-    const rawDemand = demand;
-    const rawRatio = rawDemand.lte(0) ? 1 : Decimal.min(ONE, generated.div(rawDemand)).toNumber();
-    if (silicon && this.siliconShedding && !report.outage && demand.gt(generated)) {
-      shed = this.shedKinds(demandByKind, generated);
-      if (shed.size > 0) {
-        demand = ZERO;
-        for (const [kind, value] of demandByKind) {
-          if (!shed.has(kind)) demand = demand.plus(value);
-        }
-        report.sheddedKinds = [...shed];
-      }
+
+    // 3) 燃料发电机这一拍最多能拿出多少功率：只看燃料够不够，
+    //    真正烧多少留到需求算清楚之后再定（见第 6 步的按需发电）。
+    let fuelCapacity = ZERO;
+    for (const model of active) {
+      if (model.category !== 'generator' || model.visPowered) continue;
+      const want = this.generatorFuelDrain(model).times(step);
+      const available = this.ores[model.tier - 1]!; // 本级发电机烧本级矿石
+      const ratio = want.gt(0) ? Decimal.min(ONE, available.div(want)) : ONE;
+      fuelCapacity = fuelCapacity.plus(this.generatorOutputRated(model).times(ratio));
     }
-    const effectiveDemand = report.outage ? ZERO : demand;
 
     // 4) 供电结算。
     //    电力侧：富余电力存进电池，不够先放存量，放完才降载。
     //    奥术宇宙多一条灵气侧：节点产灵气，只有魔法机器吃灵气（它们不接电网）。
     const arcane = this.hasUniverse('arcane');
     const abyss = this.hasUniverse('abyss');
-    const step = dec(String(dtSeconds));
     // 魔法机器拿到的灵气比例，以及它带来的产量加成（0 = 没喂上，1 = 喂满）
     let visRatio = ONE;
     let plenty = ZERO;
+    // 魔法发电机这一拍的可用出力（EU/t）：不烧矿，直接按拿到的灵气算
+    let magicCapacity = ZERO;
 
     if (arcane) {
       const essentiaProduced = essentiaFromPurify(this.purifyPerSecond()).times(step);
@@ -1459,14 +1435,71 @@ export class GameCore {
       // 魔法发电机：不烧矿，直接按拿到的灵气出力
       for (const model of active) {
         if (model.category !== 'generator' || !model.visPowered) continue;
-        generated = generated.plus(
+        magicCapacity = magicCapacity.plus(
           this.generatorOutputRated(model)
-            .times(step)
             .times(visRatio)
             .times(arcaneOutputBonus(plenty, true)),
         );
       }
     }
+
+    // 5) 硅基宇宙的停机调度：电力不够时按类别整组停，而不是全厂等比降载。
+    //     保住优先级高的那几类满速跑，被停的那几类这一拍不产也不耗。
+    //     判断依据是「这一拍拿得出的出力」（燃料 + 灵气），不是按需发电之后的实际出力。
+    const silicon = this.hasUniverse('silicon');
+    const supplyCapacity = fuelCapacity.plus(magicCapacity);
+    let shed = new Set<MachineKind>();
+    const rawDemand = demand;
+    const rawRatio = rawDemand.lte(0)
+      ? 1
+      : Decimal.min(ONE, supplyCapacity.div(rawDemand)).toNumber();
+    if (silicon && this.siliconShedding && !report.outage && demand.gt(supplyCapacity)) {
+      shed = this.shedKinds(demandByKind, supplyCapacity);
+      if (shed.size > 0) {
+        demand = ZERO;
+        for (const [kind, value] of demandByKind) {
+          if (!shed.has(kind)) demand = demand.plus(value);
+        }
+        report.sheddedKinds = [...shed];
+      }
+    }
+    const effectiveDemand = report.outage ? ZERO : demand;
+
+    // 6) 按需发电：只发「需求 + 电池还能吃下的量」，富余出力不空烧矿石。
+    //    停电那一拍接电网的部分全停，所以充电余量按 0 算；灵气侧不接电网，
+    //    照常出力（魔法机器在停电时也照常运转，见 samplePollutionLoad）。
+    const batteryRoom = Decimal.max(ZERO, this.batteryCapacity().minus(this.storedEU));
+    const chargeHeadroom = report.outage ? ZERO : batteryRoom.div(step);
+    const supplyTarget = report.outage
+      ? magicCapacity
+      : Decimal.min(supplyCapacity, effectiveDemand.plus(chargeHeadroom));
+    // 灵气发电机先顶住缺口，燃料发电机只补剩下的部分
+    const magicUsed = Decimal.min(magicCapacity, supplyTarget);
+    const fuelTarget = supplyTarget.minus(magicUsed);
+    const fuelThrottle = fuelCapacity.gt(0)
+      ? Decimal.min(ONE, fuelTarget.div(fuelCapacity))
+      : ZERO;
+
+    // 每台发电机这一拍实际出了多少力（0-1）：按需降载与燃料不够都记在这里，污染按它算。
+    // 额度是"分享"出去的，不在这里累加总出力 —— 逐台乘除会在第 40 位留舍入误差，
+    // 让供电率莫名其妙掉到 1 以下（界面就会误报"电力不足"）。
+    const fuelLoad = new Map<string, Decimal>();
+    for (const model of active) {
+      if (model.category !== 'generator' || model.visPowered) continue;
+      const want = this.generatorFuelDrain(model).times(step).times(fuelThrottle);
+      const oreTier = model.tier - 1;
+      const available = this.ores[oreTier]!;
+      const burned = Decimal.min(want, available);
+      if (burned.gt(0)) {
+        this.ores[oreTier] = available.minus(burned);
+        report.oreSpent[oreTier] = report.oreSpent[oreTier]!.plus(burned);
+        this.totalOreSpent = this.totalOreSpent.plus(burned);
+      }
+      const runRatio = want.gt(0) ? fuelThrottle.times(burned.div(want)) : ZERO;
+      fuelLoad.set(model.id, runRatio);
+    }
+    // 燃料侧的实际出力就等于按需分配的额度：fuelTarget ≤ fuelCapacity 时一定拿得出来
+    const generated = magicUsed.plus(fuelTarget);
 
     const settlement = settleStorage({
       stored: this.storedEU,
@@ -1656,8 +1689,10 @@ export class GameCore {
     }
 
     this.playSeconds += dtSeconds;
-    this.runEU = this.runEU.plus(generated);
-    this.totalEU = this.totalEU.plus(generated);
+    // 累计发电量按 EU 计：generated 是这一拍的功率（EU/t），乘步长才是电量
+    const generatedEU = generated.times(step);
+    this.runEU = this.runEU.plus(generatedEU);
+    this.totalEU = this.totalEU.plus(generatedEU);
 
     // 8b) 硅基宇宙：AI 按供电情况自动升降档。
     //     升档要求电力扛得住翻倍，降档只在明显缺电时动手，中间地带不动 —— 免得来回抖。
@@ -1673,7 +1708,7 @@ export class GameCore {
           ratio >= 1 &&
           level < MAX_OVERCLOCK_LEVEL &&
           rawDemand.gt(0) &&
-          generated.gte(rawDemand.times(SILICON_UPGRADE_HEADROOM))
+          supplyCapacity.gte(rawDemand.times(SILICON_UPGRADE_HEADROOM))
         ) {
           this.setOverclock(model.id, level + 1);
           report.autoOverclockUp += 1;
@@ -1684,7 +1719,9 @@ export class GameCore {
       }
     }
 
-    report.euGenerated = generated;
+    report.euGenerated = generatedEU;
+    report.euCapacity = supplyCapacity.times(step);
+    report.stepSeconds = dtSeconds;
     report.euConsumed = effectiveDemand.times(dtSeconds).times(ratioDec);
     report.powerRatio = ratioDec.toNumber();
     this.lastReport = report;
@@ -1696,6 +1733,8 @@ export class GameCore {
 function emptyReport(): TickReport {
   return {
     euGenerated: ZERO,
+    euCapacity: ZERO,
+    stepSeconds: 0,
     euConsumed: ZERO,
     powerRatio: 1,
     computeProduced: ZERO,

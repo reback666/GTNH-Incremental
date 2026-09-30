@@ -119,4 +119,13 @@ describe('开发者模式', () => {
     delete legacy.devMode;
     expect(deserialize(legacy as never).devMode).toBe(false);
   });
+
+  it('开发者模式解锁不会污染「历史最高电压」与成就', () => {
+    const core = new GameCore();
+    core.setDevMode(true);
+    core.devUnlockTo(10);
+    expect(core.maxTier).toBe(10);
+    // peakTier 是玩家的履历统计（还挂着「最高电压」成就），测试工具不该顺手刷掉
+    expect(core.peakTier).toBe(1);
+  });
 });

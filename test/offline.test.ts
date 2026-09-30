@@ -1,0 +1,115 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
+import { useGameStore } from '../src/game/store';
+import { getCore, setCore } from '../src/game/engine';
+import { GameCore } from '../src/game/core';
+import { clearStorage, saveToStorage, secondsSinceLastSave } from '../src/game/save';
+import { SAVE_TIME_KEY } from '../src/game/constants';
+import { dec } from '../src/numeric/decimal';
+
+// 离线收益：关掉页面期间按同样的规则继续跑，最多补 24 小时。
+// 时间戳单独存在 SAVE_TIME_KEY 里，所以这里要临时装一个假的 localStorage。
+
+interface FakeStorage {
+  map: Map<string, string>;
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+function fakeStorage(): FakeStorage {
+  const map = new Map<string, string>();
+  return {
+    map,
+    getItem: (key) => map.get(key) ?? null,
+    setItem: (key, value) => void map.set(key, value),
+    removeItem: (key) => void map.delete(key),
+  };
+}
+
+function withStorage(fake: FakeStorage): () => void {
+  const holder = globalThis as { localStorage?: unknown };
+  const previous = holder.localStorage;
+  holder.localStorage = fake;
+  return () => {
+    if (previous === undefined) delete holder.localStorage;
+    else holder.localStorage = previous;
+  };
+}
+
+describe('离线收益', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    setCore(new GameCore());
+  });
+
+  it('按离线时长补算，并记下这一段产出了多少', async () => {
+    const core = getCore();
+    core.maxTier = 2;
+    core.ores[0] = dec('1e6');
+    core.counts['m-1'] = 5;
+    core.counts['g-ulv'] = 3;
+    core.counts['c-1'] = 1;
+
+    const store = useGameStore();
+    await store.catchUp(3600);
+
+    expect(core.playSeconds).toBe(3600);
+    expect(core.totalOre.gt(0)).toBe(true);
+    expect(core.totalCoins.gt(0)).toBe(true);
+    expect(store.offlineNote).toContain('离线 1 小时');
+  });
+
+  it('最多补 24 小时，超出的部分不计', async () => {
+    const store = useGameStore();
+    await store.catchUp(48 * 3600);
+    expect(getCore().playSeconds).toBe(24 * 3600);
+    expect(store.offlineNote).toContain('24 小时');
+    expect(store.offlineNote).toContain('超过 24 小时的部分不计');
+  });
+
+  it('不到一秒不补算', async () => {
+    const store = useGameStore();
+    await store.catchUp(0.4);
+    expect(getCore().playSeconds).toBe(0);
+    expect(store.offlineNote).toBe('');
+  });
+
+  it('补算期间在线模拟不叠上去', async () => {
+    const store = useGameStore();
+    const core = getCore();
+    const pending = store.catchUp(2 * 3600);
+    // 补算是分片跑的：跑到一半时在线那一拍应当被挡掉
+    store.step(1);
+    await pending;
+    expect(core.playSeconds).toBe(2 * 3600);
+  });
+});
+
+describe('写档时间戳', () => {
+  it('没有记录时返回 0，写档后能读出经过的秒数', () => {
+    const storage = fakeStorage();
+    const restore = withStorage(storage);
+    try {
+      expect(secondsSinceLastSave()).toBe(0);
+
+      saveToStorage(new GameCore());
+      expect(secondsSinceLastSave()).toBeLessThan(1);
+
+      // 假装上次写档是 90 秒前
+      storage.map.set(SAVE_TIME_KEY, String(Date.now() - 90_000));
+      expect(secondsSinceLastSave()).toBeCloseTo(90, 0);
+
+      // 时间戳坏掉（或系统时间倒流）都按 0 处理，宁可少给也不少补
+      storage.map.set(SAVE_TIME_KEY, 'not-a-number');
+      expect(secondsSinceLastSave()).toBe(0);
+      storage.map.set(SAVE_TIME_KEY, String(Date.now() + 60_000));
+      expect(secondsSinceLastSave()).toBe(0);
+
+      clearStorage();
+      expect(secondsSinceLastSave()).toBe(0);
+    } finally {
+      restore();
+    }
+  });
+});
