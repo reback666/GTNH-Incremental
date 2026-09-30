@@ -216,6 +216,16 @@ describe('成就', () => {
     expect(fewMagic.achieved['arcane-factory']).toBeUndefined();
   });
 
+  it('没有奥术/深渊宇宙时，把能研究的机型研究完也算「研究清零」', () => {
+    const core = new GameCore();
+    // 灵气节点与腐蚀抑制器要对应宇宙才会进研究列表，这条成就不能把它们算进分母
+    core.researchedModels = MACHINE_MODELS.filter(
+      (model) => model.tier >= 8 && model.requiresUniverse === undefined,
+    ).map((model) => model.id);
+    core.tick(1);
+    expect(core.achieved['research-cleared']).toBeDefined();
+  });
+
   it('每条成就都有能画出来的配图', () => {
     for (const achievement of ACHIEVEMENTS) {
       const icon = achievement.icon;

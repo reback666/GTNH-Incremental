@@ -525,7 +525,11 @@ export class GameCore {
       pickaxeCollect: this.pickaxeCollect,
       pickaxeBlast: this.pickaxeBlast,
       researchedTotal: this.researchedModels.length,
-      researchTotal: MACHINE_MODELS.filter((model) => needsResearch(model.tier)).length,
+      // 只数「真的能被研究」的那部分：灵气节点与腐蚀抑制器要有对应平行宇宙才会出现在研究列表里。
+      // 不这么算的话，没有那两个宇宙的玩家把能研究的全研究完，也永远差着 14 台拿不到成就。
+      researchTotal: MACHINE_MODELS.filter(
+        (model) => needsResearch(model.tier) && this.universeSatisfied(model),
+      ).length,
       essentia: this.essentia,
       specials: {
         steam: fuelGenerators('-steam'),
