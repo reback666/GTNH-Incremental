@@ -75,14 +75,16 @@ describe('离线收益', () => {
     expect(store.offlineNote).toBe('');
   });
 
-  it('补算期间在线模拟不叠上去', async () => {
+  it('补算期间在线模拟不叠上去', () => {
     const store = useGameStore();
     const core = getCore();
-    const pending = store.catchUp(2 * 3600);
-    // 补算是分片跑的：跑到一半时在线那一拍应当被挡掉
+    // 分片跑的那一小会儿里，在线那一拍要被挡掉，否则同一段时间会被算两遍
+    store.catchingUp = true;
     store.step(1);
-    await pending;
-    expect(core.playSeconds).toBe(2 * 3600);
+    expect(core.playSeconds).toBe(0);
+    store.catchingUp = false;
+    store.step(1);
+    expect(core.playSeconds).toBe(1);
   });
 });
 
