@@ -28,11 +28,17 @@ const PICKAXE_TAB = 'pickaxe';
 
 // 镐子标签上的角标：有没有机会升级
 const pickaxeLines = computed(() => store.snap.pickaxe.lines);
-// 只看「机会还有没有剩」：机会是电压发的，币够不够是另一回事 ——
-// 没钱时不该显示成「已全部升满」（价格与按钮的禁用状态会说明差钱）
+// 机会还有没有剩（电压发放的那部分上限没用满）
 const pickaxeHasChance = computed(() =>
   pickaxeLines.value.some((line) => line.level < line.cap),
 );
+// 有机会、又买得起 —— 只有这时候角标才写「可升级」并高亮
+const pickaxeCanUpgrade = computed(() => pickaxeLines.value.some((line) => line.canUpgrade));
+// 角标三态：可升级 / 缺币（有机会但买不起）/ 已全部升满（机会用完了）
+const pickaxeBadge = computed(() => {
+  if (pickaxeCanUpgrade.value) return '可升级';
+  return pickaxeHasChance.value ? '缺币' : '已全部升满';
+});
 // 币不够时按钮照样写「升级」，用 title 说明为什么点不动
 function upgradeTitle(line: PickaxeLineRow): string {
   if (line.locked) return '这一级还没给机会，先把电压升上去';
@@ -209,9 +215,7 @@ function canBuy(model: MachineModelRow): boolean {
       >
         <img v-if="pickaxeTabIcon" class="tab-icon" :src="pickaxeTabIcon" alt="" />
         <span class="tab-name">镐子</span>
-        <span class="tab-count" :class="{ can: pickaxeHasChance }">
-          {{ pickaxeHasChance ? '可升级' : '已全部升满' }}
-        </span>
+        <span class="tab-count" :class="{ can: pickaxeCanUpgrade }">{{ pickaxeBadge }}</span>
       </button>
       <button
         v-for="column in columns"
