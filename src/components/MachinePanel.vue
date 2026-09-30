@@ -6,6 +6,7 @@ import {
   type MachineModelRow,
   type ModifierRow,
   type MachineTierGroup,
+  type PickaxeLineRow,
 } from '../game/store';
 import type { MachineKind, PayWith } from '../game/core';
 import {
@@ -25,13 +26,20 @@ const store = useGameStore();
 const active = ref<MachineKind | 'pickaxe'>('miner');
 const PICKAXE_TAB = 'pickaxe';
 
-// 镐子标签上的角标：三条线还剩几次能升
+// 镐子标签上的角标：有没有机会升级
 const pickaxeLines = computed(() => store.snap.pickaxe.lines);
-// 只统计真正还能升的次数：机会没用满，且币也够。
-// 币不够时这次升级做不了，不该算进角标。
-const pickaxeChancesLeft = computed(() =>
-  pickaxeLines.value.reduce((sum, line) => sum + (line.canUpgrade ? 1 : 0), 0),
+// 只看「机会还有没有剩」：机会是电压发的，币够不够是另一回事 ——
+// 没钱时不该显示成「已全部升满」（价格与按钮的禁用状态会说明差钱）
+const pickaxeHasChance = computed(() =>
+  pickaxeLines.value.some((line) => line.level < line.cap),
 );
+// 币不够时按钮照样写「升级」，用 title 说明为什么点不动
+function upgradeTitle(line: PickaxeLineRow): string {
+  if (line.locked) return '这一级还没给机会，先把电压升上去';
+  if (line.level >= line.cap) return '已经升满';
+  if (!line.affordable) return `币不足：这次要 ${line.cost} ${line.coinName}`;
+  return `升级到第 ${line.level + 1} 次`;
+}
 const pickaxeTabIcon = computed(() =>
   pickaxeIconUrl('vajra', pickaxeLines.value[0]?.iconTier ?? 1),
 );
@@ -201,8 +209,8 @@ function canBuy(model: MachineModelRow): boolean {
       >
         <img v-if="pickaxeTabIcon" class="tab-icon" :src="pickaxeTabIcon" alt="" />
         <span class="tab-name">镐子</span>
-        <span class="tab-count" :class="{ can: pickaxeChancesLeft > 0 }">
-          {{ pickaxeChancesLeft > 0 ? `可升 ${pickaxeChancesLeft} 次` : '已全部升满' }}
+        <span class="tab-count" :class="{ can: pickaxeHasChance }">
+          {{ pickaxeHasChance ? '可升级' : '已全部升满' }}
         </span>
       </button>
       <button
@@ -477,17 +485,10 @@ function canBuy(model: MachineModelRow): boolean {
                 class="pickaxe-upgrade"
                 type="button"
                 :disabled="!line.canUpgrade"
+                :title="upgradeTitle(line)"
                 @click="store.upgradePickaxe(line.id)"
               >
-                {{
-                  line.locked
-                    ? '未开放'
-                    : line.level >= line.cap
-                      ? '已满级'
-                      : !line.affordable
-                        ? '币不足'
-                        : '升级'
-                }}
+                {{ line.locked ? '未开放' : line.level >= line.cap ? '已满级' : '升级' }}
               </button>
             </div>
           </div>
