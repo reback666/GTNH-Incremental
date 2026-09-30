@@ -7,3 +7,6 @@ dist/*
 coverage/
 __pycache__/
 *.pyc
+# 其它 CLI 工具留下的本地文件（计划缓存与它自己的忽略表）
+.zcode/
+.zcodeignore

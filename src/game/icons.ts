@@ -21,5 +21,3 @@ for (const [assetPath, url] of Object.entries(files)) {
 export function modelIconUrl(modelId: string): string | undefined {
   return URLS[modelId];
 }
-
-export const MODEL_ICON_COUNT = Object.keys(URLS).length;

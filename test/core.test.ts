@@ -137,14 +137,23 @@ describe('游戏核心：ULV → LV 完整循环', () => {
     // 第 3 台买完时，下一台要 2000 × 1.07^3 ≈ 2450
     const priceBeforeSell = core.coinPriceOf(steam);
     const walletBefore = core.coins[0]!;
-    const refund = core.refundOf(steam);
-    expect(refund.toString()).toBe(priceBeforeSell.times('0.5').floor().toString());
 
     expect(core.sell(steam, 1)).toBe(1);
     expect(core.countOf(steam.id)).toBe(2);
-    expect(core.coins[0]!.minus(walletBefore).toString()).toBe(refund.toString());
+    // 退款按「卖出后的台数」定价：卖掉的这台就是按这一档买进来的
+    expect(core.coins[0]!.minus(walletBefore).toString()).toBe(core.refundOf(steam).toString());
     // 台数少了，重新买回来的价钱比刚才低
     expect(core.coinPriceOf(steam).lt(priceBeforeSell)).toBe(true);
+
+    // 买卖对称：买一台再卖回去，退的正好是买入价的一半
+    const solo = new GameCore();
+    solo.maxTier = 2;
+    solo.coins[0] = dec('100000');
+    solo.buy(steam, 1);
+    const paid = dec('100000').minus(solo.coins[0]!);
+    const walletAfterBuy = solo.coins[0]!;
+    solo.sell(steam, 1);
+    expect(solo.coins[0]!.minus(walletAfterBuy).toString()).toBe(paid.times('0.5').floor().toString());
 
     // 卖到一台不剩之后就卖不动了
     expect(core.sell(steam, 10)).toBe(2);

@@ -1,11 +1,14 @@
 import { Decimal, dec, pow, powFraction } from './decimal';
 import { MAX_TIER, assertTier } from './voltage';
 
-// 镐子的三条升级线。升级机会全部由电压等级发放，不花币：
+// 镐子的三条升级线。升级机会由电压等级发放，但每次升级还要花对应电压的 GT 币：
 //
 //   金刚杵   每解锁 1 个电压给 1 次 → 每次让镐子多挖一级矿脉
 //   连锁采集 每 2 个电压给 1 次     → 每次让一次点击的产出 ×2（结算在连锁爆破之后）
 //   连锁爆破 每个电压给 2 次        → 每次 +n^(n/2)，n = 当前最高电压等级
+//
+// 机会是上限、币是额外门槛：两者都满足才能升级（见 canUpgradePickaxe）。
+// 币价锚定该级机器的基准单价（machineCost，purchased=0），再按线乘系数。
 //
 // 连锁爆破的加值按「当前最高电压」算，不按领取时的电压算：
 // 后者会变成「攒着到 MAX 再点」的最优解，前期镐子等于没有成长。
@@ -78,6 +81,53 @@ export function blastNextBonus(tier: number, used: number): Decimal {
 export function collectMultiplier(level: number): Decimal {
   if (level <= 0) return dec('1');
   return pow(String(COLLECT_MULTIPLIER), level);
+}
+
+// ── 升级费用 ───────────────────────────────────────────────
+// 升级仍然需要「机会」（由电压发放，是上限），但每次升级还要花对应电压的 GT 币：
+// 币价锚定该级机器的基准单价（machineCost，purchased=0），再按线乘系数。
+//
+//   金刚杵   第 n 次升级 → tier = n+1，付第 n 级币，价 = 500×4^n ÷ 2
+//   连锁采集 第 n 次升级 → tier = n+1，付第 n 级币，价 = 500×4^n × 2
+//   连锁爆破 第 n 次升级 → tier = floor((n-1)/2)+1，付 paymentTier(tier) 币，价 = 500×4^(tier-1)
+//
+// 注意币种是「第 n 级币」而不是「第 tier 级币」：金刚杵第 1 次升级（挖 T1）花的是
+// 第 1 级币（ULV 币），而 tier 记的是升级后的目标等级。
+
+// 三条线的价格系数，乘在基准单价上
+export const PICKAXE_COST_SCALE: Record<PickaxeLine, string> = {
+  vajra: '0.5',
+  collect: '2',
+  blast: '1',
+};
+
+// 第 level 次升级（level 从 0 数，即「已经升了 level 次，现在要升第 level+1 次」）
+// 对应哪一级电压的机器基准价。返回的是 tier（1..MAX_TIER），用于 machineCost。
+export function pickaxeUpgradeTier(line: PickaxeLine, level: number): number {
+  const n = Math.max(0, Math.floor(level)) + 1; // 第 n 次升级
+  if (line === 'blast') {
+    return Math.floor((n - 1) / BLAST_CHANCES_PER_TIER) + 1;
+  }
+  return n + 1;
+}
+
+// 这次升级用哪一级的币支付：paymentTier(max(1, tier-1))
+export function pickaxeUpgradeCoinTier(line: PickaxeLine, level: number): number {
+  const tier = pickaxeUpgradeTier(line, level);
+  return Math.max(1, tier - 1);
+}
+
+// 这次升级的价格，币种见 pickaxeUpgradeCoinTier。
+// baseCostAtTier 由调用方提供（「这一级机器买第一台的价钱」）：numeric 层不依赖
+// game/constants 里的基准价，只负责按线乘系数并向下取整。
+export function pickaxeUpgradeCost(
+  line: PickaxeLine,
+  level: number,
+  baseCostAtTier: (tier: number) => Decimal,
+): Decimal {
+  const tier = pickaxeUpgradeTier(line, level);
+  const scale = dec(PICKAXE_COST_SCALE[line]);
+  return baseCostAtTier(tier).times(scale).floor();
 }
 
 // 这条线一共能升多少次（分母用满级时的机会总数，不跟着当前电压变）

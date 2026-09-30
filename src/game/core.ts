@@ -37,6 +37,8 @@ import {
   collectChances,
   pickaxeOutputPerClick,
   pickaxeIconTier,
+  pickaxeUpgradeCoinTier,
+  pickaxeUpgradeCost,
   vajraChances,
   vajraMaxLevel,
 } from '../numeric/pickaxe';
@@ -523,7 +525,11 @@ export class GameCore {
       pickaxeCollect: this.pickaxeCollect,
       pickaxeBlast: this.pickaxeBlast,
       researchedTotal: this.researchedModels.length,
-      researchTotal: MACHINE_MODELS.filter((model) => needsResearch(model.tier)).length,
+      // 只数「真的能被研究」的那部分：灵气节点与腐蚀抑制器要有对应平行宇宙才会出现在研究列表里。
+      // 不这么算的话，没有那两个宇宙的玩家把能研究的全研究完，也永远差着 14 台拿不到成就。
+      researchTotal: MACHINE_MODELS.filter(
+        (model) => needsResearch(model.tier) && this.universeSatisfied(model),
+      ).length,
       essentia: this.essentia,
       specials: {
         steam: fuelGenerators('-steam'),
@@ -1231,12 +1237,56 @@ export class GameCore {
     return chances[line];
   }
 
+  // 升级要同时满足两件事：机会还有剩（电压发放的上限），且买得起这次的币价。
   canUpgradePickaxe(line: PickaxeLine): boolean {
-    return this.pickaxeLevel(line) < this.pickaxeCap(line);
+    if (this.pickaxeLevel(line) >= this.pickaxeCap(line)) return false;
+    return this.canAffordPickaxe(line);
+  }
+
+  // 这次升级的价格（币种见 pickaxeUpgradeCoinTierOf）
+  pickaxeUpgradeCostOf(line: PickaxeLine): Decimal {
+    return pickaxeUpgradeCost(
+      line,
+      this.pickaxeLevel(line),
+      (tier) => machineCost({ baseCost: C.BASE_MACHINE_COST, tier, purchased: 0 }),
+    );
+  }
+
+  // 这次升级花哪一级的币（界面显示币种用）
+  pickaxeUpgradeCoinTierOf(line: PickaxeLine): number {
+    return pickaxeUpgradeCoinTier(line, this.pickaxeLevel(line));
+  }
+
+  // 界面用的买得起判断（不含机会上限）：机会不够时也照实显示钱够不够
+  canAffordPickaxeOf(line: PickaxeLine): boolean {
+    return this.canAffordPickaxe(line);
+  }
+
+  // 买得起吗。币种是「第 n 级币」，但 industry 宇宙下可以跨电压结算，
+  // 照 canAfford 的写法：所有不高于结算等级的币按价值折算后与所需价值比较。
+  private canAffordPickaxe(line: PickaxeLine): boolean {
+    const price = this.pickaxeUpgradeCostOf(line);
+    const payTier = this.pickaxeUpgradeCoinTierOf(line);
+    if (this.hasUniverse('industry')) {
+      let available = ZERO;
+      for (let tier = 1; tier <= payTier; tier += 1) {
+        available = available.plus(this.coins[tier - 1]!.times(coinValueInTier1(tier)));
+      }
+      return available.gte(price.times(coinValueInTier1(payTier)));
+    }
+    return this.coins[payTier - 1]!.gte(price);
   }
 
   upgradePickaxe(line: PickaxeLine): boolean {
     if (!this.canUpgradePickaxe(line)) return false;
+    // 先扣币再 +1：扣不动就直接不升，不能出现「币没花、等级涨了」
+    const price = this.pickaxeUpgradeCostOf(line);
+    const payTier = this.pickaxeUpgradeCoinTierOf(line);
+    if (this.hasUniverse('industry')) {
+      if (!this.payAcrossTiers(price, payTier)) return false;
+    } else {
+      this.coins[payTier - 1] = this.coins[payTier - 1]!.minus(price);
+    }
     if (line === 'vajra') this.pickaxeVajra += 1;
     else if (line === 'collect') this.pickaxeCollect += 1;
     else this.pickaxeBlast += 1;
@@ -1287,8 +1337,10 @@ export class GameCore {
     for (let i = 0; i < count; i += 1) {
       const have = this.countOf(model.id);
       if (have <= 0) break;
-      const refund = this.refundOf(model, payWith);
       this.counts[model.id] = have - 1;
+      // 退款按「卖出后的台数」定价：卖掉的那一台本来就是按这一档买进来的，
+      // 这样买 N 台再全卖回去，拿回的钱正好是买价的一半（用卖出前的台数会多退一档）
+      const refund = this.refundOf(model, payWith);
       // 坏掉的台数不能比剩下的台数还多
       const faulty = this.faults[model.id];
       if (faulty !== undefined && faulty > have - 1) this.faults[model.id] = have - 1;

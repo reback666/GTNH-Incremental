@@ -27,8 +27,10 @@ const PICKAXE_TAB = 'pickaxe';
 
 // 镐子标签上的角标：三条线还剩几次能升
 const pickaxeLines = computed(() => store.snap.pickaxe.lines);
+// 只统计真正还能升的次数：机会没用满，且币也够。
+// 币不够时这次升级做不了，不该算进角标。
 const pickaxeChancesLeft = computed(() =>
-  pickaxeLines.value.reduce((sum, line) => sum + (line.cap - line.level), 0),
+  pickaxeLines.value.reduce((sum, line) => sum + (line.canUpgrade ? 1 : 0), 0),
 );
 const pickaxeTabIcon = computed(() =>
   pickaxeIconUrl('vajra', pickaxeLines.value[0]?.iconTier ?? 1),
@@ -64,10 +66,17 @@ interface TipState {
 
 const tip = ref<TipState | null>(null);
 
+// 卖回价跟着当前的支付方式走：切到「同级矿石」时卖出去退的是矿石，提示不能还报币的数
+function refundLabel(row: MachineModelRow): string {
+  return payWith.value === 'ore'
+    ? `${row.oreRefund} 同级矿石（卖出后单价的一半）`
+    : `${row.refund}（卖出后单价的一半）`;
+}
+
 function showTip(event: Event, model: MachineModelRow) {
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
   const lines = [...model.single];
-  lines.push({ label: '卖回一台', value: `${model.refund}（单价的 50%）` });
+  lines.push({ label: '卖回一台', value: refundLabel(model) });
   if (model.overclock > 0) {
     lines.push({ label: '超频', value: `${model.overclock} 档（速度 +${model.overclock * 60}%）` });
     lines.push({ label: '故障率', value: model.faultHint });
@@ -343,7 +352,7 @@ function canBuy(model: MachineModelRow): boolean {
                 <button
                   class="sell-btn"
                   :disabled="bar.model.count === 0"
-                  :title="`卖回一台拿回 ${bar.model.refund}（单价的 50%）；卖出后重新买回来的价钱也会跟着降`"
+                  :title="`卖回一台拿回 ${refundLabel(bar.model)}；卖出后重新买回来的价钱也会跟着降`"
                   @click="store.sell(bar.model.id, 1, payWith)"
                 >
                   1x
@@ -461,13 +470,24 @@ function canBuy(model: MachineModelRow): boolean {
             </div>
             <div class="pickaxe-line-action">
               <span v-if="!line.locked" class="muted small">{{ line.level }} / {{ line.cap }}</span>
+              <span v-if="line.cost" class="pickaxe-cost">
+                {{ line.cost }} {{ line.coinName }}
+              </span>
               <button
                 class="pickaxe-upgrade"
                 type="button"
                 :disabled="!line.canUpgrade"
                 @click="store.upgradePickaxe(line.id)"
               >
-                {{ line.canUpgrade ? '升级' : line.locked ? '未开放' : '已满级' }}
+                {{
+                  line.locked
+                    ? '未开放'
+                    : line.level >= line.cap
+                      ? '已满级'
+                      : !line.affordable
+                        ? '币不足'
+                        : '升级'
+                }}
               </button>
             </div>
           </div>
