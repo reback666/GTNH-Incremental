@@ -69,8 +69,8 @@ const tip = ref<TipState | null>(null);
 // 卖回价跟着当前的支付方式走：切到「同级矿石」时卖出去退的是矿石，提示不能还报币的数
 function refundLabel(row: MachineModelRow): string {
   return payWith.value === 'ore'
-    ? `${row.oreRefund} 同级矿石（单价的 50%）`
-    : `${row.refund}（单价的 50%）`;
+    ? `${row.oreRefund} 同级矿石（卖出后单价的一半）`
+    : `${row.refund}（卖出后单价的一半）`;
 }
 
 function showTip(event: Event, model: MachineModelRow) {

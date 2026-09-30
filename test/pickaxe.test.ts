@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { dec } from '../src/numeric/decimal';
+import { ZERO, dec } from '../src/numeric/decimal';
 import {
   blastBonusPerUpgrade,
   blastBonus,
@@ -18,7 +18,7 @@ import { MAX_TIER } from '../src/numeric/voltage';
 import { GameCore } from '../src/game/core';
 import { deserialize, serialize } from '../src/game/save';
 import { useGameStore } from '../src/game/store';
-import { getCore } from '../src/game/engine';
+import { getCore, setCore } from '../src/game/engine';
 
 // 升级现在要花对应电压的 GT 币：这些用例只关心升级本身，先把钱包填满
 function funded(core: GameCore): GameCore {
@@ -290,5 +290,29 @@ describe('镐子面板拿到的数据', () => {
     store.upgradePickaxe('vajra');
     store.upgradePickaxe('vajra');
     expect(store.snap.pickaxe.veinName).toBe(store.snap.pickaxe.maxVeinName);
+  });
+
+  it('面板数据带上价格、币种与「买不起」，币不够也看得到下一步效果', () => {
+    setCore(new GameCore()); // 引擎是单例：这条用例自己从空厂开始，免得受前面用例影响
+    const store = useGameStore();
+    store.boot();
+    const core = getCore();
+    core.maxTier = 3;
+    core.coins = core.coins.map(() => ZERO);
+    store.refresh();
+
+    const broke = store.snap.pickaxe.lines[0]!;
+    expect(broke.cost).not.toBe('');
+    expect(broke.coinName).not.toBe('');
+    expect(broke.affordable).toBe(false);
+    expect(broke.canUpgrade).toBe(false);
+    // 币不够只影响能不能点，不该把「升上去能拿到什么」也藏起来
+    expect(broke.effectNext).not.toBe('');
+
+    core.coins[0] = dec('1e9');
+    store.refresh();
+    const rich = store.snap.pickaxe.lines[0]!;
+    expect(rich.affordable).toBe(true);
+    expect(rich.canUpgrade).toBe(true);
   });
 });
