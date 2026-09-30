@@ -974,7 +974,7 @@ function pickaxeLineText(
   // 买得起吗：与机会上限无关，机会不够时也照实显示钱够不够
   const affordable = maxed ? false : core.canAffordPickaxeOf(line);
   // 「下一步效果」看的是机会还有没有剩，和买不买得起无关 ——
-  // 币不够时按钮显示「币不足」，但玩家仍然该看到升上去能拿到什么
+  // 币不够只是按钮点不动（title 会说明差多少），玩家仍然该看到升上去能拿到什么
   const hasChance = level < cap;
 
   if (line === 'vajra') {
