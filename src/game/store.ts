@@ -518,6 +518,8 @@ export const useGameStore = defineStore('game', {
     challengesCollapsed: false,
     treeCollapsed: true,
     historyCollapsed: true,
+    // 科技页的电网列表，同样默认收起（摘要显示使用中的电网）
+    gridPanelCollapsed: true,
     // 模拟连续出错时暂停（纯运行时状态，不进存档；刷新页面即可恢复）
     simulationPaused: false,
     crashStreak: 0,
@@ -559,6 +561,9 @@ export const useGameStore = defineStore('game', {
     },
     toggleHistory(): void {
       this.historyCollapsed = !this.historyCollapsed;
+    },
+    toggleGridPanel(): void {
+      this.gridPanelCollapsed = !this.gridPanelCollapsed;
     },
     boot() {
       const loaded = loadFromStorage();

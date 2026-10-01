@@ -762,7 +762,8 @@ h2 .small {
 }
 
 /* 转生页的平行宇宙：默认收成一个框，点开才列出来 */
-.rebirth-toggle {
+.rebirth-toggle,
+.panel-toggle {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -779,7 +780,8 @@ h2 .small {
   border-color: transparent;
 }
 
-.rebirth-toggle:hover {
+.rebirth-toggle:hover,
+.panel-toggle:hover {
   color: var(--text);
   border-color: var(--line);
 }
@@ -854,24 +856,6 @@ h2 .small {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
   gap: 8px;
-}
-
-.ach-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-
-.ach-head h2 {
-  margin: 0;
-}
-
-.ach-toggle {
-  min-height: 32px;
-  padding: 0 10px;
-  font-size: 12px;
 }
 
 .achievement {

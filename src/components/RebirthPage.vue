@@ -238,25 +238,6 @@ let lastPan: { left: number; top: number } | null = null;
       本周目的时空裂缝已经关掉了，这一轮只剩打到 MAX。
     </p>
 
-    <div class="row" style="margin-top: 8px">
-      <div class="name">
-        <template v-if="rebirth.planckOwned">
-          <b>普朗克锚</b>已铸造：MAX 转生的线缆结算永久 ×1.5
-        </template>
-        <template v-else>
-          <b>普朗克锚</b>（终局装置）：花 300 条线缆铸造，MAX 转生的线缆结算永久 ×1.5
-        </template>
-      </div>
-      <button
-        v-if="!rebirth.planckOwned"
-        :disabled="!rebirth.planckBuyable"
-        :title="rebirth.planckBuyable ? undefined : '线缆不够（需要 300 条）'"
-        @click="store.buyPlanckAnchor()"
-      >
-        铸造（300 条）
-      </button>
-    </div>
-
     <button
       type="button"
       class="rebirth-toggle"
@@ -354,6 +335,25 @@ let lastPan: { left: number; top: number } | null = null;
       <span class="muted small">{{ treeSummary }}</span>
     </button>
     <template v-if="!treeCollapsed">
+        <div class="row" style="margin-top: 8px">
+      <div class="name">
+        <template v-if="rebirth.planckOwned">
+          <b>普朗克锚</b>已铸造：MAX 转生的线缆结算永久 ×1.5
+        </template>
+        <template v-else>
+          <b>普朗克锚</b>（终局装置）：花 300 条线缆铸造，MAX 转生的线缆结算永久 ×1.5
+        </template>
+      </div>
+      <button
+        v-if="!rebirth.planckOwned"
+        :disabled="!rebirth.planckBuyable"
+        :title="rebirth.planckBuyable ? undefined : '线缆不够（需要 300 条）'"
+        @click="store.buyPlanckAnchor()"
+      >
+        铸造（300 条）
+      </button>
+    </div>
+
     <p class="muted small" style="margin: 4px 0 4px">
       以「时空锚点」为中心向四周延伸；按住画布拖动查看整棵树。
     </p>
