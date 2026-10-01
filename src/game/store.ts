@@ -283,6 +283,19 @@ export interface RebirthNodeRow {
   buyable: boolean;
 }
 
+export interface RunHistoryRow {
+  run: number;
+  // 「裂缝 / MAX」
+  route: string;
+  universe: string;
+  challenge: string;
+  // 「×1.3 通过」/「已失效」/「—」
+  challengeNote: string;
+  cables: string;
+  duration: string;
+  voltage: string;
+}
+
 export interface ChallengeRow {
   id: string;
   name: string;
@@ -322,6 +335,8 @@ export interface RebirthStats {
   // 本次转生将挂上的挑战名（空串 = 不挂）
   pendingChallengeName: string;
   challengeRows: ChallengeRow[];
+  // 转生履历（最近 50 条，最新的在最前）
+  historyRows: RunHistoryRow[];
   root: { name: string; x: number; y: number };
   nodes: RebirthNodeRow[];
   // 已经装上的加成汇总
@@ -499,6 +514,7 @@ export const useGameStore = defineStore('game', {
     // 转生页另外两块同样可折叠：挑战展开（状态行常看），加成树默认收起（画布大）
     challengesCollapsed: false,
     treeCollapsed: true,
+    historyCollapsed: true,
     // 模拟连续出错时暂停（纯运行时状态，不进存档；刷新页面即可恢复）
     simulationPaused: false,
     crashStreak: 0,
@@ -537,6 +553,9 @@ export const useGameStore = defineStore('game', {
     },
     toggleTree(): void {
       this.treeCollapsed = !this.treeCollapsed;
+    },
+    toggleHistory(): void {
+      this.historyCollapsed = !this.historyCollapsed;
     },
     boot() {
       const loaded = loadFromStorage();
@@ -1594,6 +1613,24 @@ function rebirthStats(core: GameCore): RebirthStats {
       core.pendingChallenge === null
         ? ''
         : (challengeById(core.pendingChallenge)?.name ?? core.pendingChallenge),
+    historyRows: core.runHistory.map((entry) => ({
+      run: entry.run,
+      route: entry.route === 'rift' ? '裂缝' : 'MAX',
+      universe: entry.universe === '' ? '—' : (universeById(entry.universe)?.name ?? entry.universe),
+      challenge:
+        entry.challenge === ''
+          ? '—'
+          : (challengeById(entry.challenge)?.name ?? entry.challenge),
+      challengeNote:
+        entry.challenge === ''
+          ? '—'
+          : entry.challengePassed
+            ? `×${challengeById(entry.challenge)?.bonus ?? ''} 通过`
+            : '已失效',
+      cables: formatNumber(dec(entry.cables)),
+      duration: formatDuration(entry.seconds),
+      voltage: VOLTAGE_TIERS[entry.maxTier - 1] ?? 'ULV',
+    })),
     challengeRows: CHALLENGES.map((challenge) => ({
       id: challenge.id,
       name: challenge.name,

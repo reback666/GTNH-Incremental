@@ -15,6 +15,13 @@ const pickedUniverse = computed(() => store.snap.rebirth.pendingUniverse);
 const universesCollapsed = computed(() => store.universesCollapsed);
 const challengesCollapsed = computed(() => store.challengesCollapsed);
 const treeCollapsed = computed(() => store.treeCollapsed);
+const historyCollapsed = computed(() => store.historyCollapsed);
+
+const historySummary = computed(() => {
+  const rows = store.snap.rebirth.historyRows;
+  if (rows.length === 0) return '还没有转生记录';
+  return `${rows.length} 条 · 最近一趟 ${rows[0]!.cables} 条线缆`;
+});
 
 // 收起时的摘要：一眼看出挑战挂没挂、树点了多少
 const challengesSummary = computed(() => {
@@ -389,6 +396,48 @@ let lastPan: { left: number; top: number } | null = null;
         <dd>{{ bonus.value }}</dd>
       </div>
     </dl>
+    </template>
+
+    <button
+      type="button"
+      class="rebirth-toggle"
+      :aria-expanded="!historyCollapsed"
+      @click="store.toggleHistory()"
+    >
+      <span>{{ historyCollapsed ? '▸' : '▾' }} 转生履历</span>
+      <span class="muted small">{{ historySummary }}</span>
+    </button>
+    <template v-if="!historyCollapsed">
+      <p v-if="store.snap.rebirth.historyRows.length === 0" class="muted small" style="margin: 4px 0 0">
+        还没有转生记录——第一次转生之后这里会记下每一趟的路线、宇宙、挑战与线缆结算。
+      </p>
+      <table v-else class="detail-table history-table">
+        <thead>
+          <tr>
+            <th>周目</th>
+            <th>路线</th>
+            <th>宇宙</th>
+            <th>挑战</th>
+            <th>结算</th>
+            <th>时长</th>
+            <th>电压</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in store.snap.rebirth.historyRows" :key="row.run">
+            <td class="num-cell">#{{ row.run }}</td>
+            <td>{{ row.route }}</td>
+            <td>{{ row.universe }}</td>
+            <td>
+              {{ row.challenge }}
+              <span v-if="row.challengeNote !== '—'" class="muted small">{{ row.challengeNote }}</span>
+            </td>
+            <td class="num-cell">{{ row.cables }} 条</td>
+            <td>{{ row.duration }}</td>
+            <td>{{ row.voltage }}</td>
+          </tr>
+        </tbody>
+      </table>
     </template>
 
     <div class="row" style="margin-top: 16px">

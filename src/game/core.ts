@@ -127,6 +127,23 @@ export type DevResourceTarget =
   | { scope: 'ores' | 'coins' | 'both' | 'cables' }
   | { scope: 'ore' | 'coin'; tier: number };
 
+// 转生履历的一条（docs/转生拓展大纲.md C1）：结算那一刻记下，只增不改，
+// 超过 50 条丢最旧的。数值都存字符串（Decimal 序列化口径）。
+export interface RunHistoryEntry {
+  // 第几个周目（转生后的 rebirthCount，即刚结束的周目序号）
+  run: number;
+  route: 'rift' | 'max';
+  // 这一趟带走的平行宇宙（没带是空串）
+  universe: string;
+  // 挂着的挑战与结算结果（没挂是空串；passed 只在通过时 true）
+  challenge: string;
+  challengePassed: boolean;
+  cables: string;
+  // 本周目时长（游戏内秒）与最高电压
+  seconds: number;
+  maxTier: number;
+}
+
 export interface TickReport {
   euGenerated: Decimal;
   // 这一拍「拿得出」的功率 × 步长：燃料够、灵气够时的上限。
@@ -230,6 +247,8 @@ export class GameCore {
   challengePrimed = false;
   // 首通过的挑战（跨周目保留，只用来点亮首通成就，不重复发奖）
   completedChallenges: ChallengeId[] = [];
+  // 转生履历（最近的在最前，超过 50 条丢最旧的）
+  runHistory: RunHistoryEntry[] = [];
   // 已经选好、等下一次转生挂上的挑战
   pendingChallenge: ChallengeId | null = null;
   // 硅基宇宙的三项 AI 功能，默认全开（三个开关互相独立，跨周目保留）
@@ -498,6 +517,17 @@ export class GameCore {
       gained = gained.times(challengeById(challenge)!.bonus).floor();
       if (!this.completedChallenges.includes(challenge)) this.completedChallenges.push(challenge);
     }
+    this.runHistory.unshift({
+      run: this.rebirthCount + 1,
+      route,
+      universe: universe ?? '',
+      challenge: challenge ?? '',
+      challengePassed: passed,
+      cables: gained.toString(),
+      seconds: Math.floor(this.playSeconds),
+      maxTier: this.maxTier,
+    });
+    if (this.runHistory.length > 50) this.runHistory.length = 50;
     if (universe !== undefined) this.addUniverse(universe);
     this.pendingUniverse = null; // 选择已经用掉
     this.cables = this.cables.plus(gained);

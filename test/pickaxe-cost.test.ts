@@ -229,7 +229,7 @@ describe('GameCore 实际升级：扣币、买不起、跨电压', () => {
 });
 
 describe('存档版本', () => {
-  it('v19：挑战时间线的五个字段进存档', () => {
-    expect(SAVE_VERSION).toBe(19);
+  it('v20：挑战时间线 + 转生履历进存档', () => {
+    expect(SAVE_VERSION).toBe(20);
   });
 });

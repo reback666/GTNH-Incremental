@@ -74,6 +74,8 @@ export interface SaveData {
   challengePrimed?: boolean;
   completedChallenges?: string[];
   pendingChallenge?: string | null;
+  // v20：转生履历（最近 50 条）
+  runHistory?: unknown[];
   // v13：镐子的三条升级线（金刚杵等级、连锁采集等级、连锁爆破已用机会数）
   pickaxeVajra?: number;
   pickaxeCollect?: number;
@@ -145,6 +147,7 @@ export function serialize(core: GameCore): SaveData {
     challengePrimed: core.challengePrimed,
     completedChallenges: [...core.completedChallenges],
     pendingChallenge: core.pendingChallenge,
+    runHistory: core.runHistory.map((entry) => ({ ...entry })),
     pickaxeVajra: core.pickaxeVajra,
     pickaxeCollect: core.pickaxeCollect,
     pickaxeBlast: core.pickaxeBlast,
@@ -268,6 +271,7 @@ export function deserialize(data: SaveData): GameCore {
   core.challengePrimed = booleanOr(data.challengePrimed, false);
   core.completedChallenges = cleanChallengeList(data.completedChallenges);
   core.pendingChallenge = cleanChallengeId(data.pendingChallenge);
+  core.runHistory = cleanRunHistory(data.runHistory);
   core.pickaxeVajra = clampInt(data.pickaxeVajra, 0, vajraMaxLevel(), 0);
   core.pickaxeCollect = clampInt(data.pickaxeCollect, 0, collectChances(MAX_TIER), 0);
   core.pickaxeBlast = clampInt(data.pickaxeBlast, 0, blastChances(MAX_TIER), 0);
@@ -462,6 +466,31 @@ function cleanPendingUniverse(
   if (typeof value !== 'string' || !UNIVERSE_IDS.has(value)) return null;
   const id = value as GameCore['universes'][number];
   return owned.includes(id) ? null : id;
+}
+
+// 履历是纯展示数据：逐条清洗，坏条目直接丢，不因为一条脏记录丢掉整份履历
+function cleanRunHistory(value: unknown): GameCore['runHistory'] {
+  if (!Array.isArray(value)) return [];
+  const entries: GameCore['runHistory'] = [];
+  for (const raw of value) {
+    if (!isRecord(raw)) continue;
+    const route = raw.route === 'rift' || raw.route === 'max' ? raw.route : null;
+    if (route === null) continue;
+    const run = nonNegativeInt(raw.run);
+    const cables = safeDec(raw.cables);
+    entries.push({
+      run,
+      route,
+      universe: typeof raw.universe === 'string' ? raw.universe : '',
+      challenge: typeof raw.challenge === 'string' ? raw.challenge : '',
+      challengePassed: booleanOr(raw.challengePassed, false),
+      cables: cables.toString(),
+      seconds: nonNegativeInt(raw.seconds),
+      maxTier: raw.maxTier === undefined ? 1 : Math.min(Math.max(nonNegativeInt(raw.maxTier), 1), MAX_TIER),
+    });
+    if (entries.length >= 50) break;
+  }
+  return entries;
 }
 
 // 挑战 id 只认挑战表里有的；乱写的退回 null（挂着的挑战丢了就丢了，不能崩读档）

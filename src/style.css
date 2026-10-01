@@ -2079,3 +2079,10 @@ h2 .small {
 .hint {
   margin: 0 0 8px;
 }
+
+/* 转生履历表：一页放不下 50 条，限制高度内部滚动 */
+.history-table {
+  display: block;
+  max-height: 280px;
+  overflow-y: auto;
+}

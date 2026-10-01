@@ -170,6 +170,69 @@ describe('挑战在核心里生效', () => {
   });
 });
 
+describe('转生履历（C1）', () => {
+  it('每次转生记一条：路线、宇宙、挑战、线缆、时长、电压', () => {
+    const core = new GameCore();
+    core.maxTier = 14;
+    core.runEU = dec('1e40');
+    core.playSeconds = 3600;
+    core.activeChallenge = 'pure';
+    core.rebirth('max', 'industry');
+    expect(core.runHistory.length).toBe(1);
+    const first = core.runHistory[0]!;
+    expect(first.run).toBe(1);
+    expect(first.route).toBe('max');
+    expect(first.universe).toBe('industry');
+    expect(first.challenge).toBe('pure');
+    expect(first.challengePassed).toBe(true);
+    expect(first.maxTier).toBe(14);
+    expect(first.seconds).toBe(3600);
+    // 第二趟：裂缝路线、没挂挑战
+    core.riftOffered = false;
+    core.maxTier = 7; // LuV，裂缝条件
+    core.rebirth('rift');
+    const second = core.runHistory[0]!;
+    expect(second.run).toBe(2);
+    expect(second.route).toBe('rift');
+    expect(second.challenge).toBe('');
+    expect(second.challengePassed).toBe(false);
+  });
+
+  it('超过 50 条丢最旧的', () => {
+    const core = new GameCore();
+    core.maxTier = 14;
+    for (let i = 0; i < 55; i += 1) {
+      core.maxTier = 14; // 转生会把它归 1，每轮重新打到 MAX
+      core.runEU = dec('1e40');
+      core.rebirth('max');
+    }
+    expect(core.runHistory.length).toBe(50);
+    expect(core.runHistory[0]!.run).toBe(55);
+    expect(core.runHistory[49]!.run).toBe(6);
+  });
+
+  it('履历进存档（v20）并完整往返', () => {
+    const core = new GameCore();
+    core.maxTier = 14;
+    core.runEU = dec('1e40');
+    core.activeChallenge = 'grid';
+    core.playSeconds = 7200;
+    core.rebirth('max');
+    const restored = deserialize(serialize(core));
+    expect(restored.runHistory.length).toBe(1);
+    expect(restored.runHistory[0]!.challenge).toBe('grid');
+    expect(restored.runHistory[0]!.cables).toBe(core.runHistory[0]!.cables);
+    // 旧档没有该字段：读入为空数组；脏条目被丢掉
+    const legacy = deserialize({ version: 19 } as SaveData);
+    expect(legacy.runHistory).toEqual([]);
+    const messy = deserialize({
+      runHistory: [{ run: 1, route: 'nonsense' }, 'junk', { run: 2, route: 'max', cables: '10' }],
+    } as unknown as SaveData);
+    expect(messy.runHistory.length).toBe(1);
+    expect(messy.runHistory[0]!.run).toBe(2);
+  });
+});
+
 describe('挑战存档（v19）', () => {
   it('五个字段完整往返', () => {
     const core = new GameCore();
