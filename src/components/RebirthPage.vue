@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, nextTick } from 'vue';
+import { computed, ref, nextTick } from 'vue';
 import { useGameStore, type RebirthNodeRow } from '../game/store';
 import { REBIRTH_CANVAS_SIZE, REBIRTH_NODES } from '../game/rebirth';
 
@@ -13,6 +13,25 @@ const universes = computed(() => store.snap.universes);
 // 所以来回切页面、刷新都不会丢
 const pickedUniverse = computed(() => store.snap.rebirth.pendingUniverse);
 const universesCollapsed = computed(() => store.universesCollapsed);
+const challengesCollapsed = computed(() => store.challengesCollapsed);
+const treeCollapsed = computed(() => store.treeCollapsed);
+
+// 收起时的摘要：一眼看出挑战挂没挂、树点了多少
+const challengesSummary = computed(() => {
+  const active = activeChallengeName.value;
+  const failed = store.snap.rebirth.activeChallengeFailed;
+  const parts: string[] = [];
+  parts.push(active ? `本周目：${active}${failed ? '（已失效）' : ''}` : '本周目未挂挑战');
+  if (pendingChallengeName.value) parts.push(`本次挂：${pendingChallengeName.value}`);
+  return parts.join(' · ');
+});
+
+const treeSummary = computed(() => {
+  const nodes = store.snap.rebirth.nodes;
+  const owned = nodes.filter((node) => node.owned);
+  const spent = owned.reduce((sum, node) => sum + Number(node.cost), 0);
+  return `已点亮 ${owned.length} / ${nodes.length} 节点 · 已花 ${spent} 条`;
+});
 
 // 收起来的时候也要能一眼看出「有几个宇宙、这次带哪个」
 const universesSummary = computed(() => {
@@ -98,6 +117,30 @@ const ownedUniverseNames = computed(
 
 // ── 树画布的拖拽平移 ────────────────────────────────────────
 const viewport = ref<HTMLDivElement | null>(null);
+
+// 画布挂载/卸载都会走这里：首次挂载（含折叠后首次展开）把视图停在中心，
+// 之后的挂载恢复上次拖到的位置（卸载时记下滚动值）
+function setViewport(el: unknown): void {
+  if (el === null) {
+    const node = viewport.value;
+    if (node) lastPan = { left: node.scrollLeft, top: node.scrollTop };
+    viewport.value = null;
+    return;
+  }
+  viewport.value = el as HTMLDivElement;
+  nextTick(() => {
+    const node = viewport.value;
+    if (!node) return;
+    if (!treeEverOpened) {
+      treeEverOpened = true;
+      node.scrollLeft = (REBIRTH_CANVAS_SIZE - node.clientWidth) / 2;
+      node.scrollTop = (REBIRTH_CANVAS_SIZE - node.clientHeight) / 2;
+    } else if (lastPan) {
+      node.scrollLeft = lastPan.left;
+      node.scrollTop = lastPan.top;
+    }
+  });
+}
 const dragging = ref(false);
 // 拖过的距离超过阈值就吞掉紧跟的 click，免得平移结束误买节点
 let panMoved = 0;
@@ -134,14 +177,10 @@ function onNodeClick(node: RebirthNodeRow) {
   store.buyRebirthNode(node.id);
 }
 
-// 打开页面时把视图停在中心（时空锚点）
-onMounted(async () => {
-  await nextTick();
-  const el = viewport.value;
-  if (!el) return;
-  el.scrollLeft = (REBIRTH_CANVAS_SIZE - el.clientWidth) / 2;
-  el.scrollTop = (REBIRTH_CANVAS_SIZE - el.clientHeight) / 2;
-});
+// 把视图停在中心（时空锚点）。树默认收起、挂载时画布还不存在，
+// 所以首次展开时也要居中一次（之后展开不再重置，保留用户拖到的位置）
+let treeEverOpened = false;
+let lastPan: { left: number; top: number } | null = null;
 </script>
 
 <template>
@@ -232,7 +271,16 @@ onMounted(async () => {
       </div>
     </template>
 
-    <h2 class="mt">挑战时间线</h2>
+    <button
+      type="button"
+      class="rebirth-toggle"
+      :aria-expanded="!challengesCollapsed"
+      @click="store.toggleChallenges()"
+    >
+      <span>{{ challengesCollapsed ? '▸' : '▾' }} 挑战时间线</span>
+      <span class="muted small">{{ challengesSummary }}</span>
+    </button>
+    <template v-if="!challengesCollapsed">
     <p v-if="activeChallengeName" class="small" style="margin: 4px 0 4px">
       本周目挑战：<b>{{ activeChallengeName }}</b>（{{ store.snap.rebirth.activeChallengeDesc }}，
       结算
@@ -268,14 +316,23 @@ onMounted(async () => {
         <span v-if="!row.eligible" class="muted small effect">· 需要拥有（或本次带上）{{ row.requireUniverseName }}</span>
       </button>
     </div>
+    </template>
 
-    <h2 class="mt">永久加成</h2>
-
+    <button
+      type="button"
+      class="rebirth-toggle"
+      :aria-expanded="!treeCollapsed"
+      @click="store.toggleTree()"
+    >
+      <span>{{ treeCollapsed ? '▸' : '▾' }} 永久加成</span>
+      <span class="muted small">{{ treeSummary }}</span>
+    </button>
+    <template v-if="!treeCollapsed">
     <p class="muted small" style="margin: 4px 0 4px">
       以「时空锚点」为中心向四周延伸；按住画布拖动查看整棵树。
     </p>
     <div
-      ref="viewport"
+      :ref="setViewport"
       class="rebirth-viewport"
       :class="{ dragging }"
       @pointerdown="onPanDown"
@@ -332,6 +389,7 @@ onMounted(async () => {
         <dd>{{ bonus.value }}</dd>
       </div>
     </dl>
+    </template>
 
     <div class="row" style="margin-top: 16px">
       <div class="name muted">加成买完就回工厂继续下一轮</div>

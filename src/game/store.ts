@@ -496,6 +496,9 @@ export const useGameStore = defineStore('game', {
     researchListCollapsed: false,
     // 转生页的平行宇宙列表收起来没有（纯界面状态，不进存档；默认收起）
     universesCollapsed: true,
+    // 转生页另外两块同样可折叠：挑战展开（状态行常看），加成树默认收起（画布大）
+    challengesCollapsed: false,
+    treeCollapsed: true,
     // 模拟连续出错时暂停（纯运行时状态，不进存档；刷新页面即可恢复）
     simulationPaused: false,
     crashStreak: 0,
@@ -528,6 +531,12 @@ export const useGameStore = defineStore('game', {
     },
     toggleUniverses(): void {
       this.universesCollapsed = !this.universesCollapsed;
+    },
+    toggleChallenges(): void {
+      this.challengesCollapsed = !this.challengesCollapsed;
+    },
+    toggleTree(): void {
+      this.treeCollapsed = !this.treeCollapsed;
     },
     boot() {
       const loaded = loadFromStorage();
