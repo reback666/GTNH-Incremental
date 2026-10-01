@@ -82,6 +82,7 @@ import {
 import {
   bonusMultiplier,
   canBuyNode,
+  effectTotal,
   machineSpeedMultiplier,
   minerSpeedMultiplier,
   rebirthNodeById,
@@ -89,6 +90,13 @@ import {
   type RebirthEffectKind,
 } from './rebirth';
 import { ACHIEVEMENTS, achievedCount, type AchievementState } from './achievements';
+import {
+  challengeById,
+  challengeSettles,
+  evaluateChallenge,
+  isChallengeId,
+  type ChallengeId,
+} from './challenges';
 import * as C from './constants';
 
 // 机型 → 数值：出力带上机型倍率，烧矿速率带上机型的燃料效率。
@@ -112,12 +120,29 @@ export const RIFT_CABLES = '1';
 export type PayWith = 'coin' | 'ore';
 
 // 开发者模式里「指定资源增减」的目标：
-//   ores / coins / both 是每一级都给（原来那个「每级各加一笔」）
+//   ores / coins / both 是每一级都给一份
 //   ore / coin 只动指定等级的那一种
 //   cables 是时空线缆（转生货币）
 export type DevResourceTarget =
   | { scope: 'ores' | 'coins' | 'both' | 'cables' }
   | { scope: 'ore' | 'coin'; tier: number };
+
+// 转生履历的一条（docs/转生拓展大纲.md C1）：结算那一刻记下，只增不改，
+// 超过 50 条丢最旧的。数值都存字符串（Decimal 序列化口径）。
+export interface RunHistoryEntry {
+  // 第几个周目（转生后的 rebirthCount，即刚结束的周目序号）
+  run: number;
+  route: 'rift' | 'max';
+  // 这一趟带走的平行宇宙（没带是空串）
+  universe: string;
+  // 挂着的挑战与结算结果（没挂是空串；passed 只在通过时 true）
+  challenge: string;
+  challengePassed: boolean;
+  cables: string;
+  // 本周目时长（游戏内秒）与最高电压
+  seconds: number;
+  maxTier: number;
+}
 
 export interface TickReport {
   euGenerated: Decimal;
@@ -146,6 +171,8 @@ export interface TickReport {
   essentiaUsed: Decimal;
   // 奥术宇宙：污染对灵气机器产出的倍率
   arcanePollutionFactor: Decimal;
+  // 挑战时间线：这一拍刚好违规失效的挑战 id（只在失效那一拍有值）
+  challengeFailed: string | null;
   // 深渊宇宙：本拍每台机器因污染损坏的概率，以及抑制器抵消掉的污染点数
   corrosionPerSecond: Decimal;
   suppression: Decimal;
@@ -211,6 +238,21 @@ export class GameCore {
   universes: UniverseId[] = [];
   // 已经选好、等下一次转生带走的宇宙（只存选择本身，转生时才生效）
   pendingUniverse: UniverseId | null = null;
+  // ── 挑战时间线（docs/转生拓展大纲.md M3）──────────────────
+  // 本周目挂着的挑战：转生时从 pendingChallenge 生效，全程受检
+  activeChallenge: ChallengeId | null = null;
+  // 挑战违规即静默失效（没有惩罚，只是结算拿不到加成）
+  challengeViolated = false;
+  // 赤色时间线的热身标记：污染首次到 60% 之后判定才开始
+  challengePrimed = false;
+  // 首通过的挑战（跨周目保留，只用来点亮首通成就，不重复发奖）
+  completedChallenges: ChallengeId[] = [];
+  // 转生履历（最近的在最前，超过 50 条丢最旧的）
+  runHistory: RunHistoryEntry[] = [];
+  // 终局装置「普朗克锚」：买一次永久生效（跨周目），MAX 路线结算 ×1.5
+  planckAnchor = false;
+  // 已经选好、等下一次转生挂上的挑战
+  pendingChallenge: ChallengeId | null = null;
   // 硅基宇宙的三项 AI 功能，默认全开（三个开关互相独立，跨周目保留）
   siliconAutoRepair = true;
   siliconAutoOverclock = true;
@@ -353,9 +395,34 @@ export class GameCore {
     return true;
   }
 
+  // 挑战选择：跟 pendingUniverse 一样只存选择本身，转生时才生效。
+  // 赤色时间线要深渊宇宙——已拥有、或本次转生正打算带上，都算够格
+  canPickChallenge(id: string): boolean {
+    const challenge = challengeById(id);
+    if (!challenge) return false;
+    if (challenge.requireUniverse === undefined) return true;
+    return this.hasUniverse(challenge.requireUniverse) || this.pendingUniverse === challenge.requireUniverse;
+  }
+
+  setPendingChallenge(id: string | null): boolean {
+    if (id === null) {
+      this.pendingChallenge = null;
+      return true;
+    }
+    if (!isChallengeId(id) || !this.canPickChallenge(id)) return false;
+    this.pendingChallenge = id;
+    return true;
+  }
+
+  // 本周目挑战的状态文案用：进行中 / 已失效 / 首通已达成
+  challengeSettled(id: string): boolean {
+    return this.completedChallenges.includes(id as ChallengeId);
+  }
+
   // 工业宇宙：同一机型的边际成本增长从 1.07^k 降到 1.05^k
   marginalGrowth(): string {
-    return this.hasUniverse('industry') ? '1.05' : MARGINAL_COST_GROWTH;
+    if (!this.hasUniverse('industry')) return MARGINAL_COST_GROWTH;
+    return this.hasRebirthEffect('industryDeepen') ? '1.04' : '1.05';
   }
 
   // 工业宇宙：跨电压结算。把「不高于结算等级的币」按币值合并后统一扣款，
@@ -367,7 +434,7 @@ export class GameCore {
     supply: Decimal,
   ): Set<MachineKind> {
     const shed = new Set<MachineKind>();
-    if (this.random() < SILICON_MISJUDGE_CHANCE) {
+    if (this.random() < this.siliconMisjudgeChance()) {
       const candidates = SILICON_KEEP_PRIORITY.filter((kind) => demandByKind.has(kind));
       if (candidates.length > 0) {
         const pick = Math.min(
@@ -419,14 +486,16 @@ export class GameCore {
     return !this.riftOffered && this.maxTier >= RIFT_FROM_TIER;
   }
 
-  // 现在打到 MAX 能拿几条线缆（还没到 MAX 返回 null）
+  // 现在打到 MAX 能拿几条线缆（还没到 MAX 返回 null）。
+  // 普朗克锚在这里乘：结算与界面读数天然一致
   maxRouteCables(): Decimal | null {
     if (this.maxTier < MAX_TIER) return null;
-    return rebirthCables({
+    const base = rebirthCables({
       totalEU: this.runEU,
       maxTier: this.maxTier,
       rebirthCount: this.rebirthCount,
     });
+    return this.planckAnchor ? base.times(C.PLANCK_ANCHOR_MULTIPLIER).floor() : base;
   }
 
   canRebirth(route: 'rift' | 'max'): boolean {
@@ -439,16 +508,41 @@ export class GameCore {
     return this.maxRouteCables() ?? ZERO;
   }
 
-  // 转生：拿线缆 → 选定平行宇宙 → 重置本周目 → 保留线缆 / 加成 / 宇宙 / 次数 / 累计统计
+  // 转生：拿线缆 → 选定平行宇宙 → 重置本周目 → 保留线缆 / 加成 / 宇宙 / 次数 / 累计统计。
+  // 挂着挑战且通过时线缆乘各自倍率；赤色时间线全程没到过 60% 视为没参与，不加成
   rebirth(route: 'rift' | 'max', universe?: string): Decimal | null {
     if (!this.canRebirth(route)) return null;
-    const gained = this.cablesFor(route);
+    let gained = this.cablesFor(route);
+    const challenge = this.activeChallenge;
+    const passed =
+      challenge !== null &&
+      challengeSettles(challenge, this.challengeViolated, this.challengePrimed);
+    if (challenge !== null && passed) {
+      gained = gained.times(challengeById(challenge)!.bonus).floor();
+      if (!this.completedChallenges.includes(challenge)) this.completedChallenges.push(challenge);
+    }
+    this.runHistory.unshift({
+      run: this.rebirthCount + 1,
+      route,
+      universe: universe ?? '',
+      challenge: challenge ?? '',
+      challengePassed: passed,
+      cables: gained.toString(),
+      seconds: Math.floor(this.playSeconds),
+      maxTier: this.maxTier,
+    });
+    if (this.runHistory.length > 50) this.runHistory.length = 50;
     if (universe !== undefined) this.addUniverse(universe);
     this.pendingUniverse = null; // 选择已经用掉
     this.cables = this.cables.plus(gained);
     this.totalCables = this.totalCables.plus(gained);
     this.rebirthCount += 1;
     this.resetRun();
+    // 新周目的挑战在重置之后挂上；选择用掉即清空
+    this.activeChallenge = this.pendingChallenge;
+    this.pendingChallenge = null;
+    this.challengeViolated = false;
+    this.challengePrimed = false;
     return gained;
   }
 
@@ -467,9 +561,20 @@ export class GameCore {
     return true;
   }
 
+  // 铸造普朗克锚：花 300 条线缆，一次性永久生效
+  buyPlanckAnchor(): boolean {
+    if (this.planckAnchor) return false;
+    if (this.cables.lt(dec(C.PLANCK_ANCHOR_COST))) return false;
+    this.cables = this.cables.minus(dec(C.PLANCK_ANCHOR_COST));
+    this.planckAnchor = true;
+    return true;
+  }
+
   canBuyRebirthNode(id: string): boolean {
     const node = rebirthNodeById(id);
-    return node !== undefined && canBuyNode(this.rebirthNodes, node, this.cables);
+    return (
+      node !== undefined && canBuyNode(this.rebirthNodes, node, this.cables, this.universes)
+    );
   }
 
   // ── 开发者模式 ─────────────────────────────────────────────
@@ -531,6 +636,7 @@ export class GameCore {
         (model) => needsResearch(model.tier) && this.universeSatisfied(model),
       ).length,
       essentia: this.essentia,
+      completedChallenges: this.completedChallenges,
       specials: {
         steam: fuelGenerators('-steam'),
         plasma: fuelGenerators('-plasma'),
@@ -670,6 +776,51 @@ export class GameCore {
     return bonusMultiplier(this.rebirthNodes, kind);
   }
 
+  // 给界面读的加成倍率（1 + 该类累计）
+  totalBonusFor(kind: RebirthEffectKind): Decimal {
+    return this.totalBonus(kind);
+  }
+
+  // 污染产生的总倍率（「污染产生」节点）
+  pollutionProductionFactor(): Decimal {
+    return ONE.minus(effectTotal(this.rebirthNodes, 'pollutionReduction'));
+  }
+
+  // 超频故障率的总倍率（「故障率」节点）
+  faultFactor(): Decimal {
+    return ONE.minus(effectTotal(this.rebirthNodes, 'faultReduction'));
+  }
+
+  // 腐蚀损坏率的总倍率（「腐蚀损伤」节点）
+  corrosionFactor(): Decimal {
+    return ONE.minus(effectTotal(this.rebirthNodes, 'corrosionReduction'));
+  }
+
+  // 树上是否点亮了某一类效果（每个 kind 至少有一个非零节点，累计 > 0 即视为点亮）
+  hasRebirthEffect(kind: RebirthEffectKind): boolean {
+    return effectTotal(this.rebirthNodes, kind).gt(0);
+  }
+
+  // 接电网机器的耗电倍率（「全厂耗电」节点）
+  energyFactor(): Decimal {
+    return ONE.minus(effectTotal(this.rebirthNodes, 'energySaving'));
+  }
+
+  // 硅基 AI 的误判率（「误判率」节点把它从 5% 压到 2%）
+  siliconMisjudgeChance(): number {
+    return this.hasRebirthEffect('siliconMisjudge') ? 0.02 : SILICON_MISJUDGE_CHANCE;
+  }
+
+  // 深渊宇宙污染驱动产出的中性点（「中性点」节点把它从 30% 移到 25%）
+  abyssNeutralPoint(): Decimal {
+    return this.hasRebirthEffect('abyssNeutral') ? dec('25') : dec('30');
+  }
+
+  // 中性点的偏移量，传给 pollutionDriveFactor
+  pollutionNeutralShift(): Decimal {
+    return this.hasRebirthEffect('abyssNeutral') ? dec('5') : ZERO;
+  }
+
   minerSpeedBonus(): Decimal {
     return minerSpeedMultiplier(this.rebirthNodes);
   }
@@ -726,6 +877,8 @@ export class GameCore {
     this.researchedModels = [];
     this.runEU = ZERO;
     this.riftOffered = false;
+    this.challengeViolated = false;
+    this.challengePrimed = false;
     this.lastReport = emptyReport();
   }
 
@@ -829,7 +982,9 @@ export class GameCore {
   }
 
   computerEnergyDrain(model: MachineModel): Decimal {
-    return computerEnergyEU(model.tier).times(this.workingCountOf(model.id));
+    return computerEnergyEU(model.tier)
+      .times(this.energyFactor())
+      .times(this.workingCountOf(model.id));
   }
 
   // ── 奥术宇宙：灵气与源质 ───────────────────────────────────
@@ -866,7 +1021,7 @@ export class GameCore {
   // 这一拍每台机器因污染坏掉的概率（污染机制关掉时恒为 0）
   corrosionPerSecond(): Decimal {
     if (!this.pollutionEnabled) return ZERO;
-    return corrosionPerSecond(this.pollution, this.suppression());
+    return corrosionPerSecond(this.pollution, this.suppression()).times(this.corrosionFactor());
   }
 
   // 魔法机器要多少灵气：每台按该等级的「本级 1A」算，超频按档位翻倍。
@@ -895,7 +1050,7 @@ export class GameCore {
       const n = this.countOf(model.id);
       if (n > 0) capacity = capacity.plus(batteryCapacityEU(model.tier).times(n));
     }
-    return capacity;
+    return capacity.times(this.totalBonus('batteryCapacity'));
   }
 
   // ── 机型 → 有效数值 ────────────────────────────────────────
@@ -913,6 +1068,7 @@ export class GameCore {
   minerEnergyDrain(model: MachineModel): Decimal {
     return minerEnergyEU(model.tier)
       .times(overclockEnergyMultiplier(this.overclockOf(model.id)))
+      .times(this.energyFactor())
       .times(this.workingCountOf(model.id));
   }
 
@@ -933,11 +1089,15 @@ export class GameCore {
       baseEnergy: C.BASE_MACHINE_ENERGY,
       tier: model.tier,
       overclockLevel: this.overclockOf(model.id),
-    }).times(this.workingCountOf(model.id));
+    })
+      .times(this.energyFactor())
+      .times(this.workingCountOf(model.id));
   }
 
   generatorOutputRated(model: MachineModel): Decimal {
-    return outputOf(model).times(this.workingCountOf(model.id));
+    return outputOf(model)
+      .times(this.totalBonus('generatorOutput'))
+      .times(this.workingCountOf(model.id));
   }
 
   generatorFuelDrain(model: MachineModel): Decimal {
@@ -957,9 +1117,9 @@ export class GameCore {
 
   // 净化器不跑配方，和发电机一样不参与超频
   purifierEnergyDrain(model: MachineModel): Decimal {
-    return machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }).times(
-      this.workingCountOf(model.id),
-    );
+    return machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier })
+      .times(this.energyFactor())
+      .times(this.workingCountOf(model.id));
   }
 
   // ── 污染与电网 ─────────────────────────────────────────────
@@ -1036,7 +1196,9 @@ export class GameCore {
         });
       }
     }
-    return pollutionPerSecond(machinery);
+    return pollutionPerSecond(machinery).times(
+      ONE.minus(effectTotal(this.rebirthNodes, 'pollutionReduction')),
+    );
   }
 
   // 这一拍每台机器实际跑起来的比例：停电、被停机调度、没燃料、没灵气的记 0，
@@ -1088,7 +1250,7 @@ export class GameCore {
           count: this.workingCountOf(model.id),
           load: this.pollutionLoad.get(model.id) ?? ONE,
         })),
-    );
+    ).times(this.totalBonus('purifyBoost'));
   }
 
   // 本拍的污染净变化（正数 = 在涨）
@@ -1454,7 +1616,7 @@ export class GameCore {
         }
       }
     }
-    // 电网模式直接改耗电：稳定 +20%、波动 -30%、黑市 -50%
+    // 电网模式直接改耗电：稳定 +20%、波动 -30%、黑市 -50%（「全厂耗电」已在各 drain 里打折）
     const gridMul = gridEnergyMultiplier(this.grid);
     for (const [kind, value] of demandByKind) demandByKind.set(kind, value.times(gridMul));
     let demand = ZERO;
@@ -1497,6 +1659,8 @@ export class GameCore {
     // 魔法机器拿到的灵气比例，以及它带来的产量加成（0 = 没喂上，1 = 喂满）
     let visRatio = ONE;
     let plenty = ZERO;
+    // 「奥术·充裕上限」：把灵气加成的上限抬高几个百分点（见 arcaneOutputBonus）
+    const arcaneBonusUp = effectTotal(this.rebirthNodes, 'arcaneBonusUp');
     // 魔法发电机这一拍的可用出力（EU/t）：不烧矿，直接按拿到的灵气算
     let magicCapacity = ZERO;
 
@@ -1524,7 +1688,7 @@ export class GameCore {
         magicCapacity = magicCapacity.plus(
           this.generatorOutputRated(model)
             .times(visRatio)
-            .times(arcaneOutputBonus(plenty, true)),
+            .times(arcaneOutputBonus(plenty, true, arcaneBonusUp)),
         );
       }
     }
@@ -1602,9 +1766,14 @@ export class GameCore {
         : Decimal.max(0, Decimal.min(ONE, needEU.minus(settlement.shortfall).div(needEU)));
     report.euCharged = settlement.charged;
     report.euDischarged = settlement.discharged;
+    // 「降载缓冲」：产出侧的缺电缺口减半。停电（整厂停摆）与供电率读数都保持原样
+    const outputRatio =
+      !report.outage && this.hasRebirthEffect('softLoading')
+        ? ONE.minus(ONE.minus(ratioDec).times('0.5'))
+        : ratioDec;
 
     // 污染：边污染边被净化器压，产出按污染档位打折
-    this.samplePollutionLoad({ shed, outage: report.outage, ratio: ratioDec, visRatio, fuelLoad });
+    this.samplePollutionLoad({ shed, outage: report.outage, ratio: outputRatio, visRatio, fuelLoad });
     const pollutionDelta = this.pollutionDeltaPerSecond();
     if (this.pollutionEnabled) {
       this.pollution = clampPollution(this.pollution.plus(pollutionDelta.times(dtSeconds)));
@@ -1617,7 +1786,9 @@ export class GameCore {
     // 深渊宇宙里污染是燃料：把产出往上推（替代普通的 -20% / -40% 惩罚）。
     // 奥术宇宙不参与这一条 —— 那边的污染仍然按普通规则惩罚产出。
     const driveMul =
-      abyss && this.pollutionEnabled ? pollutionDriveFactor(this.pollution) : ONE;
+      abyss && this.pollutionEnabled
+        ? pollutionDriveFactor(this.pollution, this.pollutionNeutralShift())
+        : ONE;
     report.arcanePollutionFactor = driveMul;
     report.outputMultiplier = abyss ? driveMul : pollutionMul;
     this.maxPollution = Decimal.max(this.maxPollution, this.pollution);
@@ -1627,8 +1798,10 @@ export class GameCore {
     const factorOf = (model: MachineModel): Decimal => {
       // 被停机调度停掉的那几类：这一拍不产
       if (shed.has(model.category)) return ZERO;
-      const driven = arcane && model.visPowered ? visRatio : ratioDec;
-      const bonus = arcane ? arcaneOutputBonus(plenty, model.visPowered === true) : ONE;
+      const driven = arcane && model.visPowered ? visRatio : outputRatio;
+      const bonus = arcane
+        ? arcaneOutputBonus(plenty, model.visPowered === true, arcaneBonusUp)
+        : ONE;
       return driven.times(pollutionFactor).times(bonus);
     };
 
@@ -1681,7 +1854,7 @@ export class GameCore {
     // 5b) 研究：计算机产算力，研究站吃算力推进研究进度。
     //     算力是流量 —— 产出来当拍不用掉就浪费掉；缺电按供电比例少产。
     //     它不受污染影响：污染惩罚的是"产出物"（矿与币），不是基础设施。
-    const computeProduced = this.computerComputeRated().times(ratioDec);
+    const computeProduced = this.computerComputeRated().times(outputRatio);
     const computeSettlement = settleCompute(computeProduced, this.labComputeDemand());
     report.computeProduced = computeProduced;
     report.computeUsed = computeSettlement.used;
@@ -1716,7 +1889,10 @@ export class GameCore {
         if (healthy <= 0) continue;
         const broke = Math.min(
           healthy,
-          sampleFaults(expectedFaults(level, healthy, dtSeconds), this.random),
+          sampleFaults(
+            expectedFaults(level, healthy, dtSeconds) * this.faultFactor().toNumber(),
+            this.random,
+          ),
         );
         if (broke > 0) {
           this.faults[model.id] = this.faultyCountOf(model.id) + broke;
@@ -1751,7 +1927,7 @@ export class GameCore {
 
     // 6c) 硅基宇宙：AI 自动维护，故障当拍就修好。
     //     5% 概率这一拍没修（AI 误判），下一拍会补上。
-    if (silicon && this.siliconAutoRepair && this.random() >= SILICON_MISJUDGE_CHANCE) {
+    if (silicon && this.siliconAutoRepair && this.random() >= this.siliconMisjudgeChance()) {
       for (const model of active) {
         const faulty = this.faultyCountOf(model.id);
         if (faulty <= 0) continue;
@@ -1782,7 +1958,7 @@ export class GameCore {
 
     // 8b) 硅基宇宙：AI 按供电情况自动升降档。
     //     升档要求电力扛得住翻倍，降档只在明显缺电时动手，中间地带不动 —— 免得来回抖。
-    if (silicon && this.siliconAutoOverclock && this.random() >= SILICON_MISJUDGE_CHANCE) {
+    if (silicon && this.siliconAutoOverclock && this.random() >= this.siliconMisjudgeChance()) {
       // 用没经过停机调度修正的比值：调度把需求砍下去之后，缺电这件事仍然要反映到档位上
       const ratio = rawRatio;
       for (const model of active) {
@@ -1810,6 +1986,23 @@ export class GameCore {
     report.stepSeconds = dtSeconds;
     report.euConsumed = effectiveDemand.times(dtSeconds).times(ratioDec);
     report.powerRatio = ratioDec.toNumber();
+    // 挑战时间线：每拍评估一次激活中的挑战，违规即失效（没有惩罚，不再重新评估）。
+    // 放在供电率出炉之后——稳频挑战读的就是它
+    if (this.activeChallenge !== null && !this.challengeViolated) {
+      const verdict = evaluateChallenge(this.activeChallenge, {
+        pollution: this.pollution,
+        gridCount: this.grids.length,
+        powerRatio: report.powerRatio,
+        playSeconds: this.playSeconds,
+        maxTier: this.maxTier,
+        primed: this.challengePrimed,
+      });
+      this.challengePrimed = verdict.primed;
+      if (verdict.violated) {
+        this.challengeViolated = true;
+        report.challengeFailed = this.activeChallenge;
+      }
+    }
     this.lastReport = report;
     this.checkAchievements();
     return report;
@@ -1834,6 +2027,7 @@ function emptyReport(): TickReport {
     essentiaProduced: ZERO,
     essentiaUsed: ZERO,
     arcanePollutionFactor: ONE,
+    challengeFailed: null,
     corrosionPerSecond: ZERO,
     suppression: ZERO,
     corrosionFaults: 0,

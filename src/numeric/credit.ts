@@ -1,4 +1,4 @@
-import { Decimal, ONE, ZERO, dec, pow, type DecimalInput } from './decimal';
+import { Decimal, ONE, dec, pow, type DecimalInput } from './decimal';
 import { assertTier } from './voltage';
 
 // 计划书第七章：GT 币共 14 种，与电压等级一一对应，4 合 1 向上合成。
@@ -45,21 +45,6 @@ export function convertCoins(amount: DecimalInput, fromTier: number, toTier: num
 export function paymentTier(machineTier: number): number {
   assertTier(machineTier, 'machineTier');
   return Math.max(1, machineTier - 1);
-}
-
-// 把一堆 4 合 1 的币按最高等级规整，返回每一级的枚数（低位一律不足 4 枚）。
-// 计划书第七章要求「4 合 1 自动向上合成」，这里给出规整结果供界面展示。
-export function normalizeCoins(totalValueInTier1: DecimalInput, maxTier: number): Decimal[] {
-  assertTier(maxTier, 'maxTier');
-  let remaining = dec(totalValueInTier1).floor();
-  const stacks: Decimal[] = new Array(maxTier).fill(null).map(() => ZERO);
-  for (let tier = maxTier; tier >= 1; tier -= 1) {
-    const unit = coinValueInTier1(tier);
-    const count = remaining.div(unit).floor();
-    stacks[tier - 1] = count;
-    remaining = remaining.minus(count.times(unit));
-  }
-  return stacks;
 }
 
 // 该等级币的显示名。

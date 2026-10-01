@@ -60,6 +60,8 @@ export interface AchievementState {
   researchTotal: number;
   // 奥术宇宙的源质存量
   essentia: Decimal;
+  // 首通过的挑战时间线（docs/转生拓展大纲.md M3）
+  completedChallenges: string[];
   // 几类「有名有姓」的机器台数：成就直接读它们
   specials: {
     steam: number;
@@ -415,9 +417,9 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'tree-full',
     name: '加成树点满',
-    desc: '15 个永久加成节点全部买下',
+    desc: '33 个永久加成节点全部买下（时空星图毕业）',
     icon: { kind: 'sprite', sprite: 'star' },
-    check: (state) => state.rebirthNodeCount >= 15,
+    check: (state) => state.rebirthNodeCount >= 33,
   },
   {
     id: 'rebirth-ten',
@@ -425,6 +427,43 @@ export const ACHIEVEMENTS: Achievement[] = [
     desc: '转生 10 次：时间线都分叉成一片森林了',
     icon: { kind: 'sprite', sprite: 'cable' },
     check: (state) => state.rebirthCount >= 10,
+  },
+
+  // ── 挑战时间线首通（docs/转生拓展大纲.md M3）──────────────
+  {
+    id: 'challenge-pure',
+    name: '一尘不染',
+    desc: '首通「纯净时间线」：一整个周目污染没超过 30%',
+    icon: { kind: 'sprite', sprite: 'pollution' },
+    check: (state) => state.completedChallenges.includes('pure'),
+  },
+  {
+    id: 'challenge-red',
+    name: '如鱼得水',
+    desc: '首通「赤色时间线」：全程泡在 60% 以上的污染里',
+    icon: { kind: 'sprite', sprite: 'universe' },
+    check: (state) => state.completedChallenges.includes('red'),
+  },
+  {
+    id: 'challenge-grid',
+    name: '老派作风',
+    desc: '首通「断网时间线」：始终只用普通电网',
+    icon: { kind: 'sprite', sprite: 'grid' },
+    check: (state) => state.completedChallenges.includes('grid'),
+  },
+  {
+    id: 'challenge-power',
+    name: '稳如老狗',
+    desc: '首通「稳频时间线」：供电率从未跌破 95%',
+    icon: { kind: 'sprite', sprite: 'lightning' },
+    check: (state) => state.completedChallenges.includes('power'),
+  },
+  {
+    id: 'challenge-speedrun',
+    name: '疾速通关',
+    desc: '首通「极限时间线」：8 小时内打到 MAX',
+    icon: { kind: 'sprite', sprite: 'clock' },
+    check: (state) => state.completedChallenges.includes('speedrun'),
   },
 ];
 

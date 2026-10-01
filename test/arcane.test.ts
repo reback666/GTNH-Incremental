@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GameCore } from '../src/game/core';
 import { deserialize, serialize } from '../src/game/save';
-import { modelById } from '../src/game/models';
+import { modelById } from './helpers';
 import {
   arcaneOutputBonus,
   essentiaFromPurify,

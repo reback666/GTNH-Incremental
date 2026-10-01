@@ -6,7 +6,6 @@ import {
   blastBonus,
   blastChances,
   blastChanceTier,
-  blastNextBonus,
   collectChances,
   collectMultiplier,
   pickaxeIconTier,
@@ -59,10 +58,9 @@ describe('镐子的三条升级线', () => {
     expect(blastChanceTier(2)).toBe(2);
     expect(blastChanceTier(5)).toBe(3);
     // 同一批机会，在 MV 时点、还是攒到 MAX 再点，加的完全一样
-    for (const used of [0, 1, 2, 3, 4, 5]) {
-      expect(blastNextBonus(3, used).toString()).toBe(blastNextBonus(14, used).toString());
+    for (const used of [1, 2, 3, 4, 5, 6]) {
+      expect(blastBonus(3, used).toString()).toBe(blastBonus(14, used).toString());
     }
-    expect(blastNextBonus(14, 4).toSignificantDigits(6).toString()).toBe('2.82843'); // MV 给的那两次
     // 用满时，总和 = 每个电压那两次机会的加值逐批加起来
     expect(blastBonus(3, 6).toString()).toBe('12.48528137423857029281013234525818847142');
     let total = dec('0');

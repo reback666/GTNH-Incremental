@@ -1,4 +1,4 @@
-import { Decimal, ONE, ZERO, dec, decInt, pow, type DecimalInput } from './decimal';
+import { Decimal, ONE, dec, decInt, pow, type DecimalInput } from './decimal';
 import { VOLTAGE_STEP, assertTier } from './voltage';
 
 // 边际成本增长系数，来自计划书第八章：机器成本 = 基础成本 × 4^(tier-1) × g^(已购数量)。
@@ -73,21 +73,4 @@ export function machineCost(input: MachineCostInput): Decimal {
     .times(tierCostMultiplier(input.tier, input.lateGame))
     .times(marginalCostMultiplier(input.purchased, input.growth ?? MARGINAL_COST_GROWTH))
     .floor();
-}
-
-export interface BulkMachineCostInput extends MachineCostInput {
-  // 本次批量购买的数量，从第 purchased+1 台开始算。
-  count: number;
-}
-
-// 批量购买总价：逐台按 floor 后的单价累加，和玩家一台台点买的结果一致。
-export function bulkMachineCost(input: BulkMachineCostInput): Decimal {
-  if (!Number.isInteger(input.count) || input.count < 0) {
-    throw new RangeError(`购买数量必须是非负整数，收到 ${input.count}`);
-  }
-  let total = ZERO;
-  for (let index = 0; index < input.count; index += 1) {
-    total = total.plus(machineCost({ ...input, purchased: input.purchased + index }));
-  }
-  return total;
 }

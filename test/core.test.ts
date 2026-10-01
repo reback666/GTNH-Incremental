@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { GameCore } from '../src/game/core';
 import { deserialize, serialize, type SaveData } from '../src/game/save';
-import { modelById, modelsOf, type MachineModel } from '../src/game/models';
+import { modelsOf, type MachineModel } from '../src/game/models';
+import { modelById } from './helpers';
 import { dec } from '../src/numeric/decimal';
 import { MAX_TIER, MIN_TIER, VOLTAGE_TIERS } from '../src/numeric/voltage';
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { GameCore } from '../src/game/core';
 import { deserialize, serialize } from '../src/game/save';
-import { modelById } from '../src/game/models';
+import { modelById } from './helpers';
 import { UNIVERSES, universeById } from '../src/game/universes';
 import { ZERO, dec } from '../src/numeric/decimal';
 import { coinValueInTier1 } from '../src/numeric/credit';

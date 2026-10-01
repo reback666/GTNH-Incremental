@@ -18,7 +18,6 @@ export function baseOutputAtTier(baseOutput: DecimalInput, tier: number): Decima
 }
 
 // 产出速率 = 基础值 × 4^(tier-1) × 超频倍率（计划书第八章）。
-// 配方等级只决定「跑不跑得起来」（见 recipe.ts），不影响产出与能耗。
 export function machineOutput(input: MachineOutputInput): Decimal {
   return baseOutputAtTier(input.baseOutput, input.tier)
     .times(overclockSpeedMultiplier(input.overclockLevel ?? 0));

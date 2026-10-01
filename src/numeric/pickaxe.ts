@@ -72,12 +72,6 @@ export function blastBonus(tier: number, used: number): Decimal {
   return sum;
 }
 
-// 下一次升级（第 used+1 次机会）会加多少
-export function blastNextBonus(tier: number, used: number): Decimal {
-  const index = Math.max(0, Math.floor(used));
-  return blastBonusPerUpgrade(Math.min(tier, blastChanceTier(index)));
-}
-
 export function collectMultiplier(level: number): Decimal {
   if (level <= 0) return dec('1');
   return pow(String(COLLECT_MULTIPLIER), level);

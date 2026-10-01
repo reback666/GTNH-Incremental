@@ -10,6 +10,7 @@ import { MACHINE_MODELS, baseModelOf, type MachineModel } from './models';
 import { ACHIEVEMENTS } from './achievements';
 import { REBIRTH_NODES } from './rebirth';
 import { UNIVERSES } from './universes';
+import { isChallengeId, type ChallengeId } from './challenges';
 import { SAVE_KEY, SAVE_TIME_KEY, SAVE_VERSION } from './constants';
 import { errorText, logEvent } from './log';
 
@@ -67,6 +68,15 @@ export interface SaveData {
   essentia?: string;
   // v12：下次转生要带的平行宇宙（选择本身，转生时才生效）
   pendingUniverse?: string | null;
+  // v19：挑战时间线（挂着的 / 违规与热身标记 / 首通记录 / 待挂的选择）
+  activeChallenge?: string | null;
+  challengeViolated?: boolean;
+  challengePrimed?: boolean;
+  completedChallenges?: string[];
+  pendingChallenge?: string | null;
+  // v20：转生履历（最近 50 条）与普朗克锚
+  runHistory?: unknown[];
+  planckAnchor?: boolean;
   // v13：镐子的三条升级线（金刚杵等级、连锁采集等级、连锁爆破已用机会数）
   pickaxeVajra?: number;
   pickaxeCollect?: number;
@@ -133,6 +143,13 @@ export function serialize(core: GameCore): SaveData {
     universes: [...core.universes],
     essentia: toSaveString(core.essentia),
     pendingUniverse: core.pendingUniverse,
+    activeChallenge: core.activeChallenge,
+    challengeViolated: core.challengeViolated,
+    challengePrimed: core.challengePrimed,
+    completedChallenges: [...core.completedChallenges],
+    pendingChallenge: core.pendingChallenge,
+    runHistory: core.runHistory.map((entry) => ({ ...entry })),
+    planckAnchor: core.planckAnchor,
     pickaxeVajra: core.pickaxeVajra,
     pickaxeCollect: core.pickaxeCollect,
     pickaxeBlast: core.pickaxeBlast,
@@ -251,6 +268,13 @@ export function deserialize(data: SaveData): GameCore {
   core.universes = cleanUniverses(data.universes);
   core.essentia = safeDec(data.essentia);
   core.pendingUniverse = cleanPendingUniverse(data.pendingUniverse, core.universes);
+  core.activeChallenge = cleanChallengeId(data.activeChallenge);
+  core.challengeViolated = booleanOr(data.challengeViolated, false);
+  core.challengePrimed = booleanOr(data.challengePrimed, false);
+  core.completedChallenges = cleanChallengeList(data.completedChallenges);
+  core.pendingChallenge = cleanChallengeId(data.pendingChallenge);
+  core.runHistory = cleanRunHistory(data.runHistory);
+  core.planckAnchor = booleanOr(data.planckAnchor, false);
   core.pickaxeVajra = clampInt(data.pickaxeVajra, 0, vajraMaxLevel(), 0);
   core.pickaxeCollect = clampInt(data.pickaxeCollect, 0, collectChances(MAX_TIER), 0);
   core.pickaxeBlast = clampInt(data.pickaxeBlast, 0, blastChances(MAX_TIER), 0);
@@ -445,6 +469,46 @@ function cleanPendingUniverse(
   if (typeof value !== 'string' || !UNIVERSE_IDS.has(value)) return null;
   const id = value as GameCore['universes'][number];
   return owned.includes(id) ? null : id;
+}
+
+// 履历是纯展示数据：逐条清洗，坏条目直接丢，不因为一条脏记录丢掉整份履历
+function cleanRunHistory(value: unknown): GameCore['runHistory'] {
+  if (!Array.isArray(value)) return [];
+  const entries: GameCore['runHistory'] = [];
+  for (const raw of value) {
+    if (!isRecord(raw)) continue;
+    const route = raw.route === 'rift' || raw.route === 'max' ? raw.route : null;
+    if (route === null) continue;
+    const run = nonNegativeInt(raw.run);
+    const cables = safeDec(raw.cables);
+    entries.push({
+      run,
+      route,
+      universe: typeof raw.universe === 'string' ? raw.universe : '',
+      challenge: typeof raw.challenge === 'string' ? raw.challenge : '',
+      challengePassed: booleanOr(raw.challengePassed, false),
+      cables: cables.toString(),
+      seconds: nonNegativeInt(raw.seconds),
+      maxTier: raw.maxTier === undefined ? 1 : Math.min(Math.max(nonNegativeInt(raw.maxTier), 1), MAX_TIER),
+    });
+    if (entries.length >= 50) break;
+  }
+  return entries;
+}
+
+// 挑战 id 只认挑战表里有的；乱写的退回 null（挂着的挑战丢了就丢了，不能崩读档）
+function cleanChallengeId(value: unknown): ChallengeId | null {
+  if (typeof value !== 'string' || !isChallengeId(value)) return null;
+  return value;
+}
+
+function cleanChallengeList(value: unknown): ChallengeId[] {
+  const ids = new Set<ChallengeId>();
+  if (!Array.isArray(value)) return [];
+  for (const item of value) {
+    if (typeof item === 'string' && isChallengeId(item)) ids.add(item);
+  }
+  return [...ids];
 }
 
 // v1 存档只记了「第几级有多少台」，没有机型概念。

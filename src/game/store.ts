@@ -39,6 +39,11 @@ import { PURIFY_PER_TIER_PER_SECOND, purifierMachineCoverage } from '../numeric/
 import { pollutionDriveFactor, suppressionOfTier } from '../numeric/abyss';
 import { REBIRTH_NODES, REBIRTH_ROOT, type RebirthEffectKind } from './rebirth';
 import {
+  CHALLENGES,
+  challengeById,
+  challengeSettles,
+} from './challenges';
+import {
   RESEARCH_FROM_TIER,
   computerComputePerSecond,
   computerEnergyEU,
@@ -271,8 +276,40 @@ export interface RebirthNodeRow {
   effectText: string;
   cost: string;
   requires: string[];
+  // 宇宙支线：需要拥有该宇宙才能买（空串 = 无门控）
+  requireUniverse: string;
+  requireUniverseName: string;
   owned: boolean;
   buyable: boolean;
+}
+
+export interface RunHistoryRow {
+  run: number;
+  // 「裂缝 / MAX」
+  route: string;
+  universe: string;
+  challenge: string;
+  // 「×1.3 通过」/「已失效」/「—」
+  challengeNote: string;
+  cables: string;
+  duration: string;
+  voltage: string;
+}
+
+export interface ChallengeRow {
+  id: string;
+  name: string;
+  desc: string;
+  // 结算倍率，如 '×1.3'
+  bonus: string;
+  // 首通已达成（跨周目）
+  firstDone: boolean;
+  // 现在能不能挂（含宇宙门控：已拥有、或本次转生正打算带上）
+  eligible: boolean;
+  // 门控需要的宇宙名（空串 = 无门控）
+  requireUniverseName: string;
+  // 当前是否选定为「本次转生挂上」
+  selected: boolean;
 }
 
 export interface RebirthStats {
@@ -289,6 +326,20 @@ export interface RebirthStats {
   pendingUniverseName: string;
   // 已经拥有的宇宙名字，界面上做摘要用
   universes: string[];
+  // 挑战时间线：本周目挂着的挑战（空名 = 没挂）
+  activeChallengeName: string;
+  activeChallengeDesc: string;
+  activeChallengeBonus: string;
+  activeChallengeFailed: boolean;
+  activeChallengeFirstDone: boolean;
+  // 本次转生将挂上的挑战名（空串 = 不挂）
+  pendingChallengeName: string;
+  challengeRows: ChallengeRow[];
+  // 转生履历（最近 50 条，最新的在最前）
+  historyRows: RunHistoryRow[];
+  // 普朗克锚：已铸造 / 能不能铸（300 条）
+  planckOwned: boolean;
+  planckBuyable: boolean;
   root: { name: string; x: number; y: number };
   nodes: RebirthNodeRow[];
   // 已经装上的加成汇总
@@ -372,7 +423,6 @@ export interface Snapshot {
   coins: ResourceRow[];
   columns: MachineColumn[];
   maxTier: number;
-  powerShort: boolean;
   playTime: string;
   totalOre: string;
   totalCoins: string;
@@ -464,6 +514,12 @@ export const useGameStore = defineStore('game', {
     researchListCollapsed: false,
     // 转生页的平行宇宙列表收起来没有（纯界面状态，不进存档；默认收起）
     universesCollapsed: true,
+    // 转生页另外两块同样可折叠：挑战展开（状态行常看），加成树默认收起（画布大）
+    challengesCollapsed: false,
+    treeCollapsed: true,
+    historyCollapsed: true,
+    // 科技页的电网列表，同样默认收起（摘要显示使用中的电网）
+    gridPanelCollapsed: true,
     // 模拟连续出错时暂停（纯运行时状态，不进存档；刷新页面即可恢复）
     simulationPaused: false,
     crashStreak: 0,
@@ -475,7 +531,13 @@ export const useGameStore = defineStore('game', {
     logErrors: 0,
     seenErrors: 0,
     // 上一拍的关键状态，用来只在「状态变了」的时候记一笔日志
-    phase: { maxTier: 1, band: 'clean', powerShort: false, riftPending: false },
+    phase: {
+      maxTier: 1,
+      band: 'clean',
+      powerShort: false,
+      riftPending: false,
+      challengeFailed: null as string | null,
+    },
   }),
   getters: {
     snap: (state): Snapshot => state.snapshot ?? buildSnapshot(getCore()),
@@ -490,6 +552,18 @@ export const useGameStore = defineStore('game', {
     },
     toggleUniverses(): void {
       this.universesCollapsed = !this.universesCollapsed;
+    },
+    toggleChallenges(): void {
+      this.challengesCollapsed = !this.challengesCollapsed;
+    },
+    toggleTree(): void {
+      this.treeCollapsed = !this.treeCollapsed;
+    },
+    toggleHistory(): void {
+      this.historyCollapsed = !this.historyCollapsed;
+    },
+    toggleGridPanel(): void {
+      this.gridPanelCollapsed = !this.gridPanelCollapsed;
     },
     boot() {
       const loaded = loadFromStorage();
@@ -722,12 +796,24 @@ export const useGameStore = defineStore('game', {
     },
     // 转生：走时空裂缝（固定 1 条）或打到 MAX（按公式结算）；可以顺带选一个平行宇宙
     rebirth(route: 'rift' | 'max', universe?: string): string | null {
-      const gained = getCore().rebirth(route, universe);
+      const core = getCore();
+      // 结算口径要在 rebirth() 改写状态之前取好
+      const challenge = core.activeChallenge;
+      const passed =
+        challenge !== null &&
+        challengeSettles(challenge, core.challengeViolated, core.challengePrimed);
+      const gained = core.rebirth(route, universe);
       if (gained !== null) {
+        const note =
+          challenge === null
+            ? ''
+            : passed
+              ? `，挑战「${challengeById(challenge)!.name}」结算通过`
+              : `，挑战「${challengeById(challenge)!.name}」已失效（未加成）`;
         logEvent(
           'info',
           'rebirth.done',
-          `转生完成（${route === 'rift' ? '时空裂缝' : '打到 MAX'}），获得 ${gained.toString()} 条时空线缆`,
+          `转生完成（${route === 'rift' ? '时空裂缝' : '打到 MAX'}），获得 ${gained.toString()} 条时空线缆${note}`,
         );
       }
       this.refresh();
@@ -736,6 +822,16 @@ export const useGameStore = defineStore('game', {
     },
     declineRift(): void {
       getCore().declineRift();
+      this.refresh();
+      this.save();
+    },
+    buyPlanckAnchor(): void {
+      getCore().buyPlanckAnchor();
+      this.refresh();
+      this.save();
+    },
+    setPendingChallenge(id: string | null): void {
+      getCore().setPendingChallenge(id);
       this.refresh();
       this.save();
     },
@@ -793,8 +889,7 @@ export const useGameStore = defineStore('game', {
         if (this.simulationPaused) return;
         this.step(C.SIM_STEP_MS / 1000);
       }, C.SIM_STEP_MS);
-      // 界面跟着模拟拍与玩家操作刷新（数字的平滑过渡由 AnimatedNumber 负责）；
-      // 原来这里还有一个 20 Hz 的兜底轮询，实际只在快照为空时干活，等于空转，已删
+      // 界面跟着模拟拍与玩家操作刷新（数字的平滑过渡由 AnimatedNumber 负责）
       setInterval(() => this.save(), 10_000);
       window.addEventListener('beforeunload', () => this.save());
       // iOS / Android 上 beforeunload 常常不触发：切后台、页面被丢弃时也补一次存档，
@@ -847,6 +942,16 @@ export const useGameStore = defineStore('game', {
         phase.riftPending = rift;
         if (rift) logEvent('info', 'rebirth.rift', '时空裂缝出现（本周目第一次到 LuV）');
       }
+      // 挑战违规只在失效那一拍上报，记一条日志让玩家知道这局拿不到加成了
+      if (report.challengeFailed && report.challengeFailed !== phase.challengeFailed) {
+        phase.challengeFailed = report.challengeFailed;
+        const failed = challengeById(report.challengeFailed);
+        logEvent(
+          'warn',
+          'challenge.failed',
+          failed ? `挑战「${failed.name}」已失效：${failed.desc} 的规矩破掉了` : '挑战已失效',
+        );
+      }
     },
   },
 });
@@ -866,7 +971,6 @@ function nextFrame(): Promise<void> {
 }
 
 function buildSnapshot(core: GameCore): Snapshot {
-  const report = core.lastReport;
   const nextTier = core.maxTier < MAX_TIER ? core.maxTier + 1 : null;
   const oreRate = oreRates(core);
   const coinRate = coinRates(core);
@@ -900,7 +1004,6 @@ function buildSnapshot(core: GameCore): Snapshot {
         (kind !== 'research' || core.maxTier >= RESEARCH_FROM_TIER),
     ).map((kind) => machineColumn(core, kind)),
     maxTier: core.maxTier,
-    powerShort: report.powerRatio < 1,
     playTime: formatDuration(core.playSeconds),
     totalOre: formatNumber(core.totalOre),
     totalCoins: formatNumber(core.totalCoins),
@@ -1155,16 +1258,41 @@ function modifierRows(core: GameCore, kind: MachineKind | 'pickaxe'): ModifierRo
     const cost = core.researchCostFactor();
     if (!cost.eq(1)) add('研究需求', pct(cost), '转生 · 加成树（研究站）', cost.lt(1) ? 'good' : 'bad');
   }
+  if (kind === 'generator') {
+    const output = core.totalBonusFor('generatorOutput');
+    if (!output.eq(1)) add('发电能力', pct(output), '转生 · 加成树', tone(output));
+  }
+  if (kind === 'storage') {
+    const battery = core.totalBonusFor('batteryCapacity');
+    if (!battery.eq(1)) add('容量', pct(battery), '转生 · 加成树', tone(battery));
+  }
+  if (kind === 'purifier') {
+    const purify = core.totalBonusFor('purifyBoost');
+    if (!purify.eq(1)) add('净化', pct(purify), '转生 · 加成树', tone(purify));
+  }
+  {
+    const saving = core.energyFactor();
+    if (drawsPower && !saving.eq(1)) {
+      add('耗电', pct(saving), '转生 · 加成树', tone(saving));
+    }
+  }
+  if (kind === 'miner' || kind === 'generator' || kind === 'machine' || kind === 'research') {
+    const pollutionFactor = core.pollutionProductionFactor();
+    if (!pollutionFactor.eq(1)) {
+      add('污染产生', pct(pollutionFactor), '转生 · 加成树', tone(pollutionFactor));
+    }
+  }
 
   // ── 平行宇宙 ───────────────────────────────────────────
   if (kind === 'miner' || kind === 'machine') {
     if (abyss) {
-      // 深渊宇宙：污染变成燃料，30% 是中性点
-      const drive = pollutionDriveFactor(core.pollution);
+      // 深渊宇宙：污染变成燃料，中性点默认 30%（「深渊·中性点」节点移到 25%）
+      const neutral = core.abyssNeutralPoint();
+      const drive = pollutionDriveFactor(core.pollution, core.pollutionNeutralShift());
       add(
         '产出',
         pct(drive),
-        `深渊宇宙 · 污染 ${formatNumber(core.pollution)}%（30% 中性）`,
+        `深渊宇宙 · 污染 ${formatNumber(core.pollution)}%（${formatNumber(neutral)}% 中性）`,
         tone(drive),
       );
     } else {
@@ -1207,6 +1335,15 @@ function modifierRows(core: GameCore, kind: MachineKind | 'pickaxe'): ModifierRo
         'flat',
       );
     }
+  }
+  if (
+    (kind === 'miner' || kind === 'machine') &&
+    core.hasRebirthEffect('faultReduction')
+  ) {
+    add('故障率', pct(core.faultFactor()), '转生 · 加成树', 'good');
+  }
+  if (abyss && kind !== 'abyss' && core.hasRebirthEffect('corrosionReduction')) {
+    add('腐蚀损伤', pct(core.corrosionFactor()), '转生 · 加成树', 'good');
   }
   const faulty = modelsOf(kind).reduce((sum, model) => sum + core.faultyCountOf(model.id), 0);
   if (faulty > 0) add('停机', `${faulty} 台`, '故障未维护', 'bad');
@@ -1417,17 +1554,51 @@ const EFFECT_LABEL: Record<RebirthEffectKind, string> = {
   researchSpeed: '研究速度',
   computeOutput: '算力产出',
   researchCost: '研究需求',
+  generatorOutput: '发电能力',
+  energySaving: '全厂耗电',
+  batteryCapacity: '存电容量',
+  softLoading: '缺电惩罚',
+  pollutionReduction: '污染产生',
+  purifyBoost: '净化效果',
+  faultReduction: '故障率',
+  corrosionReduction: '腐蚀损伤',
+  industryDeepen: '工业 · 并联加深',
+  arcaneBonusUp: '奥术 · 充裕上限',
+  abyssNeutral: '深渊 · 中性点',
+  siliconMisjudge: '硅基 · 误判率',
+};
+
+// 减免类效果在「已生效的加成」里显示成负数
+const NEGATIVE_EFFECTS = new Set<RebirthEffectKind>([
+  'researchCost',
+  'energySaving',
+  'pollutionReduction',
+  'faultReduction',
+  'corrosionReduction',
+]);
+
+// 离散 / 特殊效果不走「±百分比」的通用格式，一条一句写死
+const FIXED_EFFECT_TEXT: Partial<Record<RebirthEffectKind, string>> = {
+  softLoading: '缺电惩罚 -50%',
+  industryDeepen: '边际增长 1.05→1.04',
+  arcaneBonusUp: '充裕上限 +10%',
+  abyssNeutral: '中性点 30%→25%',
+  siliconMisjudge: '误判率 5%→2%',
 };
 
 function effectText(kind: RebirthEffectKind, amount: string): string {
+  const fixed = FIXED_EFFECT_TEXT[kind];
+  if (fixed) return fixed;
   const percent = formatNumber(dec(amount).times(100));
-  const sign = kind === 'researchCost' ? '-' : '+';
+  const sign = NEGATIVE_EFFECTS.has(kind) ? '-' : '+';
   return `${EFFECT_LABEL[kind]} ${sign}${percent}%`;
 }
 
 function rebirthStats(core: GameCore): RebirthStats {
   const maxCables = core.maxRouteCables();
   const owned = core.rebirthNodes;
+  const activeChallenge =
+    core.activeChallenge === null ? null : (challengeById(core.activeChallenge) ?? null);
   return {
     cables: formatNumber(core.cables),
     count: core.rebirthCount,
@@ -1442,6 +1613,52 @@ function rebirthStats(core: GameCore): RebirthStats {
         ? ''
         : (universeById(core.pendingUniverse)?.name ?? core.pendingUniverse),
     universes: core.universes.map((id) => universeById(id)?.name ?? id),
+    activeChallengeName: activeChallenge ? activeChallenge.name : '',
+    activeChallengeDesc: activeChallenge ? activeChallenge.desc : '',
+    activeChallengeBonus:
+      activeChallenge === null ? '' : `×${activeChallenge.bonus}`,
+    activeChallengeFailed: core.activeChallenge === null ? false : core.challengeViolated,
+    activeChallengeFirstDone:
+      core.activeChallenge === null
+        ? false
+        : core.completedChallenges.includes(core.activeChallenge),
+    pendingChallengeName:
+      core.pendingChallenge === null
+        ? ''
+        : (challengeById(core.pendingChallenge)?.name ?? core.pendingChallenge),
+    planckOwned: core.planckAnchor,
+    planckBuyable: !core.planckAnchor && core.cables.gte(dec(C.PLANCK_ANCHOR_COST)),
+    historyRows: core.runHistory.map((entry) => ({
+      run: entry.run,
+      route: entry.route === 'rift' ? '裂缝' : 'MAX',
+      universe: entry.universe === '' ? '—' : (universeById(entry.universe)?.name ?? entry.universe),
+      challenge:
+        entry.challenge === ''
+          ? '—'
+          : (challengeById(entry.challenge)?.name ?? entry.challenge),
+      challengeNote:
+        entry.challenge === ''
+          ? '—'
+          : entry.challengePassed
+            ? `×${challengeById(entry.challenge)?.bonus ?? ''} 通过`
+            : '已失效',
+      cables: formatNumber(dec(entry.cables)),
+      duration: formatDuration(entry.seconds),
+      voltage: VOLTAGE_TIERS[entry.maxTier - 1] ?? 'ULV',
+    })),
+    challengeRows: CHALLENGES.map((challenge) => ({
+      id: challenge.id,
+      name: challenge.name,
+      desc: challenge.desc,
+      bonus: `×${challenge.bonus}`,
+      firstDone: core.completedChallenges.includes(challenge.id),
+      eligible: core.canPickChallenge(challenge.id),
+      requireUniverseName:
+        challenge.requireUniverse === undefined
+          ? ''
+          : (universeById(challenge.requireUniverse)?.name ?? challenge.requireUniverse),
+      selected: core.pendingChallenge === challenge.id,
+    })),
     root: { ...REBIRTH_ROOT },
     nodes: REBIRTH_NODES.map((node) => ({
       id: node.id,
@@ -1452,18 +1669,26 @@ function rebirthStats(core: GameCore): RebirthStats {
       effectText: effectText(node.effect, node.amount),
       cost: formatNumber(dec(node.cost)),
       requires: [...node.requires],
+      requireUniverse: node.requireUniverse ?? '',
+      requireUniverseName:
+        node.requireUniverse === undefined
+          ? ''
+          : (universeById(node.requireUniverse)?.name ?? node.requireUniverse),
       owned: owned.includes(node.id),
       buyable: core.canBuyRebirthNode(node.id),
     })),
-    bonuses: (Object.keys(EFFECT_LABEL) as RebirthEffectKind[]).map((kind) => {
-      const total = REBIRTH_NODES.filter(
-        (node) => node.effect === kind && owned.includes(node.id),
-      ).reduce((sum, node) => sum.plus(dec(node.amount)), ZERO);
-      return {
-        label: EFFECT_LABEL[kind],
-        value: `${kind === 'researchCost' ? '-' : '+'}${formatNumber(total.times(100))}%`,
-      };
-    }),
+    bonuses: (Object.keys(EFFECT_LABEL) as RebirthEffectKind[])
+      .filter((kind) => FIXED_EFFECT_TEXT[kind] === undefined)
+      .map((kind) => {
+        const total = REBIRTH_NODES.filter(
+          (node) => node.effect === kind && owned.includes(node.id),
+        ).reduce((sum, node) => sum.plus(dec(node.amount)), ZERO);
+        const sign = NEGATIVE_EFFECTS.has(kind) ? '-' : '+';
+        return {
+          label: EFFECT_LABEL[kind],
+          value: `${sign}${formatNumber(total.times(100))}%`,
+        };
+      }),
   };
 }
 

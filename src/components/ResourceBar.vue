@@ -133,10 +133,6 @@ function togglePower(key: PowerKey) {
       </div>
     </div>
 
-    <p v-if="snap.powerShort" class="danger small" style="margin: 10px 0 0">
-      电力不足，机器都在降载运行。加发电机，或先停掉一些机器。
-    </p>
-
     <!-- ── 奥术宇宙：灵气与源质 ─────────────────────────────── -->
     <template v-if="snap.arcane.active">
       <h2 class="mt">灵气（奥术宇宙）</h2>

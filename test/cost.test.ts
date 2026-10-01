@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   LATE_GAME_LOG_DISABLED,
   MARGINAL_COST_GROWTH,
-  bulkMachineCost,
   lateGameLogFactor,
   machineCost,
   marginalCostMultiplier,
@@ -29,23 +28,18 @@ describe('成本公式', () => {
     expect(tierCostMultiplier(14).toString()).toBe('67108864');
   });
 
-  it('批量购买总价等于逐台单价之和', () => {
+  it('批量买 5 台的总价 = 逐台单价之和（core.buy 逐台扣费，总价即 5749）', () => {
     const input = { baseCost: '1000', tier: 1, purchased: 0 };
-    let manual = ZERO;
+    let total = ZERO;
     for (let index = 0; index < 5; index += 1) {
-      manual = manual.plus(machineCost({ ...input, purchased: index }));
+      total = total.plus(machineCost({ ...input, purchased: index }));
     }
-    expect(bulkMachineCost({ ...input, count: 5 }).eq(manual)).toBe(true);
-    expect(bulkMachineCost({ ...input, count: 5 }).toString()).toBe('5749');
-    expect(bulkMachineCost({ ...input, count: 0 }).toString()).toBe('0');
+    expect(total.toString()).toBe('5749');
   });
 
-  it('已购数量或购买数量不合法时直接报错', () => {
+  it('已购数量不合法时直接报错', () => {
     expect(() => marginalCostMultiplier(-1)).toThrow(RangeError);
     expect(() => marginalCostMultiplier(2.5)).toThrow(RangeError);
-    expect(() => bulkMachineCost({ baseCost: '1000', tier: 1, purchased: 0, count: 1.5 })).toThrow(
-      RangeError,
-    );
   });
 });
 

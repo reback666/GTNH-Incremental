@@ -762,7 +762,8 @@ h2 .small {
 }
 
 /* 转生页的平行宇宙：默认收成一个框，点开才列出来 */
-.rebirth-toggle {
+.rebirth-toggle,
+.panel-toggle {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -779,7 +780,8 @@ h2 .small {
   border-color: transparent;
 }
 
-.rebirth-toggle:hover {
+.rebirth-toggle:hover,
+.panel-toggle:hover {
   color: var(--text);
   border-color: var(--line);
 }
@@ -854,24 +856,6 @@ h2 .small {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
   gap: 8px;
-}
-
-.ach-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-
-.ach-head h2 {
-  margin: 0;
-}
-
-.ach-toggle {
-  min-height: 32px;
-  padding: 0 10px;
-  font-size: 12px;
 }
 
 .achievement {
@@ -1117,20 +1101,37 @@ h2 .small {
   font-size: 13px;
 }
 
-.rebirth-tree {
-  position: relative;
-  width: 660px;
-  max-width: 100%;
-  height: 330px;
+/* 树画布：方形框，内容 960×960，按住可拖动查看；打开时停在中心的锚点上 */
+.rebirth-viewport {
+  width: 100%;
+  max-width: 640px;
+  aspect-ratio: 1 / 1;
   margin: 4px auto 8px;
-  transform-origin: top left;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #141a20;
+  cursor: grab;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+}
+
+.rebirth-viewport.dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.rebirth-canvas {
+  position: relative;
+  width: 960px;
+  height: 960px;
 }
 
 .rebirth-links {
   position: absolute;
   inset: 0;
-  width: 660px;
-  height: 330px;
+  width: 960px;
+  height: 960px;
   pointer-events: none;
 }
 
@@ -1194,6 +1195,10 @@ h2 .small {
 
 .rebirth-node.buyable:hover {
   background: rgba(88, 196, 163, 0.22);
+}
+
+.rebirth-node.gated {
+  opacity: 0.55;
 }
 
 .rebirth-node.owned {
@@ -2057,4 +2062,11 @@ h2 .small {
 
 .hint {
   margin: 0 0 8px;
+}
+
+/* 转生履历表：一页放不下 50 条，限制高度内部滚动 */
+.history-table {
+  display: block;
+  max-height: 280px;
+  overflow-y: auto;
 }

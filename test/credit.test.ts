@@ -3,7 +3,6 @@ import {
   coinName,
   coinValueInTier1,
   convertCoins,
-  normalizeCoins,
   oreName,
   paymentTier,
 } from '../src/numeric/credit';
@@ -27,17 +26,6 @@ describe('GT 币', () => {
     expect(paymentTier(2)).toBe(1);
     expect(paymentTier(3)).toBe(2);
     expect(paymentTier(14)).toBe(13);
-  });
-
-  it('规整：低位始终不足 4 枚', () => {
-    // 5 枚 tier-1 币 = 1 枚 tier-2 币 + 1 枚 tier-1 币
-    const stacks = normalizeCoins('5', 3);
-    expect(stacks[0]!.toString()).toBe('1');
-    expect(stacks[1]!.toString()).toBe('1');
-    expect(stacks[2]!.toString()).toBe('0');
-    // 16 枚 tier-1 币正好是一枚 tier-3 币
-    const exact = normalizeCoins('16', 3);
-    expect(exact.map((d) => d.toString())).toEqual(['0', '0', '1']);
   });
 
   it('币名与矿名', () => {
