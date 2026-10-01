@@ -31,6 +31,20 @@ function doRebirth() {
   store.rebirth('max', pickedUniverse.value || undefined);
 }
 
+// 挑战时间线：再点一下已选中的卡片就取消（挂 0 或 1 个，不可叠加）
+const challengeRows = computed(() => store.snap.rebirth.challengeRows);
+const activeChallengeName = computed(() => store.snap.rebirth.activeChallengeName);
+const pendingChallengeName = computed(() => store.snap.rebirth.pendingChallengeName);
+
+function pickChallenge(id: string, eligible: boolean) {
+  if (!eligible) return;
+  store.setPendingChallenge(pendingChallengeName.value === '' || pendingChallengeName.value !== challengeName(id) ? id : null);
+}
+
+function challengeName(id: string): string {
+  return store.snap.rebirth.challengeRows.find((row) => row.id === id)?.name ?? id;
+}
+
 interface Link {
   key: string;
   x1: number;
@@ -217,6 +231,43 @@ onMounted(async () => {
         </button>
       </div>
     </template>
+
+    <h2 class="mt">挑战时间线</h2>
+    <p v-if="activeChallengeName" class="small" style="margin: 4px 0 4px">
+      本周目挑战：<b>{{ activeChallengeName }}</b>（{{ store.snap.rebirth.activeChallengeDesc }}，
+      结算
+      <span :class="{ danger: store.snap.rebirth.activeChallengeFailed }">
+        {{ store.snap.rebirth.activeChallengeFailed ? '已失效，不加成' : `通过 ${store.snap.rebirth.activeChallengeBonus}` }}
+      </span>{{ store.snap.rebirth.activeChallengeFirstDone && !store.snap.rebirth.activeChallengeFailed ? '，首通已达成' : '' }}）
+    </p>
+    <p v-else class="muted small" style="margin: 4px 0 4px">本周目没有挂挑战。</p>
+    <p class="muted small" style="margin: 4px 0 6px">
+      转生时可以自愿挂上 0 或 1 个挑战，下一周目全程受检：通过则线缆结算乘倍率并点亮首通成就，
+      违规立刻失效（没有惩罚）。
+      <template v-if="pendingChallengeName">本次转生将挂上：<b>{{ pendingChallengeName }}</b></template>
+      <template v-else>本次转生不挂挑战。</template>
+    </p>
+    <div class="universe-list">
+      <button
+        v-for="row in challengeRows"
+        :key="row.id"
+        type="button"
+        class="universe"
+        :class="{ picked: row.selected, todo: !row.eligible }"
+        :disabled="!row.eligible"
+        :title="row.eligible ? undefined : `需要拥有（或本次带上）${row.requireUniverseName}`"
+        @click="pickChallenge(row.id, row.eligible)"
+      >
+        <b>
+          {{ row.name }}
+          <span class="muted small">{{ row.bonus }}</span>
+          <span v-if="row.firstDone" class="tag-owned">首通已达成</span>
+          <span v-if="row.selected" class="tag-picked">本次选择</span>
+        </b>
+        <span class="muted small">{{ row.desc }}</span>
+        <span v-if="!row.eligible" class="muted small effect">· 需要拥有（或本次带上）{{ row.requireUniverseName }}</span>
+      </button>
+    </div>
 
     <h2 class="mt">永久加成</h2>
 

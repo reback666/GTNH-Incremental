@@ -39,6 +39,11 @@ import { PURIFY_PER_TIER_PER_SECOND, purifierMachineCoverage } from '../numeric/
 import { pollutionDriveFactor, suppressionOfTier } from '../numeric/abyss';
 import { REBIRTH_NODES, REBIRTH_ROOT, type RebirthEffectKind } from './rebirth';
 import {
+  CHALLENGES,
+  challengeById,
+  challengeSettles,
+} from './challenges';
+import {
   RESEARCH_FROM_TIER,
   computerComputePerSecond,
   computerEnergyEU,
@@ -278,6 +283,22 @@ export interface RebirthNodeRow {
   buyable: boolean;
 }
 
+export interface ChallengeRow {
+  id: string;
+  name: string;
+  desc: string;
+  // 结算倍率，如 '×1.3'
+  bonus: string;
+  // 首通已达成（跨周目）
+  firstDone: boolean;
+  // 现在能不能挂（含宇宙门控：已拥有、或本次转生正打算带上）
+  eligible: boolean;
+  // 门控需要的宇宙名（空串 = 无门控）
+  requireUniverseName: string;
+  // 当前是否选定为「本次转生挂上」
+  selected: boolean;
+}
+
 export interface RebirthStats {
   cables: string;
   count: number;
@@ -292,6 +313,15 @@ export interface RebirthStats {
   pendingUniverseName: string;
   // 已经拥有的宇宙名字，界面上做摘要用
   universes: string[];
+  // 挑战时间线：本周目挂着的挑战（空名 = 没挂）
+  activeChallengeName: string;
+  activeChallengeDesc: string;
+  activeChallengeBonus: string;
+  activeChallengeFailed: boolean;
+  activeChallengeFirstDone: boolean;
+  // 本次转生将挂上的挑战名（空串 = 不挂）
+  pendingChallengeName: string;
+  challengeRows: ChallengeRow[];
   root: { name: string; x: number; y: number };
   nodes: RebirthNodeRow[];
   // 已经装上的加成汇总
@@ -477,7 +507,13 @@ export const useGameStore = defineStore('game', {
     logErrors: 0,
     seenErrors: 0,
     // 上一拍的关键状态，用来只在「状态变了」的时候记一笔日志
-    phase: { maxTier: 1, band: 'clean', powerShort: false, riftPending: false },
+    phase: {
+      maxTier: 1,
+      band: 'clean',
+      powerShort: false,
+      riftPending: false,
+      challengeFailed: null as string | null,
+    },
   }),
   getters: {
     snap: (state): Snapshot => state.snapshot ?? buildSnapshot(getCore()),
@@ -724,12 +760,24 @@ export const useGameStore = defineStore('game', {
     },
     // 转生：走时空裂缝（固定 1 条）或打到 MAX（按公式结算）；可以顺带选一个平行宇宙
     rebirth(route: 'rift' | 'max', universe?: string): string | null {
-      const gained = getCore().rebirth(route, universe);
+      const core = getCore();
+      // 结算口径要在 rebirth() 改写状态之前取好
+      const challenge = core.activeChallenge;
+      const passed =
+        challenge !== null &&
+        challengeSettles(challenge, core.challengeViolated, core.challengePrimed);
+      const gained = core.rebirth(route, universe);
       if (gained !== null) {
+        const note =
+          challenge === null
+            ? ''
+            : passed
+              ? `，挑战「${challengeById(challenge)!.name}」结算通过`
+              : `，挑战「${challengeById(challenge)!.name}」已失效（未加成）`;
         logEvent(
           'info',
           'rebirth.done',
-          `转生完成（${route === 'rift' ? '时空裂缝' : '打到 MAX'}），获得 ${gained.toString()} 条时空线缆`,
+          `转生完成（${route === 'rift' ? '时空裂缝' : '打到 MAX'}），获得 ${gained.toString()} 条时空线缆${note}`,
         );
       }
       this.refresh();
@@ -738,6 +786,11 @@ export const useGameStore = defineStore('game', {
     },
     declineRift(): void {
       getCore().declineRift();
+      this.refresh();
+      this.save();
+    },
+    setPendingChallenge(id: string | null): void {
+      getCore().setPendingChallenge(id);
       this.refresh();
       this.save();
     },
@@ -847,6 +900,16 @@ export const useGameStore = defineStore('game', {
       if (rift !== phase.riftPending) {
         phase.riftPending = rift;
         if (rift) logEvent('info', 'rebirth.rift', '时空裂缝出现（本周目第一次到 LuV）');
+      }
+      // 挑战违规只在失效那一拍上报，记一条日志让玩家知道这局拿不到加成了
+      if (report.challengeFailed && report.challengeFailed !== phase.challengeFailed) {
+        phase.challengeFailed = report.challengeFailed;
+        const failed = challengeById(report.challengeFailed);
+        logEvent(
+          'warn',
+          'challenge.failed',
+          failed ? `挑战「${failed.name}」已失效：${failed.desc} 的规矩破掉了` : '挑战已失效',
+        );
       }
     },
   },
@@ -1493,6 +1556,8 @@ function effectText(kind: RebirthEffectKind, amount: string): string {
 function rebirthStats(core: GameCore): RebirthStats {
   const maxCables = core.maxRouteCables();
   const owned = core.rebirthNodes;
+  const activeChallenge =
+    core.activeChallenge === null ? null : (challengeById(core.activeChallenge) ?? null);
   return {
     cables: formatNumber(core.cables),
     count: core.rebirthCount,
@@ -1507,6 +1572,32 @@ function rebirthStats(core: GameCore): RebirthStats {
         ? ''
         : (universeById(core.pendingUniverse)?.name ?? core.pendingUniverse),
     universes: core.universes.map((id) => universeById(id)?.name ?? id),
+    activeChallengeName: activeChallenge ? activeChallenge.name : '',
+    activeChallengeDesc: activeChallenge ? activeChallenge.desc : '',
+    activeChallengeBonus:
+      activeChallenge === null ? '' : `×${activeChallenge.bonus}`,
+    activeChallengeFailed: core.activeChallenge === null ? false : core.challengeViolated,
+    activeChallengeFirstDone:
+      core.activeChallenge === null
+        ? false
+        : core.completedChallenges.includes(core.activeChallenge),
+    pendingChallengeName:
+      core.pendingChallenge === null
+        ? ''
+        : (challengeById(core.pendingChallenge)?.name ?? core.pendingChallenge),
+    challengeRows: CHALLENGES.map((challenge) => ({
+      id: challenge.id,
+      name: challenge.name,
+      desc: challenge.desc,
+      bonus: `×${challenge.bonus}`,
+      firstDone: core.completedChallenges.includes(challenge.id),
+      eligible: core.canPickChallenge(challenge.id),
+      requireUniverseName:
+        challenge.requireUniverse === undefined
+          ? ''
+          : (universeById(challenge.requireUniverse)?.name ?? challenge.requireUniverse),
+      selected: core.pendingChallenge === challenge.id,
+    })),
     root: { ...REBIRTH_ROOT },
     nodes: REBIRTH_NODES.map((node) => ({
       id: node.id,

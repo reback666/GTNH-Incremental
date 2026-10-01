@@ -90,6 +90,13 @@ import {
   type RebirthEffectKind,
 } from './rebirth';
 import { ACHIEVEMENTS, achievedCount, type AchievementState } from './achievements';
+import {
+  challengeById,
+  challengeSettles,
+  evaluateChallenge,
+  isChallengeId,
+  type ChallengeId,
+} from './challenges';
 import * as C from './constants';
 
 // 机型 → 数值：出力带上机型倍率，烧矿速率带上机型的燃料效率。
@@ -147,6 +154,8 @@ export interface TickReport {
   essentiaUsed: Decimal;
   // 奥术宇宙：污染对灵气机器产出的倍率
   arcanePollutionFactor: Decimal;
+  // 挑战时间线：这一拍刚好违规失效的挑战 id（只在失效那一拍有值）
+  challengeFailed: string | null;
   // 深渊宇宙：本拍每台机器因污染损坏的概率，以及抑制器抵消掉的污染点数
   corrosionPerSecond: Decimal;
   suppression: Decimal;
@@ -212,6 +221,17 @@ export class GameCore {
   universes: UniverseId[] = [];
   // 已经选好、等下一次转生带走的宇宙（只存选择本身，转生时才生效）
   pendingUniverse: UniverseId | null = null;
+  // ── 挑战时间线（docs/转生拓展大纲.md M3）──────────────────
+  // 本周目挂着的挑战：转生时从 pendingChallenge 生效，全程受检
+  activeChallenge: ChallengeId | null = null;
+  // 挑战违规即静默失效（没有惩罚，只是结算拿不到加成）
+  challengeViolated = false;
+  // 赤色时间线的热身标记：污染首次到 60% 之后判定才开始
+  challengePrimed = false;
+  // 首通过的挑战（跨周目保留，只用来点亮首通成就，不重复发奖）
+  completedChallenges: ChallengeId[] = [];
+  // 已经选好、等下一次转生挂上的挑战
+  pendingChallenge: ChallengeId | null = null;
   // 硅基宇宙的三项 AI 功能，默认全开（三个开关互相独立，跨周目保留）
   siliconAutoRepair = true;
   siliconAutoOverclock = true;
@@ -354,6 +374,30 @@ export class GameCore {
     return true;
   }
 
+  // 挑战选择：跟 pendingUniverse 一样只存选择本身，转生时才生效。
+  // 赤色时间线要深渊宇宙——已拥有、或本次转生正打算带上，都算够格
+  canPickChallenge(id: string): boolean {
+    const challenge = challengeById(id);
+    if (!challenge) return false;
+    if (challenge.requireUniverse === undefined) return true;
+    return this.hasUniverse(challenge.requireUniverse) || this.pendingUniverse === challenge.requireUniverse;
+  }
+
+  setPendingChallenge(id: string | null): boolean {
+    if (id === null) {
+      this.pendingChallenge = null;
+      return true;
+    }
+    if (!isChallengeId(id) || !this.canPickChallenge(id)) return false;
+    this.pendingChallenge = id;
+    return true;
+  }
+
+  // 本周目挑战的状态文案用：进行中 / 已失效 / 首通已达成
+  challengeSettled(id: string): boolean {
+    return this.completedChallenges.includes(id as ChallengeId);
+  }
+
   // 工业宇宙：同一机型的边际成本增长从 1.07^k 降到 1.05^k
   marginalGrowth(): string {
     if (!this.hasUniverse('industry')) return MARGINAL_COST_GROWTH;
@@ -441,16 +485,30 @@ export class GameCore {
     return this.maxRouteCables() ?? ZERO;
   }
 
-  // 转生：拿线缆 → 选定平行宇宙 → 重置本周目 → 保留线缆 / 加成 / 宇宙 / 次数 / 累计统计
+  // 转生：拿线缆 → 选定平行宇宙 → 重置本周目 → 保留线缆 / 加成 / 宇宙 / 次数 / 累计统计。
+  // 挂着挑战且通过时线缆乘各自倍率；赤色时间线全程没到过 60% 视为没参与，不加成
   rebirth(route: 'rift' | 'max', universe?: string): Decimal | null {
     if (!this.canRebirth(route)) return null;
-    const gained = this.cablesFor(route);
+    let gained = this.cablesFor(route);
+    const challenge = this.activeChallenge;
+    const passed =
+      challenge !== null &&
+      challengeSettles(challenge, this.challengeViolated, this.challengePrimed);
+    if (challenge !== null && passed) {
+      gained = gained.times(challengeById(challenge)!.bonus).floor();
+      if (!this.completedChallenges.includes(challenge)) this.completedChallenges.push(challenge);
+    }
     if (universe !== undefined) this.addUniverse(universe);
     this.pendingUniverse = null; // 选择已经用掉
     this.cables = this.cables.plus(gained);
     this.totalCables = this.totalCables.plus(gained);
     this.rebirthCount += 1;
     this.resetRun();
+    // 新周目的挑战在重置之后挂上；选择用掉即清空
+    this.activeChallenge = this.pendingChallenge;
+    this.pendingChallenge = null;
+    this.challengeViolated = false;
+    this.challengePrimed = false;
     return gained;
   }
 
@@ -535,6 +593,7 @@ export class GameCore {
         (model) => needsResearch(model.tier) && this.universeSatisfied(model),
       ).length,
       essentia: this.essentia,
+      completedChallenges: this.completedChallenges,
       specials: {
         steam: fuelGenerators('-steam'),
         plasma: fuelGenerators('-plasma'),
@@ -775,6 +834,8 @@ export class GameCore {
     this.researchedModels = [];
     this.runEU = ZERO;
     this.riftOffered = false;
+    this.challengeViolated = false;
+    this.challengePrimed = false;
     this.lastReport = emptyReport();
   }
 
@@ -1882,6 +1943,23 @@ export class GameCore {
     report.stepSeconds = dtSeconds;
     report.euConsumed = effectiveDemand.times(dtSeconds).times(ratioDec);
     report.powerRatio = ratioDec.toNumber();
+    // 挑战时间线：每拍评估一次激活中的挑战，违规即失效（没有惩罚，不再重新评估）。
+    // 放在供电率出炉之后——稳频挑战读的就是它
+    if (this.activeChallenge !== null && !this.challengeViolated) {
+      const verdict = evaluateChallenge(this.activeChallenge, {
+        pollution: this.pollution,
+        gridCount: this.grids.length,
+        powerRatio: report.powerRatio,
+        playSeconds: this.playSeconds,
+        maxTier: this.maxTier,
+        primed: this.challengePrimed,
+      });
+      this.challengePrimed = verdict.primed;
+      if (verdict.violated) {
+        this.challengeViolated = true;
+        report.challengeFailed = this.activeChallenge;
+      }
+    }
     this.lastReport = report;
     this.checkAchievements();
     return report;
@@ -1906,6 +1984,7 @@ function emptyReport(): TickReport {
     essentiaProduced: ZERO,
     essentiaUsed: ZERO,
     arcanePollutionFactor: ONE,
+    challengeFailed: null,
     corrosionPerSecond: ZERO,
     suppression: ZERO,
     corrosionFaults: 0,
