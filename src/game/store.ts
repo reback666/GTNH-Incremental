@@ -372,7 +372,6 @@ export interface Snapshot {
   coins: ResourceRow[];
   columns: MachineColumn[];
   maxTier: number;
-  powerShort: boolean;
   playTime: string;
   totalOre: string;
   totalCoins: string;
@@ -865,7 +864,6 @@ function nextFrame(): Promise<void> {
 }
 
 function buildSnapshot(core: GameCore): Snapshot {
-  const report = core.lastReport;
   const nextTier = core.maxTier < MAX_TIER ? core.maxTier + 1 : null;
   const oreRate = oreRates(core);
   const coinRate = coinRates(core);
@@ -899,7 +897,6 @@ function buildSnapshot(core: GameCore): Snapshot {
         (kind !== 'research' || core.maxTier >= RESEARCH_FROM_TIER),
     ).map((kind) => machineColumn(core, kind)),
     maxTier: core.maxTier,
-    powerShort: report.powerRatio < 1,
     playTime: formatDuration(core.playSeconds),
     totalOre: formatNumber(core.totalOre),
     totalCoins: formatNumber(core.totalCoins),

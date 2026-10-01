@@ -40,10 +40,7 @@ function togglePower(key: PowerKey) {
     </p>
 
     <!-- ── 第一行：电能 ─────────────────────────────────────── -->
-    <h2>
-      电能
-      <span v-if="snap.powerShort" class="danger small">电力不足</span>
-    </h2>
+    <h2>电能</h2>
     <div class="power-row">
       <button
         v-for="box in powerBoxes"
