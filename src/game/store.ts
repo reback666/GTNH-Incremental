@@ -793,8 +793,7 @@ export const useGameStore = defineStore('game', {
         if (this.simulationPaused) return;
         this.step(C.SIM_STEP_MS / 1000);
       }, C.SIM_STEP_MS);
-      // 界面跟着模拟拍与玩家操作刷新（数字的平滑过渡由 AnimatedNumber 负责）；
-      // 原来这里还有一个 20 Hz 的兜底轮询，实际只在快照为空时干活，等于空转，已删
+      // 界面跟着模拟拍与玩家操作刷新（数字的平滑过渡由 AnimatedNumber 负责）
       setInterval(() => this.save(), 10_000);
       window.addEventListener('beforeunload', () => this.save());
       // iOS / Android 上 beforeunload 常常不触发：切后台、页面被丢弃时也补一次存档，

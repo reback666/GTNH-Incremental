@@ -31,15 +31,3 @@ export function overclockEnergyMultiplier(level: number): Decimal {
   assertOverclockLevel(level);
   return pow(String(OVERCLOCK_ENERGY_FACTOR), level);
 }
-
-// 该档位下每单位产出的相对能耗，便于比较「加速是否划算」。
-export function overclockEnergyPerOutput(level: number): Decimal {
-  return overclockEnergyMultiplier(level).div(overclockSpeedMultiplier(level));
-}
-
-export function overclockLevels(): number[] {
-  return Array.from(
-    { length: MAX_OVERCLOCK_LEVEL - MIN_OVERCLOCK_LEVEL + 1 },
-    (_, index) => MIN_OVERCLOCK_LEVEL + index,
-  );
-}

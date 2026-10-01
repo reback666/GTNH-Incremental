@@ -2,12 +2,13 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { GameCore } from '../src/game/core';
 import { deserialize, serialize } from '../src/game/save';
-import { MACHINE_MODELS, modelById } from '../src/game/models';
+import { MACHINE_MODELS } from '../src/game/models';
+import { modelById } from './helpers';
 import { useGameStore } from '../src/game/store';
 import { getCore } from '../src/game/engine';
 import { dec } from '../src/numeric/decimal';
 import { rebirthCables } from '../src/numeric/rebirth';
-import { REBIRTH_NODES, treeTotalCost } from '../src/game/rebirth';
+import { REBIRTH_NODES } from '../src/game/rebirth';
 
 // 计划书第七章资源四、第二十章第三阶段：ZPM 及以后的机型是硬墙，
 // 要靠计算机产算力、研究站推进研究进度才能解锁。
@@ -318,7 +319,10 @@ describe('第三阶段：转生与永久加成', () => {
     core.cables = dec('2');
     expect(core.buyRebirthNode('speed-2a')).toBe(true);
     expect(core.cables.toString()).toBe('0');
-    expect(treeTotalCost().toString()).toBe('51');
+    // 买满整棵树要 51 条线缆（长线目标，防止改定价时悄悄翻倍）
+    expect(
+      REBIRTH_NODES.reduce((sum, node) => sum.plus(dec(node.cost)), dec('0')).toString(),
+    ).toBe('51');
     expect(REBIRTH_NODES.length).toBe(15);
   });
 

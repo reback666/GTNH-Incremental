@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GameCore } from '../src/game/core';
-import { modelById } from '../src/game/models';
+import { modelById } from './helpers';
 import { deserialize, serialize, type SaveData } from '../src/game/save';
 import { dec } from '../src/numeric/decimal';
 

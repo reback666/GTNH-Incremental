@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GameCore } from '../src/game/core';
 import { deserialize, serialize } from '../src/game/save';
-import { modelById } from '../src/game/models';
+import { modelById } from './helpers';
 
 // 设置页里的开发者模式：只是一组测试用的快捷操作，关着的时候一律不生效。
 describe('开发者模式', () => {

@@ -283,11 +283,6 @@ export function researchCostMultiplier(owned: readonly string[]): Decimal {
   return Decimal.max(dec('0.2'), ONE.minus(effectTotal(owned, 'researchCost')));
 }
 
-// 买满整棵树要多少条线缆（界面用来显示长线目标）
-export function treeTotalCost(): Decimal {
-  return REBIRTH_NODES.reduce((sum, node) => sum.plus(dec(node.cost)), ZERO);
-}
-
 // 采矿机 / 制造机的速度倍率
 export function minerSpeedMultiplier(owned: readonly string[]): Decimal {
   return ONE

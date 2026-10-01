@@ -112,7 +112,7 @@ export const RIFT_CABLES = '1';
 export type PayWith = 'coin' | 'ore';
 
 // 开发者模式里「指定资源增减」的目标：
-//   ores / coins / both 是每一级都给（原来那个「每级各加一笔」）
+//   ores / coins / both 是每一级都给一份
 //   ore / coin 只动指定等级的那一种
 //   cables 是时空线缆（转生货币）
 export type DevResourceTarget =
