@@ -249,6 +249,8 @@ export class GameCore {
   completedChallenges: ChallengeId[] = [];
   // 转生履历（最近的在最前，超过 50 条丢最旧的）
   runHistory: RunHistoryEntry[] = [];
+  // 终局装置「普朗克锚」：买一次永久生效（跨周目），MAX 路线结算 ×1.5
+  planckAnchor = false;
   // 已经选好、等下一次转生挂上的挑战
   pendingChallenge: ChallengeId | null = null;
   // 硅基宇宙的三项 AI 功能，默认全开（三个开关互相独立，跨周目保留）
@@ -484,14 +486,16 @@ export class GameCore {
     return !this.riftOffered && this.maxTier >= RIFT_FROM_TIER;
   }
 
-  // 现在打到 MAX 能拿几条线缆（还没到 MAX 返回 null）
+  // 现在打到 MAX 能拿几条线缆（还没到 MAX 返回 null）。
+  // 普朗克锚在这里乘：结算与界面读数天然一致
   maxRouteCables(): Decimal | null {
     if (this.maxTier < MAX_TIER) return null;
-    return rebirthCables({
+    const base = rebirthCables({
       totalEU: this.runEU,
       maxTier: this.maxTier,
       rebirthCount: this.rebirthCount,
     });
+    return this.planckAnchor ? base.times(C.PLANCK_ANCHOR_MULTIPLIER).floor() : base;
   }
 
   canRebirth(route: 'rift' | 'max'): boolean {
@@ -554,6 +558,15 @@ export class GameCore {
     if (!node || !canBuyNode(this.rebirthNodes, node, this.cables)) return false;
     this.cables = this.cables.minus(dec(node.cost));
     this.rebirthNodes.push(node.id);
+    return true;
+  }
+
+  // 铸造普朗克锚：花 300 条线缆，一次性永久生效
+  buyPlanckAnchor(): boolean {
+    if (this.planckAnchor) return false;
+    if (this.cables.lt(dec(C.PLANCK_ANCHOR_COST))) return false;
+    this.cables = this.cables.minus(dec(C.PLANCK_ANCHOR_COST));
+    this.planckAnchor = true;
     return true;
   }
 

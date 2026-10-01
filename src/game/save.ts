@@ -74,8 +74,9 @@ export interface SaveData {
   challengePrimed?: boolean;
   completedChallenges?: string[];
   pendingChallenge?: string | null;
-  // v20：转生履历（最近 50 条）
+  // v20：转生履历（最近 50 条）与普朗克锚
   runHistory?: unknown[];
+  planckAnchor?: boolean;
   // v13：镐子的三条升级线（金刚杵等级、连锁采集等级、连锁爆破已用机会数）
   pickaxeVajra?: number;
   pickaxeCollect?: number;
@@ -148,6 +149,7 @@ export function serialize(core: GameCore): SaveData {
     completedChallenges: [...core.completedChallenges],
     pendingChallenge: core.pendingChallenge,
     runHistory: core.runHistory.map((entry) => ({ ...entry })),
+    planckAnchor: core.planckAnchor,
     pickaxeVajra: core.pickaxeVajra,
     pickaxeCollect: core.pickaxeCollect,
     pickaxeBlast: core.pickaxeBlast,
@@ -272,6 +274,7 @@ export function deserialize(data: SaveData): GameCore {
   core.completedChallenges = cleanChallengeList(data.completedChallenges);
   core.pendingChallenge = cleanChallengeId(data.pendingChallenge);
   core.runHistory = cleanRunHistory(data.runHistory);
+  core.planckAnchor = booleanOr(data.planckAnchor, false);
   core.pickaxeVajra = clampInt(data.pickaxeVajra, 0, vajraMaxLevel(), 0);
   core.pickaxeCollect = clampInt(data.pickaxeCollect, 0, collectChances(MAX_TIER), 0);
   core.pickaxeBlast = clampInt(data.pickaxeBlast, 0, blastChances(MAX_TIER), 0);

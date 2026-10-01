@@ -263,3 +263,55 @@ describe('挑战存档（v19）', () => {
     expect(messy.completedChallenges).toEqual(['pure']);
   });
 });
+
+describe('普朗克锚（C2 轻方案）', () => {
+  it('300 条铸造一次：MAX 结算 ×1.5，裂缝不受影响，界面读数与结算一致', () => {
+    const core = new GameCore();
+    core.maxTier = 14;
+    core.runEU = dec('1e40');
+    const base = rebirthCables({ totalEU: '1e40', maxTier: 14, rebirthCount: 0 });
+    expect(core.maxRouteCables()?.toString()).toBe(base.toString());
+    // 线缆不够买不了
+    core.cables = dec('299');
+    expect(core.buyPlanckAnchor()).toBe(false);
+    core.cables = dec('300');
+    expect(core.buyPlanckAnchor()).toBe(true);
+    expect(core.cables.toString()).toBe('0');
+    expect(core.planckAnchor).toBe(true);
+    // 一次性：再买拒绝
+    core.cables = dec('1000');
+    expect(core.buyPlanckAnchor()).toBe(false);
+    expect(core.cables.toString()).toBe('1000');
+    // MAX 读数与结算都 ×1.5
+    const boosted = base.times('1.5').floor();
+    expect(core.maxRouteCables()?.toString()).toBe(boosted.toString());
+    expect(core.rebirth('max')?.toString()).toBe(boosted.toString());
+    // 裂缝路线不受影响
+    const rift = new GameCore();
+    rift.planckAnchor = true;
+    rift.riftOffered = false;
+    rift.maxTier = 7;
+    expect(rift.cablesFor('rift').toString()).toBe('1');
+  });
+
+  it('与挑战倍率叠乘（挑战先算、普朗克后算）', () => {
+    const core = new GameCore();
+    core.maxTier = 14;
+    core.runEU = dec('1e40');
+    core.planckAnchor = true;
+    core.activeChallenge = 'pure';
+    core.tick(1); // 无机器，污染 0，挑战通过
+    const base = rebirthCables({ totalEU: '1e40', maxTier: 14, rebirthCount: 0 });
+    const expected = base.times('1.5').floor().times('1.3').floor();
+    expect(core.rebirth('max')?.toString()).toBe(expected.toString());
+  });
+
+  it('普朗克锚进存档（v20）', () => {
+    const core = new GameCore();
+    core.planckAnchor = true;
+    const restored = deserialize(serialize(core));
+    expect(restored.planckAnchor).toBe(true);
+    const fresh = deserialize({ version: 19 } as SaveData);
+    expect(fresh.planckAnchor).toBe(false);
+  });
+});

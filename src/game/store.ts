@@ -337,6 +337,9 @@ export interface RebirthStats {
   challengeRows: ChallengeRow[];
   // 转生履历（最近 50 条，最新的在最前）
   historyRows: RunHistoryRow[];
+  // 普朗克锚：已铸造 / 能不能铸（300 条）
+  planckOwned: boolean;
+  planckBuyable: boolean;
   root: { name: string; x: number; y: number };
   nodes: RebirthNodeRow[];
   // 已经装上的加成汇总
@@ -814,6 +817,11 @@ export const useGameStore = defineStore('game', {
     },
     declineRift(): void {
       getCore().declineRift();
+      this.refresh();
+      this.save();
+    },
+    buyPlanckAnchor(): void {
+      getCore().buyPlanckAnchor();
       this.refresh();
       this.save();
     },
@@ -1613,6 +1621,8 @@ function rebirthStats(core: GameCore): RebirthStats {
       core.pendingChallenge === null
         ? ''
         : (challengeById(core.pendingChallenge)?.name ?? core.pendingChallenge),
+    planckOwned: core.planckAnchor,
+    planckBuyable: !core.planckAnchor && core.cables.gte(dec(C.PLANCK_ANCHOR_COST)),
     historyRows: core.runHistory.map((entry) => ({
       run: entry.run,
       route: entry.route === 'rift' ? '裂缝' : 'MAX',
