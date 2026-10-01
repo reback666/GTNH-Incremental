@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref, nextTick } from 'vue';
 import { useGameStore, type RebirthNodeRow } from '../game/store';
-import { REBIRTH_NODES } from '../game/rebirth';
+import { REBIRTH_CANVAS_SIZE, REBIRTH_NODES } from '../game/rebirth';
 
 // 独立的转生页面：进来之后只显示转生相关的东西，工厂界面完全不出现。
 // 从主界面顶部的入口进来，或转生刚发生时自动进来；点「回到工厂」返回。
@@ -39,7 +39,7 @@ interface Link {
   y2: number;
 }
 
-// 树的连线：根 → 每条支线的第一格，再按前置关系连到下一层
+// 树的连线：根 → 每条支线的第一格，再按前置关系连到下一层（中心连中心）
 const links = computed<Link[]>(() => {
   const byId = new Map(REBIRTH_NODES.map((node) => [node.id, node]));
   const out: Link[] = [];
@@ -48,9 +48,9 @@ const links = computed<Link[]>(() => {
       out.push({
         key: `root->${node.id}`,
         x1: rebirth.value.root.x,
-        y1: rebirth.value.root.y + 16,
+        y1: rebirth.value.root.y,
         x2: node.x,
-        y2: node.y - 20,
+        y2: node.y,
       });
       continue;
     }
@@ -60,9 +60,9 @@ const links = computed<Link[]>(() => {
       out.push({
         key: `${parentId}->${node.id}`,
         x1: parent.x,
-        y1: parent.y + 20,
+        y1: parent.y,
         x2: node.x,
-        y2: node.y - 20,
+        y2: node.y,
       });
     }
   }
@@ -70,8 +70,64 @@ const links = computed<Link[]>(() => {
 });
 
 function nodeClass(node: RebirthNodeRow) {
-  return { owned: node.owned, buyable: !node.owned && node.buyable };
+  return {
+    owned: node.owned,
+    buyable: !node.owned && node.buyable,
+    // 宇宙支线：还没拥有对应宇宙时置灰并上锁
+    gated: !node.owned && node.requireUniverse !== '' && !ownedUniverseNames.value.has(node.requireUniverseName),
+  };
 }
+
+const ownedUniverseNames = computed(
+  () => new Set(universes.value.filter((universe) => universe.owned).map((u) => u.name)),
+);
+
+// ── 树画布的拖拽平移 ────────────────────────────────────────
+const viewport = ref<HTMLDivElement | null>(null);
+const dragging = ref(false);
+// 拖过的距离超过阈值就吞掉紧跟的 click，免得平移结束误买节点
+let panMoved = 0;
+let panLast: { x: number; y: number } | null = null;
+
+function onPanDown(event: PointerEvent) {
+  if (event.button !== 0) return;
+  dragging.value = true;
+  panMoved = 0;
+  panLast = { x: event.clientX, y: event.clientY };
+  viewport.value?.setPointerCapture(event.pointerId);
+}
+
+function onPanMove(event: PointerEvent) {
+  if (!dragging.value || !panLast) return;
+  const dx = event.clientX - panLast.x;
+  const dy = event.clientY - panLast.y;
+  panMoved += Math.abs(dx) + Math.abs(dy);
+  panLast = { x: event.clientX, y: event.clientY };
+  if (viewport.value) {
+    viewport.value.scrollLeft -= dx;
+    viewport.value.scrollTop -= dy;
+  }
+}
+
+function onPanUp() {
+  dragging.value = false;
+  panLast = null;
+}
+
+function onNodeClick(node: RebirthNodeRow) {
+  if (node.owned || !node.buyable) return;
+  if (panMoved > 6) return; // 刚拖完视口，不当成点击
+  store.buyRebirthNode(node.id);
+}
+
+// 打开页面时把视图停在中心（时空锚点）
+onMounted(async () => {
+  await nextTick();
+  const el = viewport.value;
+  if (!el) return;
+  el.scrollLeft = (REBIRTH_CANVAS_SIZE - el.clientWidth) / 2;
+  el.scrollTop = (REBIRTH_CANVAS_SIZE - el.clientHeight) / 2;
+});
 </script>
 
 <template>
@@ -164,34 +220,58 @@ function nodeClass(node: RebirthNodeRow) {
 
     <h2 class="mt">永久加成</h2>
 
-    <div class="rebirth-tree">
-      <svg class="rebirth-links" viewBox="0 0 660 330" aria-hidden="true">
-        <line
-          v-for="link in links"
-          :key="link.key"
-          :x1="link.x1"
-          :y1="link.y1"
-          :x2="link.x2"
-          :y2="link.y2"
-        />
-      </svg>
-      <div class="rebirth-root" :style="{ left: rebirth.root.x + 'px', top: rebirth.root.y + 'px' }">
-        {{ rebirth.root.name }}
+    <p class="muted small" style="margin: 4px 0 4px">
+      以「时空锚点」为中心向四周延伸；按住画布拖动查看整棵树。
+    </p>
+    <div
+      ref="viewport"
+      class="rebirth-viewport"
+      :class="{ dragging }"
+      @pointerdown="onPanDown"
+      @pointermove="onPanMove"
+      @pointerup="onPanUp"
+      @pointercancel="onPanUp"
+    >
+      <div class="rebirth-canvas">
+        <svg class="rebirth-links" :viewBox="`0 0 ${REBIRTH_CANVAS_SIZE} ${REBIRTH_CANVAS_SIZE}`" aria-hidden="true">
+          <line
+            v-for="link in links"
+            :key="link.key"
+            :x1="link.x1"
+            :y1="link.y1"
+            :x2="link.x2"
+            :y2="link.y2"
+          />
+        </svg>
+        <div
+          class="rebirth-root"
+          :style="{ left: rebirth.root.x + 'px', top: rebirth.root.y + 'px' }"
+        >
+          {{ rebirth.root.name }}
+        </div>
+        <button
+          v-for="node in rebirth.nodes"
+          :key="node.id"
+          type="button"
+          class="rebirth-node"
+          :class="nodeClass(node)"
+          :style="{ left: node.x + 'px', top: node.y + 'px' }"
+          :disabled="node.owned || !node.buyable"
+          :title="
+            node.owned
+              ? undefined
+              : node.requireUniverseName !== '' && !ownedUniverseNames.has(node.requireUniverseName)
+                ? `需要拥有${node.requireUniverseName}`
+                : `前置：${node.requires.join(' / ') || '无'} · 价格 ${node.cost} 条`
+          "
+          @click="onNodeClick(node)"
+        >
+          <span>{{ node.effectText }}</span>
+          <em v-if="!node.owned">
+            {{ node.requireUniverseName !== '' && !ownedUniverseNames.has(node.requireUniverseName) ? `🔒 ${node.requireUniverseName}` : `${node.cost} 条` }}
+          </em>
+        </button>
       </div>
-      <button
-        v-for="node in rebirth.nodes"
-        :key="node.id"
-        type="button"
-        class="rebirth-node"
-        :class="nodeClass(node)"
-        :style="{ left: node.x + 'px', top: node.y + 'px' }"
-        :disabled="node.owned || !node.buyable"
-        :title="node.owned ? undefined : `前置：${node.requires.join(' / ') || '无'} · 价格 ${node.cost} 条`"
-        @click="store.buyRebirthNode(node.id)"
-      >
-        <span>{{ node.effectText }}</span>
-        <em v-if="!node.owned">{{ node.cost }} 条</em>
-      </button>
     </div>
 
     <h2 class="mt">已生效的加成</h2>

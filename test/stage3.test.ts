@@ -319,11 +319,11 @@ describe('第三阶段：转生与永久加成', () => {
     core.cables = dec('2');
     expect(core.buyRebirthNode('speed-2a')).toBe(true);
     expect(core.cables.toString()).toBe('0');
-    // 买满整棵树要 51 条线缆（长线目标，防止改定价时悄悄翻倍）
+    // 买满整棵树要 186 条线缆（时空星图二期；价格表如有意调整应同步改这条）
     expect(
       REBIRTH_NODES.reduce((sum, node) => sum.plus(dec(node.cost)), dec('0')).toString(),
-    ).toBe('51');
-    expect(REBIRTH_NODES.length).toBe(15);
+    ).toBe('186');
+    expect(REBIRTH_NODES.length).toBe(33);
   });
 
   it('存档往返保留转生状态', () => {

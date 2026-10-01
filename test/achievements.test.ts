@@ -152,8 +152,7 @@ describe('成就', () => {
     core.rebirthCount = 10;
     core.universes = ['industry', 'arcane', 'abyss', 'silicon'];
     core.grids = ['normal', 'stable', 'volatile', 'black'];
-    core.counts['b-3'] = 1; // 容量 16000
-    core.storedEU = dec('16000'); // 满池
+    core.counts['b-3'] = 1; // 基础容量 16000
     core.counts['g-lv-steam'] = 1; // 蒸汽轮机
     core.counts['g-ev-plasma'] = 1; // 等离子发电机
     core.counts['g-uiv-mb-dyson'] = 1; // 戴森云地面单元
@@ -173,6 +172,8 @@ describe('成就', () => {
       (model) => model.id,
     );
     core.rebirthNodes = REBIRTH_NODES.map((node) => node.id);
+    // 全树点亮含「存电容量 +20%」：满池按点亮后的实际容量算
+    core.storedEU = core.batteryCapacity();
     core.essentia = dec('2e6');
     core.tick(1);
 

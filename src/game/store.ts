@@ -271,6 +271,9 @@ export interface RebirthNodeRow {
   effectText: string;
   cost: string;
   requires: string[];
+  // 宇宙支线：需要拥有该宇宙才能买（空串 = 无门控）
+  requireUniverse: string;
+  requireUniverseName: string;
   owned: boolean;
   buyable: boolean;
 }
@@ -1151,16 +1154,41 @@ function modifierRows(core: GameCore, kind: MachineKind | 'pickaxe'): ModifierRo
     const cost = core.researchCostFactor();
     if (!cost.eq(1)) add('研究需求', pct(cost), '转生 · 加成树（研究站）', cost.lt(1) ? 'good' : 'bad');
   }
+  if (kind === 'generator') {
+    const output = core.totalBonusFor('generatorOutput');
+    if (!output.eq(1)) add('发电能力', pct(output), '转生 · 加成树', tone(output));
+  }
+  if (kind === 'storage') {
+    const battery = core.totalBonusFor('batteryCapacity');
+    if (!battery.eq(1)) add('容量', pct(battery), '转生 · 加成树', tone(battery));
+  }
+  if (kind === 'purifier') {
+    const purify = core.totalBonusFor('purifyBoost');
+    if (!purify.eq(1)) add('净化', pct(purify), '转生 · 加成树', tone(purify));
+  }
+  {
+    const saving = core.energyFactor();
+    if (drawsPower && !saving.eq(1)) {
+      add('耗电', pct(saving), '转生 · 加成树', tone(saving));
+    }
+  }
+  if (kind === 'miner' || kind === 'generator' || kind === 'machine' || kind === 'research') {
+    const pollutionFactor = core.pollutionProductionFactor();
+    if (!pollutionFactor.eq(1)) {
+      add('污染产生', pct(pollutionFactor), '转生 · 加成树', tone(pollutionFactor));
+    }
+  }
 
   // ── 平行宇宙 ───────────────────────────────────────────
   if (kind === 'miner' || kind === 'machine') {
     if (abyss) {
-      // 深渊宇宙：污染变成燃料，30% 是中性点
-      const drive = pollutionDriveFactor(core.pollution);
+      // 深渊宇宙：污染变成燃料，中性点默认 30%（「深渊·中性点」节点移到 25%）
+      const neutral = core.abyssNeutralPoint();
+      const drive = pollutionDriveFactor(core.pollution, core.pollutionNeutralShift());
       add(
         '产出',
         pct(drive),
-        `深渊宇宙 · 污染 ${formatNumber(core.pollution)}%（30% 中性）`,
+        `深渊宇宙 · 污染 ${formatNumber(core.pollution)}%（${formatNumber(neutral)}% 中性）`,
         tone(drive),
       );
     } else {
@@ -1203,6 +1231,15 @@ function modifierRows(core: GameCore, kind: MachineKind | 'pickaxe'): ModifierRo
         'flat',
       );
     }
+  }
+  if (
+    (kind === 'miner' || kind === 'machine') &&
+    core.hasRebirthEffect('faultReduction')
+  ) {
+    add('故障率', pct(core.faultFactor()), '转生 · 加成树', 'good');
+  }
+  if (abyss && kind !== 'abyss' && core.hasRebirthEffect('corrosionReduction')) {
+    add('腐蚀损伤', pct(core.corrosionFactor()), '转生 · 加成树', 'good');
   }
   const faulty = modelsOf(kind).reduce((sum, model) => sum + core.faultyCountOf(model.id), 0);
   if (faulty > 0) add('停机', `${faulty} 台`, '故障未维护', 'bad');
@@ -1413,11 +1450,43 @@ const EFFECT_LABEL: Record<RebirthEffectKind, string> = {
   researchSpeed: '研究速度',
   computeOutput: '算力产出',
   researchCost: '研究需求',
+  generatorOutput: '发电能力',
+  energySaving: '全厂耗电',
+  batteryCapacity: '存电容量',
+  softLoading: '缺电惩罚',
+  pollutionReduction: '污染产生',
+  purifyBoost: '净化效果',
+  faultReduction: '故障率',
+  corrosionReduction: '腐蚀损伤',
+  industryDeepen: '工业 · 并联加深',
+  arcaneBonusUp: '奥术 · 充裕上限',
+  abyssNeutral: '深渊 · 中性点',
+  siliconMisjudge: '硅基 · 误判率',
+};
+
+// 减免类效果在「已生效的加成」里显示成负数
+const NEGATIVE_EFFECTS = new Set<RebirthEffectKind>([
+  'researchCost',
+  'energySaving',
+  'pollutionReduction',
+  'faultReduction',
+  'corrosionReduction',
+]);
+
+// 离散 / 特殊效果不走「±百分比」的通用格式，一条一句写死
+const FIXED_EFFECT_TEXT: Partial<Record<RebirthEffectKind, string>> = {
+  softLoading: '缺电惩罚 -50%',
+  industryDeepen: '边际增长 1.05→1.04',
+  arcaneBonusUp: '充裕上限 +10%',
+  abyssNeutral: '中性点 30%→25%',
+  siliconMisjudge: '误判率 5%→2%',
 };
 
 function effectText(kind: RebirthEffectKind, amount: string): string {
+  const fixed = FIXED_EFFECT_TEXT[kind];
+  if (fixed) return fixed;
   const percent = formatNumber(dec(amount).times(100));
-  const sign = kind === 'researchCost' ? '-' : '+';
+  const sign = NEGATIVE_EFFECTS.has(kind) ? '-' : '+';
   return `${EFFECT_LABEL[kind]} ${sign}${percent}%`;
 }
 
@@ -1448,18 +1517,26 @@ function rebirthStats(core: GameCore): RebirthStats {
       effectText: effectText(node.effect, node.amount),
       cost: formatNumber(dec(node.cost)),
       requires: [...node.requires],
+      requireUniverse: node.requireUniverse ?? '',
+      requireUniverseName:
+        node.requireUniverse === undefined
+          ? ''
+          : (universeById(node.requireUniverse)?.name ?? node.requireUniverse),
       owned: owned.includes(node.id),
       buyable: core.canBuyRebirthNode(node.id),
     })),
-    bonuses: (Object.keys(EFFECT_LABEL) as RebirthEffectKind[]).map((kind) => {
-      const total = REBIRTH_NODES.filter(
-        (node) => node.effect === kind && owned.includes(node.id),
-      ).reduce((sum, node) => sum.plus(dec(node.amount)), ZERO);
-      return {
-        label: EFFECT_LABEL[kind],
-        value: `${kind === 'researchCost' ? '-' : '+'}${formatNumber(total.times(100))}%`,
-      };
-    }),
+    bonuses: (Object.keys(EFFECT_LABEL) as RebirthEffectKind[])
+      .filter((kind) => FIXED_EFFECT_TEXT[kind] === undefined)
+      .map((kind) => {
+        const total = REBIRTH_NODES.filter(
+          (node) => node.effect === kind && owned.includes(node.id),
+        ).reduce((sum, node) => sum.plus(dec(node.amount)), ZERO);
+        const sign = NEGATIVE_EFFECTS.has(kind) ? '-' : '+';
+        return {
+          label: EFFECT_LABEL[kind],
+          value: `${sign}${formatNumber(total.times(100))}%`,
+        };
+      }),
   };
 }
 

@@ -82,6 +82,7 @@ import {
 import {
   bonusMultiplier,
   canBuyNode,
+  effectTotal,
   machineSpeedMultiplier,
   minerSpeedMultiplier,
   rebirthNodeById,
@@ -355,7 +356,8 @@ export class GameCore {
 
   // 工业宇宙：同一机型的边际成本增长从 1.07^k 降到 1.05^k
   marginalGrowth(): string {
-    return this.hasUniverse('industry') ? '1.05' : MARGINAL_COST_GROWTH;
+    if (!this.hasUniverse('industry')) return MARGINAL_COST_GROWTH;
+    return this.hasRebirthEffect('industryDeepen') ? '1.04' : '1.05';
   }
 
   // 工业宇宙：跨电压结算。把「不高于结算等级的币」按币值合并后统一扣款，
@@ -367,7 +369,7 @@ export class GameCore {
     supply: Decimal,
   ): Set<MachineKind> {
     const shed = new Set<MachineKind>();
-    if (this.random() < SILICON_MISJUDGE_CHANCE) {
+    if (this.random() < this.siliconMisjudgeChance()) {
       const candidates = SILICON_KEEP_PRIORITY.filter((kind) => demandByKind.has(kind));
       if (candidates.length > 0) {
         const pick = Math.min(
@@ -469,7 +471,9 @@ export class GameCore {
 
   canBuyRebirthNode(id: string): boolean {
     const node = rebirthNodeById(id);
-    return node !== undefined && canBuyNode(this.rebirthNodes, node, this.cables);
+    return (
+      node !== undefined && canBuyNode(this.rebirthNodes, node, this.cables, this.universes)
+    );
   }
 
   // ── 开发者模式 ─────────────────────────────────────────────
@@ -670,6 +674,51 @@ export class GameCore {
     return bonusMultiplier(this.rebirthNodes, kind);
   }
 
+  // 给界面读的加成倍率（1 + 该类累计）
+  totalBonusFor(kind: RebirthEffectKind): Decimal {
+    return this.totalBonus(kind);
+  }
+
+  // 污染产生的总倍率（「污染产生」节点）
+  pollutionProductionFactor(): Decimal {
+    return ONE.minus(effectTotal(this.rebirthNodes, 'pollutionReduction'));
+  }
+
+  // 超频故障率的总倍率（「故障率」节点）
+  faultFactor(): Decimal {
+    return ONE.minus(effectTotal(this.rebirthNodes, 'faultReduction'));
+  }
+
+  // 腐蚀损坏率的总倍率（「腐蚀损伤」节点）
+  corrosionFactor(): Decimal {
+    return ONE.minus(effectTotal(this.rebirthNodes, 'corrosionReduction'));
+  }
+
+  // 树上是否点亮了某一类效果（每个 kind 至少有一个非零节点，累计 > 0 即视为点亮）
+  hasRebirthEffect(kind: RebirthEffectKind): boolean {
+    return effectTotal(this.rebirthNodes, kind).gt(0);
+  }
+
+  // 接电网机器的耗电倍率（「全厂耗电」节点）
+  energyFactor(): Decimal {
+    return ONE.minus(effectTotal(this.rebirthNodes, 'energySaving'));
+  }
+
+  // 硅基 AI 的误判率（「误判率」节点把它从 5% 压到 2%）
+  siliconMisjudgeChance(): number {
+    return this.hasRebirthEffect('siliconMisjudge') ? 0.02 : SILICON_MISJUDGE_CHANCE;
+  }
+
+  // 深渊宇宙污染驱动产出的中性点（「中性点」节点把它从 30% 移到 25%）
+  abyssNeutralPoint(): Decimal {
+    return this.hasRebirthEffect('abyssNeutral') ? dec('25') : dec('30');
+  }
+
+  // 中性点的偏移量，传给 pollutionDriveFactor
+  pollutionNeutralShift(): Decimal {
+    return this.hasRebirthEffect('abyssNeutral') ? dec('5') : ZERO;
+  }
+
   minerSpeedBonus(): Decimal {
     return minerSpeedMultiplier(this.rebirthNodes);
   }
@@ -829,7 +878,9 @@ export class GameCore {
   }
 
   computerEnergyDrain(model: MachineModel): Decimal {
-    return computerEnergyEU(model.tier).times(this.workingCountOf(model.id));
+    return computerEnergyEU(model.tier)
+      .times(this.energyFactor())
+      .times(this.workingCountOf(model.id));
   }
 
   // ── 奥术宇宙：灵气与源质 ───────────────────────────────────
@@ -866,7 +917,7 @@ export class GameCore {
   // 这一拍每台机器因污染坏掉的概率（污染机制关掉时恒为 0）
   corrosionPerSecond(): Decimal {
     if (!this.pollutionEnabled) return ZERO;
-    return corrosionPerSecond(this.pollution, this.suppression());
+    return corrosionPerSecond(this.pollution, this.suppression()).times(this.corrosionFactor());
   }
 
   // 魔法机器要多少灵气：每台按该等级的「本级 1A」算，超频按档位翻倍。
@@ -895,7 +946,7 @@ export class GameCore {
       const n = this.countOf(model.id);
       if (n > 0) capacity = capacity.plus(batteryCapacityEU(model.tier).times(n));
     }
-    return capacity;
+    return capacity.times(this.totalBonus('batteryCapacity'));
   }
 
   // ── 机型 → 有效数值 ────────────────────────────────────────
@@ -913,6 +964,7 @@ export class GameCore {
   minerEnergyDrain(model: MachineModel): Decimal {
     return minerEnergyEU(model.tier)
       .times(overclockEnergyMultiplier(this.overclockOf(model.id)))
+      .times(this.energyFactor())
       .times(this.workingCountOf(model.id));
   }
 
@@ -933,11 +985,15 @@ export class GameCore {
       baseEnergy: C.BASE_MACHINE_ENERGY,
       tier: model.tier,
       overclockLevel: this.overclockOf(model.id),
-    }).times(this.workingCountOf(model.id));
+    })
+      .times(this.energyFactor())
+      .times(this.workingCountOf(model.id));
   }
 
   generatorOutputRated(model: MachineModel): Decimal {
-    return outputOf(model).times(this.workingCountOf(model.id));
+    return outputOf(model)
+      .times(this.totalBonus('generatorOutput'))
+      .times(this.workingCountOf(model.id));
   }
 
   generatorFuelDrain(model: MachineModel): Decimal {
@@ -957,9 +1013,9 @@ export class GameCore {
 
   // 净化器不跑配方，和发电机一样不参与超频
   purifierEnergyDrain(model: MachineModel): Decimal {
-    return machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }).times(
-      this.workingCountOf(model.id),
-    );
+    return machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier })
+      .times(this.energyFactor())
+      .times(this.workingCountOf(model.id));
   }
 
   // ── 污染与电网 ─────────────────────────────────────────────
@@ -1036,7 +1092,9 @@ export class GameCore {
         });
       }
     }
-    return pollutionPerSecond(machinery);
+    return pollutionPerSecond(machinery).times(
+      ONE.minus(effectTotal(this.rebirthNodes, 'pollutionReduction')),
+    );
   }
 
   // 这一拍每台机器实际跑起来的比例：停电、被停机调度、没燃料、没灵气的记 0，
@@ -1088,7 +1146,7 @@ export class GameCore {
           count: this.workingCountOf(model.id),
           load: this.pollutionLoad.get(model.id) ?? ONE,
         })),
-    );
+    ).times(this.totalBonus('purifyBoost'));
   }
 
   // 本拍的污染净变化（正数 = 在涨）
@@ -1454,7 +1512,7 @@ export class GameCore {
         }
       }
     }
-    // 电网模式直接改耗电：稳定 +20%、波动 -30%、黑市 -50%
+    // 电网模式直接改耗电：稳定 +20%、波动 -30%、黑市 -50%（「全厂耗电」已在各 drain 里打折）
     const gridMul = gridEnergyMultiplier(this.grid);
     for (const [kind, value] of demandByKind) demandByKind.set(kind, value.times(gridMul));
     let demand = ZERO;
@@ -1497,6 +1555,8 @@ export class GameCore {
     // 魔法机器拿到的灵气比例，以及它带来的产量加成（0 = 没喂上，1 = 喂满）
     let visRatio = ONE;
     let plenty = ZERO;
+    // 「奥术·充裕上限」：把灵气加成的上限抬高几个百分点（见 arcaneOutputBonus）
+    const arcaneBonusUp = effectTotal(this.rebirthNodes, 'arcaneBonusUp');
     // 魔法发电机这一拍的可用出力（EU/t）：不烧矿，直接按拿到的灵气算
     let magicCapacity = ZERO;
 
@@ -1524,7 +1584,7 @@ export class GameCore {
         magicCapacity = magicCapacity.plus(
           this.generatorOutputRated(model)
             .times(visRatio)
-            .times(arcaneOutputBonus(plenty, true)),
+            .times(arcaneOutputBonus(plenty, true, arcaneBonusUp)),
         );
       }
     }
@@ -1602,9 +1662,14 @@ export class GameCore {
         : Decimal.max(0, Decimal.min(ONE, needEU.minus(settlement.shortfall).div(needEU)));
     report.euCharged = settlement.charged;
     report.euDischarged = settlement.discharged;
+    // 「降载缓冲」：产出侧的缺电缺口减半。停电（整厂停摆）与供电率读数都保持原样
+    const outputRatio =
+      !report.outage && this.hasRebirthEffect('softLoading')
+        ? ONE.minus(ONE.minus(ratioDec).times('0.5'))
+        : ratioDec;
 
     // 污染：边污染边被净化器压，产出按污染档位打折
-    this.samplePollutionLoad({ shed, outage: report.outage, ratio: ratioDec, visRatio, fuelLoad });
+    this.samplePollutionLoad({ shed, outage: report.outage, ratio: outputRatio, visRatio, fuelLoad });
     const pollutionDelta = this.pollutionDeltaPerSecond();
     if (this.pollutionEnabled) {
       this.pollution = clampPollution(this.pollution.plus(pollutionDelta.times(dtSeconds)));
@@ -1617,7 +1682,9 @@ export class GameCore {
     // 深渊宇宙里污染是燃料：把产出往上推（替代普通的 -20% / -40% 惩罚）。
     // 奥术宇宙不参与这一条 —— 那边的污染仍然按普通规则惩罚产出。
     const driveMul =
-      abyss && this.pollutionEnabled ? pollutionDriveFactor(this.pollution) : ONE;
+      abyss && this.pollutionEnabled
+        ? pollutionDriveFactor(this.pollution, this.pollutionNeutralShift())
+        : ONE;
     report.arcanePollutionFactor = driveMul;
     report.outputMultiplier = abyss ? driveMul : pollutionMul;
     this.maxPollution = Decimal.max(this.maxPollution, this.pollution);
@@ -1627,8 +1694,10 @@ export class GameCore {
     const factorOf = (model: MachineModel): Decimal => {
       // 被停机调度停掉的那几类：这一拍不产
       if (shed.has(model.category)) return ZERO;
-      const driven = arcane && model.visPowered ? visRatio : ratioDec;
-      const bonus = arcane ? arcaneOutputBonus(plenty, model.visPowered === true) : ONE;
+      const driven = arcane && model.visPowered ? visRatio : outputRatio;
+      const bonus = arcane
+        ? arcaneOutputBonus(plenty, model.visPowered === true, arcaneBonusUp)
+        : ONE;
       return driven.times(pollutionFactor).times(bonus);
     };
 
@@ -1681,7 +1750,7 @@ export class GameCore {
     // 5b) 研究：计算机产算力，研究站吃算力推进研究进度。
     //     算力是流量 —— 产出来当拍不用掉就浪费掉；缺电按供电比例少产。
     //     它不受污染影响：污染惩罚的是"产出物"（矿与币），不是基础设施。
-    const computeProduced = this.computerComputeRated().times(ratioDec);
+    const computeProduced = this.computerComputeRated().times(outputRatio);
     const computeSettlement = settleCompute(computeProduced, this.labComputeDemand());
     report.computeProduced = computeProduced;
     report.computeUsed = computeSettlement.used;
@@ -1716,7 +1785,10 @@ export class GameCore {
         if (healthy <= 0) continue;
         const broke = Math.min(
           healthy,
-          sampleFaults(expectedFaults(level, healthy, dtSeconds), this.random),
+          sampleFaults(
+            expectedFaults(level, healthy, dtSeconds) * this.faultFactor().toNumber(),
+            this.random,
+          ),
         );
         if (broke > 0) {
           this.faults[model.id] = this.faultyCountOf(model.id) + broke;
@@ -1751,7 +1823,7 @@ export class GameCore {
 
     // 6c) 硅基宇宙：AI 自动维护，故障当拍就修好。
     //     5% 概率这一拍没修（AI 误判），下一拍会补上。
-    if (silicon && this.siliconAutoRepair && this.random() >= SILICON_MISJUDGE_CHANCE) {
+    if (silicon && this.siliconAutoRepair && this.random() >= this.siliconMisjudgeChance()) {
       for (const model of active) {
         const faulty = this.faultyCountOf(model.id);
         if (faulty <= 0) continue;
@@ -1782,7 +1854,7 @@ export class GameCore {
 
     // 8b) 硅基宇宙：AI 按供电情况自动升降档。
     //     升档要求电力扛得住翻倍，降档只在明显缺电时动手，中间地带不动 —— 免得来回抖。
-    if (silicon && this.siliconAutoOverclock && this.random() >= SILICON_MISJUDGE_CHANCE) {
+    if (silicon && this.siliconAutoOverclock && this.random() >= this.siliconMisjudgeChance()) {
       // 用没经过停机调度修正的比值：调度把需求砍下去之后，缺电这件事仍然要反映到档位上
       const ratio = rawRatio;
       for (const model of active) {

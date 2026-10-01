@@ -41,8 +41,13 @@ export function nodeVisPerSecond(tier: number): Decimal {
 
 // 灵气充裕度（0~1，= 喂得上的灵气 ÷ 魔法机器需要的灵气）→ 产量倍率。
 // 没有魔法机器时不加成：奥术宇宙的收益得靠魔法机器自己挣。
-export function arcaneOutputBonus(plenty: DecimalInput, magic: boolean): Decimal {
-  const rate = dec(magic ? ARCANE_BONUS_MAGIC : ARCANE_BONUS_NORMAL);
+// bonusUp：永久加成「奥术·充裕上限」把上限再抬高几个百分点。
+export function arcaneOutputBonus(
+  plenty: DecimalInput,
+  magic: boolean,
+  bonusUp: DecimalInput = ZERO,
+): Decimal {
+  const rate = dec(magic ? ARCANE_BONUS_MAGIC : ARCANE_BONUS_NORMAL).plus(dec(bonusUp));
   const ratio = Decimal.min(ONE, Decimal.max(ZERO, dec(plenty)));
   return ONE.plus(rate.times(ratio));
 }

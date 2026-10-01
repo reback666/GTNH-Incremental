@@ -15,11 +15,15 @@ export const POLLUTION_DRIVE_NEUTRAL = '30';
 // 每偏离中性点 1 点，产出 ±1%
 export const POLLUTION_DRIVE_PER_POINT = '0.01';
 
-// 污染对全厂产出的倍率（只在深渊宇宙生效，替代普通宇宙那套 -20% / -40% 惩罚）
-export function pollutionDriveFactor(pollution: DecimalInput): Decimal {
+// 污染对全厂产出的倍率（只在深渊宇宙生效，替代普通宇宙那套 -20% / -40% 惩罚）。
+// neutralShift：永久加成「深渊·中性点」把中性点从 30% 往低移（传 5 → 25% 中性）。
+export function pollutionDriveFactor(
+  pollution: DecimalInput,
+  neutralShift: DecimalInput = ZERO,
+): Decimal {
   const factor = ONE.plus(
     dec(pollution)
-      .minus(POLLUTION_DRIVE_NEUTRAL)
+      .minus(dec(POLLUTION_DRIVE_NEUTRAL).minus(dec(neutralShift)))
       .times(POLLUTION_DRIVE_PER_POINT),
   );
   return Decimal.max(dec('0.01'), factor);
