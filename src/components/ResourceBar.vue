@@ -83,7 +83,12 @@ function togglePower(key: PowerKey) {
                       <span>{{ row.name }}</span>
                     </span>
                   </td>
-                  <td class="num-cell">×{{ row.count }}</td>
+                  <td class="num-cell">
+                    ×{{ row.count }}
+                    <span v-if="row.running !== undefined" class="muted small run-split">
+                      运行 {{ row.running }} · 停机 {{ row.stopped }}
+                    </span>
+                  </td>
                   <td class="num-cell">{{ row.amount }}</td>
                 </tr>
               </tbody>
@@ -142,7 +147,7 @@ function togglePower(key: PowerKey) {
           <dd>{{ snap.arcane.visProduced }}</dd>
         </div>
         <div class="stat">
-          <dt>魔法机器吃灵气</dt>
+          <dt>灵气消耗</dt>
           <dd>{{ snap.arcane.visUsed }}</dd>
         </div>
         <div class="stat">

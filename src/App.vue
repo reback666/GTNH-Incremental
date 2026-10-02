@@ -101,9 +101,25 @@ onMounted(() => {
           </section>
           <section class="panel">
             <h2>存档</h2>
+            <div class="row">
+              <div class="name">自动存档间隔</div>
+              <input
+                class="time-slider"
+                type="range"
+                min="5"
+                max="60"
+                step="1"
+                :value="store.snap.autosaveSeconds"
+                aria-label="自动存档间隔（秒）"
+                @change="
+                  store.setAutosaveSeconds(Number(($event.target as HTMLInputElement).value))
+                "
+              />
+              <span class="count">{{ store.snap.autosaveSeconds }} 秒</span>
+            </div>
             <p class="muted" style="margin: 0 0 8px">
-              自动每 10 秒存一次，关页面时也会存。累计矿石 {{ store.snap.totalOre }}，累计产币
-              {{ store.snap.totalCoins }}。
+              自动每 {{ store.snap.autosaveSeconds }} 秒存一次，关页面时也会存。累计矿石
+              {{ store.snap.totalOre }}，累计产币 {{ store.snap.totalCoins }}。
             </p>
             <div class="row">
               <div class="name muted">重开一局（会清掉存档）</div>

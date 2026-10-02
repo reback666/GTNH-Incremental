@@ -273,7 +273,7 @@ function canBuy(model: MachineModelRow): boolean {
                 <span
                   v-if="bar.model.visPowered"
                   class="badge magic"
-                  title="魔法机器：不耗电，改吃灵气；产出是同价电力机型的 2.5 倍"
+                  title="魔法机器：不耗电，改为灵气消耗；产出是同价电力机型的 2.5 倍"
                   >魔法</span
                 >
               </span>
@@ -304,6 +304,7 @@ function canBuy(model: MachineModelRow): boolean {
             </div>
 
             <div class="tier-line second">
+              <span v-if="!bar.model.overclockable" class="overclock-slot" aria-hidden="true" />
               <span v-if="bar.model.overclockable" class="overclock">
               <span
                 class="oc-label"
@@ -332,24 +333,29 @@ function canBuy(model: MachineModelRow): boolean {
                 +
               </button>
               </span>
+              <span v-if="bar.model.stoppable && bar.model.count > 0" class="run-state">
+                <button
+                  class="run-btn"
+                  :class="{ stopped: bar.model.stopped || bar.model.running === 0 }"
+                  :title="
+                    bar.model.stopped
+                      ? '这一机型全部停机：不产、不耗、不污染。点一下恢复运行'
+                      : bar.model.running === 0
+                        ? '这一机型当前全部停机（故障或被 AI 停机调度）。点一下设为手动停机，恢复供电后也不会自动运行'
+                        : '点一下让这一机型全部停机（不产、不耗、不污染）'
+                  "
+                  @click="store.toggleStopped(bar.model.id)"
+                >
+                  {{ bar.model.stopped || bar.model.running === 0 ? '已停机' : '运行中' }}
+                </button>
+                <span class="muted small run-split">
+                  运行 {{ bar.model.running }} · 停机 {{ bar.model.idle }}
+                </span>
+              </span>
               <span v-if="bar.model.faulty > 0" class="fault">
                 故障 {{ bar.model.faulty }} 台
                 <button title="修理这台机型的所有故障机器" @click="store.repair(bar.model.id)">
                   维护
-                </button>
-              </span>
-              <span v-if="bar.model.stoppable && bar.model.count > 0" class="run-state">
-                <button
-                  class="run-btn"
-                  :class="{ stopped: bar.model.stopped }"
-                  :title="
-                    bar.model.stopped
-                      ? '这一机型全部停机：不产、不耗、不污染。点一下恢复运行'
-                      : '点一下让这一机型全部停机（不产、不耗、不污染）'
-                  "
-                  @click="store.toggleStopped(bar.model.id)"
-                >
-                  {{ bar.model.stopped ? '已停机' : '运行中' }}
                 </button>
               </span>
               <span class="trade">

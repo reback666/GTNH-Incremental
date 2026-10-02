@@ -4,6 +4,13 @@ import { useGameStore } from '../game/store';
 import { VOLTAGE_TIERS } from '../numeric/voltage';
 import { dec } from '../numeric/decimal';
 import type { DevResourceTarget } from '../game/core';
+import type { DisplayMode } from '../numeric/format';
+import { SOUNDS, type SoundId } from '../game/audio';
+
+// 音效列表按「操作 / 事件」分区展示
+const SOUND_GROUPS: { title: string; items: typeof SOUNDS }[] = (['操作', '事件'] as const).map(
+  (group) => ({ title: group, items: SOUNDS.filter((sound) => sound.group === group) }),
+);
 
 // 设置：污染机制的整体开关、开发者模式（计划书第六章）。
 // 污染读数在第 1 页最下方，电网与转生在别的页面，这里只管设置项。
@@ -13,6 +20,34 @@ const snap = computed(() => store.snap);
 const devMode = computed(() => snap.value.devMode);
 // 开发者工具里「解锁到」下拉选中的等级
 const unlockTier = ref(1);
+
+// 计数方法的下拉菜单：按钮上显示当前选法，点开三选一，选完收起
+const modeMenuOpen = ref(false);
+const DISPLAY_MODE_OPTIONS: { id: DisplayMode; name: string }[] = [
+  { id: 'auto', name: '自动' },
+  { id: 'scientific', name: '科学计数法' },
+  { id: 'full', name: '完整数字' },
+];
+const modeName = computed(
+  () => DISPLAY_MODE_OPTIONS.find((option) => option.id === snap.value.displayMode)?.name ?? '自动',
+);
+function pickMode(id: DisplayMode): void {
+  modeMenuOpen.value = false;
+  if (snap.value.displayMode !== id) store.setDisplayMode(id);
+}
+
+// 硅基宇宙三项调度的悬停说明：介绍挂在各自那一行上（鼠标移上去显示），
+// 共同的误判率说明随行附在句尾
+const MISJUDGE_NOTE = '该调度有 5% 的误判率，误判在下一拍自动纠正。';
+const repairHint = `发生故障的机器在当拍内完成修复。${MISJUDGE_NOTE}`;
+const overclockHint =
+  `可用出力达到需求的 2 倍时升档，供电率低于 90% 时降档，` +
+  `其余情况维持原档以避免频繁切换。${MISJUDGE_NOTE}`;
+const sheddingHint = computed(
+  () =>
+    `供电不足时按 ${snap.value.silicon.sheddingOrder} 的顺序整组停机，` +
+    `其余机器保持满负荷运行，而非全厂统一降载。${MISJUDGE_NOTE}`,
+);
 
 // 开发者工具里「资源」那一行：目标用 'ores' / 'coins' / 'both' 或 'ore:3' / 'coin:3' 表示
 const resTarget = ref('both');
@@ -63,10 +98,92 @@ function cleanAmount(text: string): string | null {
       关掉之后污染不再增长、也不产生任何影响（默认开启）。污染值显示在第 1 页最下方。
     </p>
 
+    <!-- ── 数字显示（计划书第二十一章 #9） ──────────────────── -->
+    <h2 class="mt">数字显示</h2>
+    <div class="row">
+      <div class="name">计数方法</div>
+      <div class="mode-picker">
+        <button type="button" @click="modeMenuOpen = !modeMenuOpen">{{ modeName }} ▾</button>
+        <!-- 透明垫层：菜单开着时点菜单外面就收起 -->
+        <button
+          v-if="modeMenuOpen"
+          type="button"
+          class="mode-backdrop"
+          aria-label="关闭菜单"
+          @click="modeMenuOpen = false"
+        />
+        <div v-if="modeMenuOpen" class="mode-menu">
+          <button
+            v-for="option in DISPLAY_MODE_OPTIONS"
+            :key="option.id"
+            type="button"
+            :class="{ primary: snap.displayMode === option.id }"
+            @click="pickMode(option.id)"
+          >
+            {{ option.name }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 音效（计划书第二十一章 #10）：总开关 + 每种音效单独开关 ── -->
+    <h2 class="mt">音效</h2>
+    <div class="row">
+      <div class="name">音效总开关</div>
+      <button
+        :class="{ primary: snap.soundEnabled }"
+        @click="store.setSoundEnabled(true)"
+      >
+        开启
+      </button>
+      <button
+        :class="{ primary: !snap.soundEnabled }"
+        @click="store.setSoundEnabled(false)"
+      >
+        关闭
+      </button>
+    </div>
+    <p class="muted small" style="margin: 6px 0 0">
+      全部是现场合成的简短提示音。总开关关掉就全静音；点「每种音效单独开关」展开列表逐个调。
+    </p>
+    <button
+      type="button"
+      class="panel-toggle"
+      :aria-expanded="!store.soundListCollapsed"
+      @click="store.toggleSoundList()"
+    >
+      <span>{{ store.soundListCollapsed ? '▸' : '▾' }} 每种音效单独开关</span>
+      <span class="muted small">已单独关闭 {{ snap.soundMuted.length }} / {{ SOUNDS.length }} 种</span>
+    </button>
+    <template v-if="!store.soundListCollapsed">
+      <template v-for="group in SOUND_GROUPS" :key="group.title">
+        <p class="muted small" style="margin: 10px 0 0">{{ group.title }}</p>
+        <div v-for="item in group.items" :key="item.id" class="row">
+          <div class="name">
+            {{ item.name }}
+            <span class="muted small" style="display: block">{{ item.desc }}</span>
+          </div>
+          <button type="button" @click="store.previewSound(item.id as SoundId)">试听</button>
+          <button
+            :class="{ primary: !snap.soundMuted.includes(item.id) }"
+            @click="store.setSoundMuted(item.id as SoundId, false)"
+          >
+            开
+          </button>
+          <button
+            :class="{ primary: snap.soundMuted.includes(item.id) }"
+            @click="store.setSoundMuted(item.id as SoundId, true)"
+          >
+            关
+          </button>
+        </div>
+      </template>
+    </template>
+
     <!-- ── 硅基宇宙：三项 AI 开关（只有拥有这个宇宙才显示） ──── -->
     <template v-if="snap.silicon.active">
       <h2 class="mt">硅基宇宙 · AI 调度</h2>
-      <div class="row">
+      <div class="row" :title="repairHint">
         <div class="name">自动维护</div>
         <button
           :class="{ primary: snap.silicon.autoRepair }"
@@ -81,7 +198,7 @@ function cleanAmount(text: string): string | null {
           关闭
         </button>
       </div>
-      <div class="row">
+      <div class="row" :title="overclockHint">
         <div class="name">自动超频</div>
         <button
           :class="{ primary: snap.silicon.autoOverclock }"
@@ -96,7 +213,7 @@ function cleanAmount(text: string): string | null {
           关闭
         </button>
       </div>
-      <div class="row">
+      <div class="row" :title="sheddingHint">
         <div class="name">按优先级停机</div>
         <button
           :class="{ primary: snap.silicon.shedding }"
@@ -111,11 +228,6 @@ function cleanAmount(text: string): string | null {
           关闭
         </button>
       </div>
-      <p class="muted small" style="margin: 6px 0 0">
-        自动维护：故障机器当拍修好。自动超频：电力扛得住翻倍时才升档，明显缺电就降档。
-        按优先级停机：缺电时整组停掉优先级最低的机器（{{ snap.silicon.sheddingOrder }}），
-        而不是全厂一起减半。三件事都有 5% 误判率，做错了下一拍自己纠正。
-      </p>
       <p class="muted small" style="margin: 6px 0 0">{{ snap.silicon.note }}</p>
     </template>
 

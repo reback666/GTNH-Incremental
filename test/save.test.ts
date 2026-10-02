@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
 import { deserialize, serialize, type SaveData } from '../src/game/save';
 import { GameCore } from '../src/game/core';
+import { dec } from '../src/numeric/decimal';
+import { useGameStore } from '../src/game/store';
+import { getCore } from '../src/game/engine';
 
 // 读档清洗：存档是玩家机器上的数据，坏值不能进到模拟里，也不能因为一个字段坏了
 // 就把整份存档丢掉（见 src/game/save.ts 的 clean* 一组）。
@@ -96,5 +100,95 @@ describe('读档清洗', () => {
     expect(restored.mutationTimer).toBe(45);
     expect(restored.collapseTimer).toBe(600);
     expect(serialize(restored)).toEqual(serialize(core));
+  });
+});
+
+describe('数字显示模式（v21）', () => {
+  it('进存档并完整往返；旧档没有该字段、坏值都退回自动', () => {
+    const core = new GameCore();
+    core.displayMode = 'full';
+    expect(serialize(core).displayMode).toBe('full');
+    expect(deserialize(serialize(core)).displayMode).toBe('full');
+
+    expect(deserialize(emptySave()).displayMode).toBe('auto');
+    const messy = deserialize({ ...emptySave(), displayMode: 'no-such-mode' });
+    expect(messy.displayMode).toBe('auto');
+  });
+
+  it('设置页切换后，界面数字按新画法输出', () => {
+    setActivePinia(createPinia());
+    const store = useGameStore();
+    store.boot();
+    getCore().totalOre = dec('1.23e9');
+    store.refresh();
+    expect(store.snap.totalOre).toBe('1.23G');
+
+    store.setDisplayMode('full');
+    expect(store.snap.displayMode).toBe('full');
+    expect(store.snap.totalOre).toBe('1230000000');
+    expect(getCore().displayMode).toBe('full');
+  });
+});
+
+describe('自动存档间隔（v22）', () => {
+  it('进存档并完整往返；旧档缺字段退回 10 秒，越界值收进 5~60', () => {
+    const core = new GameCore();
+    core.autosaveSeconds = 30;
+    expect(serialize(core).autosaveSeconds).toBe(30);
+    expect(deserialize(serialize(core)).autosaveSeconds).toBe(30);
+
+    expect(deserialize(emptySave()).autosaveSeconds).toBe(10);
+    expect(deserialize({ ...emptySave(), autosaveSeconds: 999 }).autosaveSeconds).toBe(60);
+    expect(deserialize({ ...emptySave(), autosaveSeconds: 0 }).autosaveSeconds).toBe(5);
+  });
+
+  it('存档框滑条改间隔后，snapshot 与 core 同步，非法输入被拒', () => {
+    setActivePinia(createPinia());
+    const store = useGameStore();
+    store.boot();
+    // 换假时钟：动作里会按新间隔起定时器，测试里不能留真定时器
+    vi.useFakeTimers();
+    try {
+      expect(store.setAutosaveSeconds(30)).toBe(true);
+      expect(store.snap.autosaveSeconds).toBe(30);
+      expect(getCore().autosaveSeconds).toBe(30);
+
+      expect(store.setAutosaveSeconds(999)).toBe(true);
+      expect(store.snap.autosaveSeconds).toBe(60);
+
+      expect(store.setAutosaveSeconds(Number.NaN)).toBe(false);
+      expect(getCore().autosaveSeconds).toBe(60);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('音效开关（v23）', () => {
+  it('总开关与单独关闭列表完整往返；旧档缺字段退回默认，乱写的 id 丢掉', () => {
+    const core = new GameCore();
+    core.soundEnabled = false;
+    core.setSoundMuted('mine', true);
+    core.setSoundMuted('unlock', true);
+    expect(serialize(core).soundEnabled).toBe(false);
+    expect(serialize(core).soundMuted).toEqual(['mine', 'unlock']);
+
+    const restored = deserialize(serialize(core));
+    expect(restored.soundEnabled).toBe(false);
+    expect(restored.soundMuted).toEqual(['mine', 'unlock']);
+    // 再开一次总开关 / 取消单独关闭，都生效
+    restored.setSoundEnabled(true);
+    restored.setSoundMuted('mine', false);
+    expect(restored.soundEnabled).toBe(true);
+    expect(restored.soundMuted).toEqual(['unlock']);
+
+    const fresh = deserialize(emptySave());
+    expect(fresh.soundEnabled).toBe(true);
+    expect(fresh.soundMuted).toEqual([]);
+    const messy = deserialize({
+      ...emptySave(),
+      soundMuted: ['no-such-sound', 42, 'sell'],
+    } as unknown as SaveData);
+    expect(messy.soundMuted).toEqual(['sell']);
   });
 });

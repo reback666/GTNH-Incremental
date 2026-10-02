@@ -1,8 +1,9 @@
+import { oreMaterial } from './vein-materials';
 import { SIM_STEP_MS } from './constants';
 import { MACHINE_MODELS } from './models';
 import { formatLogEntry, logEntries, levelName } from './log';
 import { type GameCore } from './core';
-import { coinName, oreName } from '../numeric/credit';
+import { coinName } from '../numeric/credit';
 import { ZERO } from '../numeric/decimal';
 import { formatNumber } from '../numeric/format';
 import { gridMode } from '../numeric/grid';
@@ -93,7 +94,7 @@ export function stateSnapshot(core: GameCore): string[] {
   }
 
   const ores = core.ores
-    .map((amount, index) => ({ name: oreName(index), amount }))
+    .map((amount, index) => ({ name: oreMaterial(index), amount }))
     .filter((item) => item.amount.gt(0));
   lines.push(
     ores.length === 0

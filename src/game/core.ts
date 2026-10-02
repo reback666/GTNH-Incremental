@@ -5,6 +5,8 @@ import { machineEnergy, machineOutput } from '../numeric/output';
 import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../numeric/generator';
 import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
 import { coinValueInTier1, convertCoins, paymentTier } from '../numeric/credit';
+import type { DisplayMode } from '../numeric/format';
+import type { SoundId } from './audio';
 import { type UniverseId, universeById } from './universes';
 import {
   arcaneOutputBonus,
@@ -189,6 +191,9 @@ export interface TickReport {
   outage: boolean;
   mutations: number;
   collapses: number;
+  // 这一拍新达成的成就数（音效用），以及黑市窃取发生的次数
+  achievementsGained: number;
+  siphons: number;
   // 本拍的存电结算：充进去多少、放出来多少
   euCharged: Decimal;
   euDischarged: Decimal;
@@ -234,6 +239,13 @@ export class GameCore {
   riftOffered = false;
   // 开发者模式：设置页里的测试开关，开着时界面会露出测试用的快捷操作
   devMode = false;
+  // 数字显示模式：纯界面偏好（设置页切换，计划书第二十一章 #9），跨周目保留
+  displayMode: DisplayMode = 'auto';
+  // 自动存档间隔（秒）：存档框的滑条设置，随存档走
+  autosaveSeconds = C.AUTOSAVE_SECONDS_DEFAULT;
+  // 音效：总开关与被单独关掉的音效 id（见 game/audio.ts 的 SOUNDS）
+  soundEnabled = true;
+  soundMuted: SoundId[] = [];
   // 已经拥有的平行宇宙（转生时选一个，选过的永久叠加）
   universes: UniverseId[] = [];
   // 已经选好、等下一次转生带走的宇宙（只存选择本身，转生时才生效）
@@ -668,6 +680,31 @@ export class GameCore {
 
   setDevMode(enabled: boolean): void {
     this.devMode = enabled;
+  }
+
+  setDisplayMode(mode: DisplayMode): void {
+    this.displayMode = mode;
+  }
+
+  setSoundEnabled(enabled: boolean): void {
+    this.soundEnabled = enabled;
+  }
+
+  // 单独开关某一种音效；返回该音效现在的状态
+  setSoundMuted(id: SoundId, muted: boolean): boolean {
+    const index = this.soundMuted.indexOf(id);
+    if (muted && index === -1) this.soundMuted.push(id);
+    else if (!muted && index >= 0) this.soundMuted.splice(index, 1);
+    return this.soundMuted.includes(id);
+  }
+
+  setAutosaveSeconds(seconds: number): boolean {
+    if (!Number.isFinite(seconds)) return false;
+    this.autosaveSeconds = Math.min(
+      C.AUTOSAVE_SECONDS_MAX,
+      Math.max(C.AUTOSAVE_SECONDS_MIN, Math.floor(seconds)),
+    );
+    return true;
   }
 
   // 直接把电压推到某一级：开放矿脉、把该级及以前的机型都标记成已研究
@@ -1333,7 +1370,7 @@ export class GameCore {
   }
 
   // 黑市电网：随机薅走一种 GT 币的 1%
-  private siphonCoins(): void {
+  private siphonCoins(report: TickReport): void {
     const held = this.coins
       .map((amount, index) => ({ amount, index }))
       .filter((item) => item.amount.gt(0));
@@ -1341,6 +1378,7 @@ export class GameCore {
     const target = held[Math.floor(this.random() * held.length)]!;
     this.coins[target.index] = target.amount.times(dec('1').minus(SIPHON_RATIO));
     this.siphoned = this.siphoned.plus(target.amount.times(SIPHON_RATIO));
+    report.siphons += 1;
   }
 
   // 在给定电压等级上能造的机型。
@@ -1946,7 +1984,7 @@ export class GameCore {
       this.siphonTimer += dtSeconds;
       if (this.siphonTimer >= SIPHON_CHECK_SECONDS) {
         this.siphonTimer -= SIPHON_CHECK_SECONDS;
-        this.siphonCoins();
+        this.siphonCoins(report);
       }
     }
 
@@ -2004,7 +2042,9 @@ export class GameCore {
       }
     }
     this.lastReport = report;
+    const achievedBefore = this.achievedCount();
     this.checkAchievements();
+    report.achievementsGained = this.achievedCount() - achievedBefore;
     return report;
   }
 }
@@ -2028,6 +2068,8 @@ function emptyReport(): TickReport {
     essentiaUsed: ZERO,
     arcanePollutionFactor: ONE,
     challengeFailed: null,
+    achievementsGained: 0,
+    siphons: 0,
     corrosionPerSecond: ZERO,
     suppression: ZERO,
     corrosionFaults: 0,

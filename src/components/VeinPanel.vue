@@ -182,7 +182,7 @@ function mine(event: MouseEvent) {
         </span>
       </span>
       <span class="vein-label">
-        {{ store.snap.currentVein.name }} · {{ info?.material }} —— 点击挖矿
+        {{ store.snap.currentVein.name }}矿脉 —— 点击挖矿
       </span>
 
       <span

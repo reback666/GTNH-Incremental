@@ -49,7 +49,15 @@ export const SIM_STEP_MS = 1000;
 // v18：加了随机事件计时器（波动电网断电 / 黑市窃取 / 变异 / 工厂崩溃）
 // v19：加了挑战时间线（挂着的挑战、违规与热身标记、首通记录、待挂的选择）
 // v20：加了转生履历（最近 50 条）与「普朗克锚」终局装置
-export const SAVE_VERSION = 20;
+// v21：加了数字显示模式（设置页的界面偏好：自动 / 科学计数法 / 完整数字）
+// v22：加了自动存档间隔（存档框里的滑条，秒）
+// v23：加了音效开关（设置页：总开关 + 每种音效单独关）
+export const SAVE_VERSION = 23;
+
+// 自动存档间隔（秒）：存档框滑条的范围，默认沿用写死的 10 秒
+export const AUTOSAVE_SECONDS_DEFAULT = 10;
+export const AUTOSAVE_SECONDS_MIN = 5;
+export const AUTOSAVE_SECONDS_MAX = 60;
 export const SAVE_KEY = 'gtnh-incremental-save';
 // 上次写档的墙上时间单独存一个键：存档本体保持纯状态（还能逐字节比较），
 // 离线收益按这个时间戳算（见 save.ts 的 secondsSinceLastSave）

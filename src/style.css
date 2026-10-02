@@ -349,6 +349,57 @@ h2 .small {
   font-size: 13px;
 }
 
+/* 运行 / 停机台数的小字（耗电明细与机器面板机型行共用） */
+.run-split {
+  display: inline-block;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+/* ── 滑条（存档框的自动存档间隔等） ─────────────────────── */
+.time-slider {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--accent);
+}
+
+/* ── 设置页「计数方法」下拉 ─────────────────────────────── */
+/* 按钮显示当前选法，点开三选一；透明垫层负责「点菜单外收起」 */
+.mode-picker {
+  position: relative;
+}
+
+.mode-picker .mode-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 14;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+
+.mode-picker .mode-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 120px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
 .muted {
   color: var(--muted);
 }
@@ -611,11 +662,19 @@ h2 .small {
 
 /* 机型行里的超频档位与故障维护 */
 .overclock {
+  /* 固定宽：后面运行按钮的缩进按它算（见 .run-state） */
+  flex: 0 0 96px;
   display: inline-flex;
   align-items: center;
   gap: 3px;
   font-size: 12px;
   color: var(--muted);
+}
+
+/* 不能超频的机型（发电机 / 净化器 / 研究等）占住同样的位置，
+   让运行按钮在所有机型上起点一致 */
+.overclock-slot {
+  flex: 0 0 96px;
 }
 
 .overclock .oc-label {
@@ -1100,6 +1159,7 @@ h2 .small {
   padding: 0 4px;
   font-size: 13px;
 }
+
 
 /* 树画布：方形框，内容 960×960，按住可拖动查看；打开时停在中心的锚点上 */
 .rebirth-viewport {
@@ -1818,7 +1878,10 @@ h2 .small {
 .run-state {
   display: inline-flex;
   align-items: center;
-  margin-left: auto;
+  gap: 6px;
+  /* 缩进到与第一行机器图标的左缘对齐：46px 行缩进 + 超频块 96px + 60px 余量，
+     再扣掉行内 6px 的间距余量自己不吃（54 = 60 - 6） */
+  margin-left: 54px;
 }
 
 .run-btn {
@@ -1894,7 +1957,8 @@ h2 .small {
 
 /* 机型名：同一等级下会有好几行，名字占一格固定宽度，后面再接图标与按钮 */
 .model-name {
-  flex: 1 1 132px;
+  /* 固定宽：第二行的运行按钮要按它的右缘缩进对齐机器图标的左缘（见 .run-state） */
+  flex: 0 0 150px;
   min-width: 0;
   display: inline-flex;
   align-items: center;
@@ -1919,7 +1983,11 @@ h2 .small {
 .model-tip {
   position: fixed;
   z-index: 100;
-  width: 178px;
+  /* 宽度跟着内容走：数值长（如「卖回一台 327（卖出后单价的一半）」）时整行撑开，
+     不再把一句话折成两行；320px 封顶，再长的内容才换行 */
+  width: max-content;
+  min-width: 178px;
+  max-width: min(320px, 90vw);
   padding: 8px 10px;
   background: #0f141a;
   border: 1px solid var(--accent);
