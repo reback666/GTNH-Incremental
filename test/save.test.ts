@@ -163,3 +163,32 @@ describe('自动存档间隔（v22）', () => {
     }
   });
 });
+
+describe('音效开关（v23）', () => {
+  it('总开关与单独关闭列表完整往返；旧档缺字段退回默认，乱写的 id 丢掉', () => {
+    const core = new GameCore();
+    core.soundEnabled = false;
+    core.setSoundMuted('mine', true);
+    core.setSoundMuted('unlock', true);
+    expect(serialize(core).soundEnabled).toBe(false);
+    expect(serialize(core).soundMuted).toEqual(['mine', 'unlock']);
+
+    const restored = deserialize(serialize(core));
+    expect(restored.soundEnabled).toBe(false);
+    expect(restored.soundMuted).toEqual(['mine', 'unlock']);
+    // 再开一次总开关 / 取消单独关闭，都生效
+    restored.setSoundEnabled(true);
+    restored.setSoundMuted('mine', false);
+    expect(restored.soundEnabled).toBe(true);
+    expect(restored.soundMuted).toEqual(['unlock']);
+
+    const fresh = deserialize(emptySave());
+    expect(fresh.soundEnabled).toBe(true);
+    expect(fresh.soundMuted).toEqual([]);
+    const messy = deserialize({
+      ...emptySave(),
+      soundMuted: ['no-such-sound', 42, 'sell'],
+    } as unknown as SaveData);
+    expect(messy.soundMuted).toEqual(['sell']);
+  });
+});

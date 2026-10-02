@@ -12,6 +12,7 @@ import { ACHIEVEMENTS } from './achievements';
 import { REBIRTH_NODES } from './rebirth';
 import { UNIVERSES } from './universes';
 import { isChallengeId, type ChallengeId } from './challenges';
+import { isSoundId } from './audio';
 import {
   AUTOSAVE_SECONDS_DEFAULT,
   AUTOSAVE_SECONDS_MAX,
@@ -89,6 +90,9 @@ export interface SaveData {
   displayMode?: string;
   // v22：自动存档间隔（秒，存档框的滑条）
   autosaveSeconds?: number;
+  // v23：音效开关（总开关 + 被单独关掉的音效 id）
+  soundEnabled?: boolean;
+  soundMuted?: string[];
   // v13：镐子的三条升级线（金刚杵等级、连锁采集等级、连锁爆破已用机会数）
   pickaxeVajra?: number;
   pickaxeCollect?: number;
@@ -164,6 +168,8 @@ export function serialize(core: GameCore): SaveData {
     planckAnchor: core.planckAnchor,
     displayMode: core.displayMode,
     autosaveSeconds: core.autosaveSeconds,
+    soundEnabled: core.soundEnabled,
+    soundMuted: [...core.soundMuted],
     pickaxeVajra: core.pickaxeVajra,
     pickaxeCollect: core.pickaxeCollect,
     pickaxeBlast: core.pickaxeBlast,
@@ -291,6 +297,8 @@ export function deserialize(data: SaveData): GameCore {
   core.planckAnchor = booleanOr(data.planckAnchor, false);
   core.displayMode = cleanDisplayMode(data.displayMode);
   core.autosaveSeconds = cleanAutosaveSeconds(data.autosaveSeconds);
+  core.soundEnabled = booleanOr(data.soundEnabled, true);
+  core.soundMuted = cleanSoundMuted(data.soundMuted);
   core.pickaxeVajra = clampInt(data.pickaxeVajra, 0, vajraMaxLevel(), 0);
   core.pickaxeCollect = clampInt(data.pickaxeCollect, 0, collectChances(MAX_TIER), 0);
   core.pickaxeBlast = clampInt(data.pickaxeBlast, 0, blastChances(MAX_TIER), 0);
@@ -349,6 +357,16 @@ const DISPLAY_MODES = new Set<string>(['auto', 'scientific', 'full']);
 
 function cleanDisplayMode(value: unknown): DisplayMode {
   return typeof value === 'string' && DISPLAY_MODES.has(value) ? (value as DisplayMode) : 'auto';
+}
+
+// 被单独关掉的音效只认音效表里有的 id，重复与乱写直接丢
+function cleanSoundMuted(value: unknown): GameCore['soundMuted'] {
+  const ids = new Set<GameCore['soundMuted'][number]>();
+  if (!Array.isArray(value)) return [];
+  for (const item of value) {
+    if (isSoundId(item)) ids.add(item);
+  }
+  return [...ids];
 }
 
 // 存档间隔收在滑条的合法范围里，丢了或乱写退回默认的 10 秒

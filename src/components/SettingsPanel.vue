@@ -5,6 +5,12 @@ import { VOLTAGE_TIERS } from '../numeric/voltage';
 import { dec } from '../numeric/decimal';
 import type { DevResourceTarget } from '../game/core';
 import type { DisplayMode } from '../numeric/format';
+import { SOUNDS, type SoundId } from '../game/audio';
+
+// 音效列表按「操作 / 事件」分区展示
+const SOUND_GROUPS: { title: string; items: typeof SOUNDS }[] = (['操作', '事件'] as const).map(
+  (group) => ({ title: group, items: SOUNDS.filter((sound) => sound.group === group) }),
+);
 
 // 设置：污染机制的整体开关、开发者模式（计划书第六章）。
 // 污染读数在第 1 页最下方，电网与转生在别的页面，这里只管设置项。
@@ -119,6 +125,60 @@ function cleanAmount(text: string): string | null {
         </div>
       </div>
     </div>
+
+    <!-- ── 音效（计划书第二十一章 #10）：总开关 + 每种音效单独开关 ── -->
+    <h2 class="mt">音效</h2>
+    <div class="row">
+      <div class="name">音效总开关</div>
+      <button
+        :class="{ primary: snap.soundEnabled }"
+        @click="store.setSoundEnabled(true)"
+      >
+        开启
+      </button>
+      <button
+        :class="{ primary: !snap.soundEnabled }"
+        @click="store.setSoundEnabled(false)"
+      >
+        关闭
+      </button>
+    </div>
+    <p class="muted small" style="margin: 6px 0 0">
+      全部是现场合成的简短提示音。总开关关掉就全静音；点「每种音效单独开关」展开列表逐个调。
+    </p>
+    <button
+      type="button"
+      class="panel-toggle"
+      :aria-expanded="!store.soundListCollapsed"
+      @click="store.toggleSoundList()"
+    >
+      <span>{{ store.soundListCollapsed ? '▸' : '▾' }} 每种音效单独开关</span>
+      <span class="muted small">已单独关闭 {{ snap.soundMuted.length }} / {{ SOUNDS.length }} 种</span>
+    </button>
+    <template v-if="!store.soundListCollapsed">
+      <template v-for="group in SOUND_GROUPS" :key="group.title">
+        <p class="muted small" style="margin: 10px 0 0">{{ group.title }}</p>
+        <div v-for="item in group.items" :key="item.id" class="row">
+          <div class="name">
+            {{ item.name }}
+            <span class="muted small" style="display: block">{{ item.desc }}</span>
+          </div>
+          <button type="button" @click="store.previewSound(item.id as SoundId)">试听</button>
+          <button
+            :class="{ primary: !snap.soundMuted.includes(item.id) }"
+            @click="store.setSoundMuted(item.id as SoundId, false)"
+          >
+            开
+          </button>
+          <button
+            :class="{ primary: snap.soundMuted.includes(item.id) }"
+            @click="store.setSoundMuted(item.id as SoundId, true)"
+          >
+            关
+          </button>
+        </div>
+      </template>
+    </template>
 
     <!-- ── 硅基宇宙：三项 AI 开关（只有拥有这个宇宙才显示） ──── -->
     <template v-if="snap.silicon.active">

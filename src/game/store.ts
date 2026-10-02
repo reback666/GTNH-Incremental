@@ -65,6 +65,7 @@ import {
   type MachineModel,
 } from './models';
 import { getCore, resetCore, setCore } from './engine';
+import { playSound, type SoundId } from './audio';
 import * as C from './constants';
 import { clearStorage, loadFromStorage, saveToStorage, secondsSinceLastSave } from './save';
 import { appVersion, buildStamp, stateSnapshot } from './diagnostics';
@@ -443,6 +444,9 @@ export interface Snapshot {
   devMode: boolean;
   // 数字显示模式（设置页）：界面上的大数字用自动 / 科学计数法 / 完整数字哪种画法
   displayMode: DisplayMode;
+  // 音效设置（设置页）：总开关与被单独关掉的音效 id
+  soundEnabled: boolean;
+  soundMuted: SoundId[];
   nextTier: number | null;
   unlockCost: string;
   canUnlock: boolean;
@@ -460,6 +464,12 @@ const CRASH_STREAK_LIMIT = 5;
 
 // 自动存档定时器句柄：只有 restartAutosave 碰它
 let autosaveTimer: ReturnType<typeof setInterval> | null = null;
+
+// 按当前存档的音效设置播一声（总开关 + 单独关掉的都在 core 上）
+function sound(id: SoundId): void {
+  const core = getCore();
+  playSound(id, core.soundEnabled, core.soundMuted);
+}
 
 // 离线收益：最多补算这么久，按这么久一片分次跑
 const OFFLINE_CAP_SECONDS = 24 * 60 * 60;
@@ -527,6 +537,8 @@ export const useGameStore = defineStore('game', {
     historyCollapsed: true,
     // 科技页的电网列表，同样默认收起（摘要显示使用中的电网）
     gridPanelCollapsed: true,
+    // 设置页的单效开关列表，默认收起（总开关开着就够了，细调时才展开）
+    soundListCollapsed: true,
     // 模拟连续出错时暂停（纯运行时状态，不进存档；刷新页面即可恢复）
     simulationPaused: false,
     crashStreak: 0,
@@ -571,6 +583,9 @@ export const useGameStore = defineStore('game', {
     },
     toggleGridPanel(): void {
       this.gridPanelCollapsed = !this.gridPanelCollapsed;
+    },
+    toggleSoundList(): void {
+      this.soundListCollapsed = !this.soundListCollapsed;
     },
     boot() {
       const loaded = loadFromStorage();
@@ -642,11 +657,13 @@ export const useGameStore = defineStore('game', {
     },
     manualMine() {
       getCore().manualMine();
+      sound('mine');
       this.refresh();
     },
     upgradePickaxe(line: PickaxeLine) {
       const core = getCore();
       if (!core.upgradePickaxe(line)) return;
+      sound('buy');
       this.refresh();
       this.save();
     },
@@ -659,6 +676,7 @@ export const useGameStore = defineStore('game', {
         return 0;
       }
       const bought = core.buy(model, count, payWith);
+      if (bought > 0) sound('buy');
       this.refresh();
       this.save();
       return bought;
@@ -670,6 +688,7 @@ export const useGameStore = defineStore('game', {
       if (!model) return 0;
       const sold = core.sell(model, count, payWith);
       if (sold > 0) {
+        sound('sell');
         this.refresh();
         this.save();
       }
@@ -686,6 +705,7 @@ export const useGameStore = defineStore('game', {
     // 超频档位：0-3。档位越高越快、越费电，也越容易坏
     setOverclock(modelId: string, level: number): boolean {
       const ok = getCore().setOverclock(modelId, level);
+      if (ok) sound('toggle');
       this.refresh();
       this.save();
       return ok;
@@ -701,6 +721,7 @@ export const useGameStore = defineStore('game', {
     toggleStopped(modelId: string): boolean {
       const core = getCore();
       const ok = core.toggleStopped(modelId);
+      if (ok) sound('toggle');
       if (ok) {
         const name = findModel(modelId)?.name ?? modelId;
         logEvent(
@@ -764,6 +785,22 @@ export const useGameStore = defineStore('game', {
       getCore().setDisplayMode(mode);
       this.refresh();
       this.save();
+    },
+    // 音效：总开关与每种音效的单独开关（纯听感设置，随存档走）
+    setSoundEnabled(enabled: boolean): void {
+      getCore().setSoundEnabled(enabled);
+      this.refresh();
+      this.save();
+    },
+    setSoundMuted(id: SoundId, muted: boolean): boolean {
+      const nowMuted = getCore().setSoundMuted(id, muted);
+      this.refresh();
+      this.save();
+      return nowMuted;
+    },
+    // 试听：无视单独开关直接播一声（列表里点「试听」用），总开关关着时不响
+    previewSound(id: SoundId): void {
+      playSound(id, getCore().soundEnabled, []);
     },
     // 自动存档间隔（秒）：存档框的滑条，改完立刻按新间隔重启定时器
     setAutosaveSeconds(seconds: number): boolean {
@@ -841,6 +878,8 @@ export const useGameStore = defineStore('game', {
           'rebirth.done',
           `转生完成（${route === 'rift' ? '时空裂缝' : '打到 MAX'}），获得 ${gained.toString()} 条时空线缆${note}`,
         );
+        sound('rebirth');
+        sound(passed ? 'challengePass' : 'challengeFail');
       }
       this.refresh();
       this.save();
@@ -853,6 +892,7 @@ export const useGameStore = defineStore('game', {
     },
     buyPlanckAnchor(): void {
       getCore().buyPlanckAnchor();
+      sound('planck');
       this.refresh();
       this.save();
     },
@@ -863,6 +903,7 @@ export const useGameStore = defineStore('game', {
     },
     buyRebirthNode(id: string): boolean {
       const ok = getCore().buyRebirthNode(id);
+      if (ok) sound('buy');
       this.refresh();
       this.save();
       return ok;
@@ -938,6 +979,7 @@ export const useGameStore = defineStore('game', {
       if (core.maxTier !== phase.maxTier) {
         phase.maxTier = core.maxTier;
         logEvent('info', 'voltage.unlock', `电压上限变为 ${VOLTAGE_TIERS[core.maxTier - 1]}`);
+        sound('unlock');
       }
       if (report.researchUnlocked !== null) {
         const done = MACHINE_MODELS.find((item) => item.id === report.researchUnlocked);
@@ -946,7 +988,9 @@ export const useGameStore = defineStore('game', {
           'research.done',
           `研究完成：${done?.name ?? report.researchUnlocked} 可以建造了`,
         );
+        sound('achievement');
       }
+      if (report.achievementsGained > 0) sound('achievement');
       const band = core.pollutionEnabled ? pollutionBand(core.pollution) : 'clean';
       if (band !== phase.band) {
         logEvent(
@@ -955,6 +999,7 @@ export const useGameStore = defineStore('game', {
           `污染进入${POLLUTION_BAND_NAME[band]}（${formatNumber(core.pollution)}%）`,
         );
         phase.band = band;
+        if (band !== 'clean') sound('pollution');
       }
       const short = report.powerRatio < 1;
       if (short !== phase.powerShort) {
@@ -964,15 +1009,22 @@ export const useGameStore = defineStore('game', {
           short ? '电力不足，产出开始降载' : '供电恢复正常',
           `供电比 ${(report.powerRatio * 100).toFixed(0)}%`,
         );
+        sound(short ? 'outage' : 'restore');
         phase.powerShort = short;
       }
+      if (report.mutations > 0) sound('mutation');
+      if (report.siphons > 0) sound('steal');
       if (report.collapses > 0) {
         logEvent('warn', 'pollution.collapse', '工厂崩溃：污染摧毁了一台机器');
+        sound('collapse');
       }
       const rift = core.riftPending();
       if (rift !== phase.riftPending) {
         phase.riftPending = rift;
-        if (rift) logEvent('info', 'rebirth.rift', '时空裂缝出现（本周目第一次到 LuV）');
+        if (rift) {
+          logEvent('info', 'rebirth.rift', '时空裂缝出现（本周目第一次到 LuV）');
+          sound('rebirth');
+        }
       }
       // 挑战违规只在失效那一拍上报，记一条日志让玩家知道这局拿不到加成了
       if (report.challengeFailed && report.challengeFailed !== phase.challengeFailed) {
@@ -1059,6 +1111,8 @@ function buildSnapshot(core: GameCore): Snapshot {
     stats: statRows(core),
     devMode: core.devMode,
     displayMode: core.displayMode,
+    soundEnabled: core.soundEnabled,
+    soundMuted: [...core.soundMuted],
     nextTier,
     unlockCost: nextTier === null ? '—' : formatNumber(core.unlockCostOf(nextTier)),
     canUnlock: nextTier !== null && core.canUnlock(nextTier),
