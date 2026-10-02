@@ -294,6 +294,9 @@ GTNH（GregTech: New Horizons）主题的增量 / 放置游戏：从超低压 UL
 - 设置页「音效」区：总开关 + 折叠的单独开关列表（按操作/事件分区，每行「试听」按钮），
   折叠状态是纯界面状态；设置随存档 v23（`soundEnabled` / `soundMuted`，坏 id 清洗）
 - 粒子特效（成就点亮动画、电压解锁闪光、污染警示等 8 项）已列候选，等用户听完音效拍板
+- 音效试听文件：`docs/音效预览/*.wav`（16 个，不入库）——`audio.ts` 的 `renderSound()`
+  用 OfflineAudioContext 跑与游戏内同一份配方离线渲染，经 esbuild 打包成 IIFE
+  在浏览器里导出 wav；重新生成：esbuild 打包 audio.ts → 临时页面调 renderSound
 - 预览图 `docs/sound-settings.png`
 
 **文案与悬停框（2026-10-02）**：

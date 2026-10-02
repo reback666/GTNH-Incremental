@@ -10,3 +10,6 @@ __pycache__/
 # 其它 CLI 工具留下的本地文件（计划缓存与它自己的忽略表）
 .zcode/
 .zcodeignore
+
+# 音效试听文件：由 audio.ts 的 renderSound() 离线渲染生成（产物不入库，重跑即得）
+docs/音效预览/

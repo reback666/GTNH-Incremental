@@ -246,3 +246,23 @@ export function playSound(id: SoundId, enabled: boolean, muted: readonly string[
     // 某个音效合成出错不影响游戏
   }
 }
+
+// ── 离线渲染：把某个音效渲染成 AudioBuffer（导出 wav 试听用） ──────────────
+// 与 playSound 走同一份配方，保证导出的文件和游戏里听到的完全一致。
+export async function renderSound(id: SoundId, seconds = 2): Promise<AudioBuffer | null> {
+  if (typeof OfflineAudioContext === 'undefined') return null;
+  const sampleRate = 44100;
+  const offline = new OfflineAudioContext(1, Math.floor(sampleRate * seconds), sampleRate);
+  // 挂上与游戏内相同的主音量；配方是同步接线的，接完立刻恢复，不影响实时播放
+  const gain = offline.createGain();
+  gain.gain.value = MASTER_VOLUME;
+  gain.connect(offline.destination);
+  const prevMaster = master;
+  master = gain;
+  try {
+    RECIPES[id](offline);
+  } finally {
+    master = prevMaster;
+  }
+  return offline.startRendering();
+}
