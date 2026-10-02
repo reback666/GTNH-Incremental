@@ -43,7 +43,12 @@ function onKeydown(event: KeyboardEvent) {
   const target = event.target as HTMLElement | null;
   if (target && /^(input|select|textarea)$/i.test(target.tagName)) return;
   const index = Number(event.key);
-  if (index >= 1 && index <= PAGES.length) goTo(index);
+  if (index >= 1 && index <= PAGES.length) {
+    goTo(index);
+    // 焦点还留在旧页码按钮上的话，键盘操作会让它一直挂着聚焦描边（绿框），
+    // 换完页就把它清掉
+    (document.activeElement as HTMLElement | null)?.blur?.();
+  }
 }
 
 onMounted(() => {
