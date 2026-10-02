@@ -23,9 +23,6 @@ export const COIN_NAMES = [
   '普朗克币',
 ] as const;
 
-// 矿石名称。计划书只定义了等级，没有命名。
-export const ORE_NAMES = Array.from({ length: 14 }, (_, index) => `T${index} 矿石`);
-
 // 币值：1 枚 tier 级币 = 4^(tier-1) 枚 tier-1 币。
 export function coinValueInTier1(tier: number): Decimal {
   assertTier(tier);
@@ -51,11 +48,6 @@ export function paymentTier(machineTier: number): number {
 export function coinName(tier: number): string {
   assertTier(tier, 'tier');
   return COIN_NAMES[tier - 1] ?? `T${tier - 1} 币`;
-}
-
-// 该等级矿石的显示名。
-export function oreName(oreTier: number): string {
-  return ORE_NAMES[oreTier] ?? `T${oreTier} 矿石`;
 }
 
 export { ONE };

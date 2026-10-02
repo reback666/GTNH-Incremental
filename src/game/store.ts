@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { Decimal, ZERO, dec, decInt } from '../numeric/decimal';
 import { MAX_TIER, VOLTAGE_TIERS } from '../numeric/voltage';
-import { coinName, oreName } from '../numeric/credit';
+import { coinName } from '../numeric/credit';
 import { SILICON_KEEP_PRIORITY } from '../numeric/silicon';
 import { formatNumber, setDefaultDisplayMode, type DisplayMode } from '../numeric/format';
 import { formatDuration } from '../numeric/time';
@@ -25,7 +25,7 @@ import {
 import { GRID_MODES, gridEnergyMultiplier, gridMode, type GridMode } from '../numeric/grid';
 import { ACHIEVEMENTS, type AchievementIcon } from './achievements';
 import { UNIVERSES, universeById } from './universes';
-import { VEIN_MATERIALS } from './vein-materials';
+import { oreMaterial } from './vein-materials';
 import { essentiaFromPurify } from '../numeric/arcane';
 import {
   arcaneOutputBonus,
@@ -190,13 +190,6 @@ export interface MachineColumn {
   stats: { label: string; value: string }[];
   // 这一类机器当前吃到的增益 / 减益（悬停标签时显示）
   modifiers: ModifierRow[];
-}
-
-// 资源条与机器面板上的矿石名：带上矿脉材料名，和矿脉面板上写的是同一个词
-// （材料名只有 VEIN_MATERIALS 这一个来源）。
-function oreLabel(oreTier: number): string {
-  const material = VEIN_MATERIALS[oreTier]?.material;
-  return material === undefined ? oreName(oreTier) : `${oreName(oreTier)}（${material}）`;
 }
 
 // 镐子（手动开采）的一条升级线
@@ -1009,7 +1002,7 @@ function buildSnapshot(core: GameCore): Snapshot {
   return {
     ores: core.ores.slice(0, core.maxTier).map((amount, index) => ({
       tier: index,
-      name: oreLabel(index),
+      name: oreMaterial(index),
       amount: formatNumber(amount),
       value: amount.toString(),
       detail: [
@@ -1074,9 +1067,9 @@ function pickaxeStats(core: GameCore): PickaxeStats {
   return {
     outputPerClick: formatNumber(core.pickaxeOutput()),
     veinTier,
-    veinName: oreName(veinTier),
+    veinName: oreMaterial(veinTier),
     maxVeinTier,
-    maxVeinName: oreName(maxVeinTier),
+    maxVeinName: oreMaterial(maxVeinTier),
     lines,
     modifiers: modifierRows(core, 'pickaxe'),
   };
@@ -1120,7 +1113,7 @@ function pickaxeLineText(
       cap,
       iconTier,
       effectNow,
-      effectNext: hasChance ? `可挖 ${oreName(level + 1)} 矿脉` : '',
+      effectNext: hasChance ? `可挖 ${oreMaterial(level + 1)} 矿脉` : '',
       canUpgrade,
       locked,
       cost,
@@ -1160,7 +1153,7 @@ function currentVein(core: GameCore): Snapshot['currentVein'] {
   const oreTier = core.unlockedVeins.length
     ? Math.max(...core.unlockedVeins)
     : 0;
-  return { tier: oreTier, name: oreName(oreTier) };
+  return { tier: oreTier, name: oreMaterial(oreTier) };
 }
 
 // 设置与风险：污染值 + 增长/净化速率 + 电网模式
@@ -1452,7 +1445,7 @@ const PICKAXE_LINE_META: { id: PickaxeLine; name: string; hint: string }[] = [
 
 function pickaxeEffectNow(core: GameCore, line: PickaxeLine): string {
   const level = core.pickaxeLevel(line);
-  if (line === 'vajra') return `可挖 ${oreName(level)} 矿脉`;
+  if (line === 'vajra') return `可挖 ${oreMaterial(level)} 矿脉`;
   if (line === 'collect') {
     return level > 0 ? `产出 ×${formatNumber(collectMultiplier(level))}` : '尚未升级';
   }
@@ -1479,7 +1472,7 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
     tiers.push({
       tier,
       voltage: VOLTAGE_TIERS[tier - 1] ?? `T${tier}`,
-      oreLabel: oreLabel(tier - 1),
+      oreLabel: oreMaterial(tier - 1),
       unlocked: tier <= core.maxTier,
       unit: payment,
       models: models.map((model) => {

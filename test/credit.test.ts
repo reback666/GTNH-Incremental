@@ -3,7 +3,6 @@ import {
   coinName,
   coinValueInTier1,
   convertCoins,
-  oreName,
   paymentTier,
 } from '../src/numeric/credit';
 
@@ -33,8 +32,6 @@ describe('GT 币', () => {
     expect(coinName(8)).toBe('中子素币');
     expect(coinName(9)).toBe('宇宙中子素币');
     expect(coinName(14)).toBe('普朗克币');
-    expect(oreName(0)).toBe('T0 矿石');
-    expect(oreName(13)).toBe('T13 矿石');
   });
 
   it('越界等级直接报错', () => {
