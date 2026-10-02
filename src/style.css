@@ -8,6 +8,7 @@
   --accent: #58c4a3;
   --warn: #e0a33e;
   --danger: #d9524f;
+  color-scheme: dark;
 }
 
 * {
@@ -18,10 +19,34 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  /* 顶部微亮、底部压暗：比死平一个颜色多一层空间感，面板就浮在环境上 */
+  background:
+    radial-gradient(120% 60% at 50% 0%, #1a2029 0%, rgba(26, 32, 41, 0) 60%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
   -webkit-text-size-adjust: 100%;
+}
+
+/* 深色主题下浏览器默认滚动条是刺眼的亮灰，换成融入背景的暗色 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2f3946;
+  border-radius: 5px;
+  border: 2px solid var(--bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3d4a5a;
 }
 
 #app {
@@ -37,10 +62,24 @@ h1 {
 }
 
 h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 14px;
   margin: 0 0 8px;
   color: var(--muted);
   font-weight: 600;
+}
+
+/* 标题前的一小截主题色竖杠：不加大字号就把视线引到每块的开头 */
+h2::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  flex: none;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0.75;
 }
 
 .panel {
@@ -49,6 +88,10 @@ h2 {
   border-radius: 10px;
   padding: 12px;
   margin-bottom: 12px;
+  /* 上缘一线极淡的高光 + 落影：面板之间有了前后层次 */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 2px 8px rgba(0, 0, 0, 0.22);
 }
 
 button {
@@ -60,6 +103,27 @@ button {
   color: var(--text);
   padding: 0 12px;
   cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease,
+    transform 0.08s ease,
+    box-shadow 0.16s ease;
+}
+
+/* 键盘/tab 键导航时给一圈主题色描边，鼠标点击不触发 */
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button:not(:disabled):hover {
+  border-color: #4a5a6c;
+  background: #2a3441;
+}
+
+button:not(:disabled):active {
+  transform: translateY(1px);
 }
 
 button:disabled {
@@ -70,6 +134,12 @@ button:disabled {
 button.primary {
   border-color: var(--accent);
   color: var(--accent);
+  background: rgba(88, 196, 163, 0.08);
+}
+
+button.primary:not(:disabled):hover {
+  background: rgba(88, 196, 163, 0.16);
+  box-shadow: 0 0 12px rgba(88, 196, 163, 0.18);
 }
 
 button.big {
@@ -111,6 +181,10 @@ button.big {
 
 .power-box:not(.static) {
   cursor: pointer;
+}
+
+.power-box:not(.static):hover {
+  border-color: #4a5a6c;
 }
 
 .power-box.active {
@@ -1733,6 +1807,11 @@ h2 .small {
   transform: scale(0.97);
 }
 
+.machine-tab:not(.active):hover {
+  border-color: #4a5a6c;
+  background: #1f2630;
+}
+
 .machine-tab.active {
   border-color: var(--accent);
   background: #1d2a2c;
@@ -2137,4 +2216,25 @@ h2 .small {
   display: block;
   max-height: 280px;
   overflow-y: auto;
+}
+
+/* 系统开了「减少动态效果」时，砍掉装饰性动画，只留必要的状态变化 */
+@media (prefers-reduced-motion: reduce) {
+  .vein-frames,
+  .vein-halo-strip,
+  .num.up,
+  .num.down,
+  .debris,
+  .spark,
+  .ripple,
+  .hit-core,
+  .hit-ray,
+  .crack,
+  .icon-pop {
+    animation: none;
+  }
+
+  * {
+    transition-duration: 0.01s;
+  }
 }
