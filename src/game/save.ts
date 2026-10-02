@@ -1,4 +1,5 @@
 import { Decimal, ZERO, fromSaveString, toSaveString } from '../numeric/decimal';
+import type { DisplayMode } from '../numeric/format';
 import { MAX_TIER } from '../numeric/voltage';
 import { DEFAULT_GRID, GRID_MODES, type GridMode } from '../numeric/grid';
 import { needsResearch } from '../numeric/research';
@@ -77,6 +78,8 @@ export interface SaveData {
   // v20：转生履历（最近 50 条）与普朗克锚
   runHistory?: unknown[];
   planckAnchor?: boolean;
+  // v21：数字显示模式（设置页的界面偏好，跨周目保留）
+  displayMode?: string;
   // v13：镐子的三条升级线（金刚杵等级、连锁采集等级、连锁爆破已用机会数）
   pickaxeVajra?: number;
   pickaxeCollect?: number;
@@ -150,6 +153,7 @@ export function serialize(core: GameCore): SaveData {
     pendingChallenge: core.pendingChallenge,
     runHistory: core.runHistory.map((entry) => ({ ...entry })),
     planckAnchor: core.planckAnchor,
+    displayMode: core.displayMode,
     pickaxeVajra: core.pickaxeVajra,
     pickaxeCollect: core.pickaxeCollect,
     pickaxeBlast: core.pickaxeBlast,
@@ -275,6 +279,7 @@ export function deserialize(data: SaveData): GameCore {
   core.pendingChallenge = cleanChallengeId(data.pendingChallenge);
   core.runHistory = cleanRunHistory(data.runHistory);
   core.planckAnchor = booleanOr(data.planckAnchor, false);
+  core.displayMode = cleanDisplayMode(data.displayMode);
   core.pickaxeVajra = clampInt(data.pickaxeVajra, 0, vajraMaxLevel(), 0);
   core.pickaxeCollect = clampInt(data.pickaxeCollect, 0, collectChances(MAX_TIER), 0);
   core.pickaxeBlast = clampInt(data.pickaxeBlast, 0, blastChances(MAX_TIER), 0);
@@ -326,6 +331,13 @@ function nonNegativeFloat(value: unknown): number {
 
 function booleanOr(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
+}
+
+// 数字显示模式只认三个合法值，乱写的退回自动（K / M 后缀那套）
+const DISPLAY_MODES = new Set<string>(['auto', 'scientific', 'full']);
+
+function cleanDisplayMode(value: unknown): DisplayMode {
+  return typeof value === 'string' && DISPLAY_MODES.has(value) ? (value as DisplayMode) : 'auto';
 }
 
 // 存档里的大数值统一走这里：不是合法十进制字符串就退回 0，负数也当 0。

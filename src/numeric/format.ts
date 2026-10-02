@@ -14,6 +14,14 @@ const SUFFIXES = ['', 'K', 'M', 'G', 'T', 'P', 'E'] as const;
 const THOUSAND = decInt(1000);
 const SUFFIX_MAX_EXPONENT = decInt(10).pow(18);
 
+// 全局默认显示模式：设置页的「数字显示」偏好（存档 v21），store 在读档与切换时同步过来。
+// 显式传 options.mode 的调用不受它影响（仍以参数为准）。
+let defaultMode: DisplayMode = 'auto';
+
+export function setDefaultDisplayMode(mode: DisplayMode): void {
+  defaultMode = mode;
+}
+
 function plainText(value: Decimal, digits: number): string {
   return value.isInteger() ? value.toFixed() : value.toSignificantDigits(digits).toString();
 }
@@ -50,7 +58,7 @@ function scientificText(abs: Decimal, digits: number): string {
 // - 大于 1e18：科学计数法，如 1.23e19。
 export function formatNumber(value: DecimalInput, options: FormatOptions = {}): string {
   const number = value instanceof Decimal ? value : new Decimal(value);
-  const mode = options.mode ?? 'auto';
+  const mode = options.mode ?? defaultMode;
   const digits = options.significantDigits ?? 3;
 
   if (!number.isFinite()) {

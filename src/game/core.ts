@@ -5,6 +5,7 @@ import { machineEnergy, machineOutput } from '../numeric/output';
 import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../numeric/generator';
 import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
 import { coinValueInTier1, convertCoins, paymentTier } from '../numeric/credit';
+import type { DisplayMode } from '../numeric/format';
 import { type UniverseId, universeById } from './universes';
 import {
   arcaneOutputBonus,
@@ -234,6 +235,8 @@ export class GameCore {
   riftOffered = false;
   // 开发者模式：设置页里的测试开关，开着时界面会露出测试用的快捷操作
   devMode = false;
+  // 数字显示模式：纯界面偏好（设置页切换，计划书第二十一章 #9），跨周目保留
+  displayMode: DisplayMode = 'auto';
   // 已经拥有的平行宇宙（转生时选一个，选过的永久叠加）
   universes: UniverseId[] = [];
   // 已经选好、等下一次转生带走的宇宙（只存选择本身，转生时才生效）
@@ -668,6 +671,10 @@ export class GameCore {
 
   setDevMode(enabled: boolean): void {
     this.devMode = enabled;
+  }
+
+  setDisplayMode(mode: DisplayMode): void {
+    this.displayMode = mode;
   }
 
   // 直接把电压推到某一级：开放矿脉、把该级及以前的机型都标记成已研究

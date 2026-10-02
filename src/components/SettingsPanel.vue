@@ -63,6 +63,34 @@ function cleanAmount(text: string): string | null {
       关掉之后污染不再增长、也不产生任何影响（默认开启）。污染值显示在第 1 页最下方。
     </p>
 
+    <!-- ── 数字显示模式（计划书第二十一章 #9） ──────────────── -->
+    <h2 class="mt">数字显示</h2>
+    <div class="row">
+      <div class="name">大数字画法</div>
+      <button
+        :class="{ primary: snap.displayMode === 'auto' }"
+        @click="store.setDisplayMode('auto')"
+      >
+        自动
+      </button>
+      <button
+        :class="{ primary: snap.displayMode === 'scientific' }"
+        @click="store.setDisplayMode('scientific')"
+      >
+        科学计数法
+      </button>
+      <button
+        :class="{ primary: snap.displayMode === 'full' }"
+        @click="store.setDisplayMode('full')"
+      >
+        完整数字
+      </button>
+    </div>
+    <p class="muted small" style="margin: 6px 0 0">
+      自动：1000 到 1e18 用 K / M / G 后缀，更大用科学计数法（默认）。
+      科学计数法：全部写成 1.23e9 这类。完整数字：每一位都写出来。界面与日志跟着一起变。
+    </p>
+
     <!-- ── 硅基宇宙：三项 AI 开关（只有拥有这个宇宙才显示） ──── -->
     <template v-if="snap.silicon.active">
       <h2 class="mt">硅基宇宙 · AI 调度</h2>

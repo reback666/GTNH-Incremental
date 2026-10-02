@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { formatNumber } from '../src/numeric/format';
+import { afterEach, describe, expect, it } from 'vitest';
+import { formatNumber, setDefaultDisplayMode } from '../src/numeric/format';
 
 describe('大数字显示（计划书第十章）', () => {
   it('小于 1000 用普通数字', () => {
@@ -52,5 +52,22 @@ describe('大数字显示（计划书第十章）', () => {
 
   it('显示层返回字符串，不产生可写回状态的数值', () => {
     expect(typeof formatNumber('1.23e1200')).toBe('string');
+  });
+});
+
+describe('全局默认显示模式（设置页偏好，存档 v21）', () => {
+  afterEach(() => {
+    setDefaultDisplayMode('auto');
+  });
+
+  it('默认自动；切换后无参调用跟着变，显式传 mode 仍以参数为准', () => {
+    expect(formatNumber('1.23e9')).toBe('1.23G');
+
+    setDefaultDisplayMode('full');
+    expect(formatNumber('1.23e9')).toBe('1230000000');
+
+    setDefaultDisplayMode('scientific');
+    expect(formatNumber('1234')).toBe('1.23e3');
+    expect(formatNumber('1.23e9', { mode: 'full' })).toBe('1230000000');
   });
 });

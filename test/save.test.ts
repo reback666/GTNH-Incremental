@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
 import { deserialize, serialize, type SaveData } from '../src/game/save';
 import { GameCore } from '../src/game/core';
+import { dec } from '../src/numeric/decimal';
+import { useGameStore } from '../src/game/store';
+import { getCore } from '../src/game/engine';
 
 // 读档清洗：存档是玩家机器上的数据，坏值不能进到模拟里，也不能因为一个字段坏了
 // 就把整份存档丢掉（见 src/game/save.ts 的 clean* 一组）。
@@ -96,5 +100,32 @@ describe('读档清洗', () => {
     expect(restored.mutationTimer).toBe(45);
     expect(restored.collapseTimer).toBe(600);
     expect(serialize(restored)).toEqual(serialize(core));
+  });
+});
+
+describe('数字显示模式（v21）', () => {
+  it('进存档并完整往返；旧档没有该字段、坏值都退回自动', () => {
+    const core = new GameCore();
+    core.displayMode = 'full';
+    expect(serialize(core).displayMode).toBe('full');
+    expect(deserialize(serialize(core)).displayMode).toBe('full');
+
+    expect(deserialize(emptySave()).displayMode).toBe('auto');
+    const messy = deserialize({ ...emptySave(), displayMode: 'no-such-mode' });
+    expect(messy.displayMode).toBe('auto');
+  });
+
+  it('设置页切换后，界面数字按新画法输出', () => {
+    setActivePinia(createPinia());
+    const store = useGameStore();
+    store.boot();
+    getCore().totalOre = dec('1.23e9');
+    store.refresh();
+    expect(store.snap.totalOre).toBe('1.23G');
+
+    store.setDisplayMode('full');
+    expect(store.snap.displayMode).toBe('full');
+    expect(store.snap.totalOre).toBe('1230000000');
+    expect(getCore().displayMode).toBe('full');
   });
 });

@@ -3,7 +3,7 @@ import { Decimal, ZERO, dec, decInt } from '../numeric/decimal';
 import { MAX_TIER, VOLTAGE_TIERS } from '../numeric/voltage';
 import { coinName, oreName } from '../numeric/credit';
 import { SILICON_KEEP_PRIORITY } from '../numeric/silicon';
-import { formatNumber } from '../numeric/format';
+import { formatNumber, setDefaultDisplayMode, type DisplayMode } from '../numeric/format';
 import { formatDuration } from '../numeric/time';
 import { machineEnergy, machineOutput } from '../numeric/output';
 import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../numeric/generator';
@@ -439,6 +439,8 @@ export interface Snapshot {
   stats: { label: string; value: string }[];
   // 开发者模式开关（设置页）
   devMode: boolean;
+  // 数字显示模式（设置页）：界面上的大数字用自动 / 科学计数法 / 完整数字哪种画法
+  displayMode: DisplayMode;
   nextTier: number | null;
   unlockCost: string;
   canUnlock: boolean;
@@ -627,6 +629,9 @@ export const useGameStore = defineStore('game', {
     },
     refresh() {
       const core = getCore();
+      // 界面偏好在 core 上（跟存档走），这里的全局默认每次刷新都对齐：
+      // 读档、开新局、切设置后格式化口径都跟当前存档一致
+      setDefaultDisplayMode(core.displayMode);
       setLogGameSeconds(core.playSeconds);
       this.snapshot = buildSnapshot(core);
     },
@@ -746,6 +751,12 @@ export const useGameStore = defineStore('game', {
     // 开发者模式：只是测试用的开关，关着的时候下面这些快捷操作都不生效
     setDevMode(enabled: boolean): void {
       getCore().setDevMode(enabled);
+      this.refresh();
+      this.save();
+    },
+    // 数字显示模式：纯界面偏好（计划书第二十一章 #9），存档跟走、转生不清
+    setDisplayMode(mode: DisplayMode): void {
+      getCore().setDisplayMode(mode);
       this.refresh();
       this.save();
     },
@@ -1018,6 +1029,7 @@ function buildSnapshot(core: GameCore): Snapshot {
     silicon: siliconStats(core),
     stats: statRows(core),
     devMode: core.devMode,
+    displayMode: core.displayMode,
     nextTier,
     unlockCost: nextTier === null ? '—' : formatNumber(core.unlockCostOf(nextTier)),
     canUnlock: nextTier !== null && core.canUnlock(nextTier),
