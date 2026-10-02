@@ -1837,25 +1837,25 @@ function siliconStats(core: GameCore): SiliconStats {
     .map((kind) => COLUMN_META[kind].title)
     .join(' → ');
   const did: string[] = [];
-  if (report.autoRepairs > 0) did.push(`修好 ${report.autoRepairs} 台故障`);
-  if (report.autoOverclockUp > 0) did.push(`升档 ${report.autoOverclockUp} 次`);
-  if (report.autoOverclockDown > 0) did.push(`降档 ${report.autoOverclockDown} 次`);
+  if (report.autoRepairs > 0) did.push(`修复故障机器 ${report.autoRepairs} 台`);
+  if (report.autoOverclockUp > 0) did.push(`超频升档 ${report.autoOverclockUp} 次`);
+  if (report.autoOverclockDown > 0) did.push(`超频降档 ${report.autoOverclockDown} 次`);
   if (report.sheddedKinds.length > 0) {
     const names = report.sheddedKinds.map(
       (kind) => COLUMN_META[kind as MachineKind]?.title ?? kind,
     );
-    did.push(`停掉${names.join('、')}`);
+    did.push(`整组停机（${names.join('、')}）`);
   }
 
   let note: string;
   if (!active) {
-    note = '没有硅基宇宙：三项 AI 都不生效。';
+    note = '未拥有硅基宇宙：三项调度均不生效。';
   } else if (did.length > 0) {
-    note = `上一拍 AI：${did.join('，')}。`;
+    note = `上一拍调度：${did.join('，')}。`;
   } else if (!core.siliconAutoRepair && !core.siliconAutoOverclock && !core.siliconShedding) {
-    note = '三个开关都关着，AI 什么都不做。';
+    note = '三项调度均已关闭，AI 不执行任何操作。';
   } else {
-    note = '上一拍 AI 没动手 —— 没故障、电力也够。';
+    note = '上一拍无调度动作：无故障机器，供电正常。';
   }
 
   return {

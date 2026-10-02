@@ -156,9 +156,10 @@ function cleanAmount(text: string): string | null {
         </button>
       </div>
       <p class="muted small" style="margin: 6px 0 0">
-        自动维护：故障机器当拍修好。自动超频：电力扛得住翻倍时才升档，明显缺电就降档。
-        按优先级停机：缺电时整组停掉优先级最低的机器（{{ snap.silicon.sheddingOrder }}），
-        而不是全厂一起减半。三件事都有 5% 误判率，做错了下一拍自己纠正。
+        自动维护：发生故障的机器在当拍内完成修复。自动超频：可用出力达到需求的 2 倍时升档，
+        供电率低于 90% 时降档，其余情况维持原档以避免频繁切换。按优先级停机：供电不足时按
+        {{ snap.silicon.sheddingOrder }} 的顺序整组停机，其余机器保持满负荷运行，而非全厂统一降载。
+        三项调度各有 5% 的误判率，误判在下一拍自动纠正。
       </p>
       <p class="muted small" style="margin: 6px 0 0">{{ snap.silicon.note }}</p>
     </template>
