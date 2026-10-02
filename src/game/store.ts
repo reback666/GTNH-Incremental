@@ -66,6 +66,7 @@ import {
 } from './models';
 import { getCore, resetCore, setCore } from './engine';
 import { playSound, type SoundId } from './audio';
+import { emitFx } from './fx';
 import * as C from './constants';
 import { clearStorage, loadFromStorage, saveToStorage, secondsSinceLastSave } from './save';
 import { appVersion, buildStamp, stateSnapshot } from './diagnostics';
@@ -544,6 +545,8 @@ export const useGameStore = defineStore('game', {
     crashStreak: 0,
     // 这次启动补算了多少离线收益（纯界面提示，不进存档）
     offlineNote: '',
+    // 离线横幅被玩家关掉了（只管这次打开页面期间，换页不复活、刷新后重新出现）
+    offlineBannerDismissed: false,
     // 正在补算离线收益（这期间不让在线模拟叠上去）
     catchingUp: false,
     // 日志里的错误条数，以及玩家已经看过的条数（设置页按钮上的小红点用它）
@@ -980,6 +983,7 @@ export const useGameStore = defineStore('game', {
         phase.maxTier = core.maxTier;
         logEvent('info', 'voltage.unlock', `电压上限变为 ${VOLTAGE_TIERS[core.maxTier - 1]}`);
         sound('unlock');
+        emitFx('voltage-unlock');
       }
       if (report.researchUnlocked !== null) {
         const done = MACHINE_MODELS.find((item) => item.id === report.researchUnlocked);
@@ -998,8 +1002,13 @@ export const useGameStore = defineStore('game', {
           'pollution.band',
           `污染进入${POLLUTION_BAND_NAME[band]}（${formatNumber(core.pollution)}%）`,
         );
+        const prevBand = phase.band;
         phase.band = band;
-        if (band !== 'clean') sound('pollution');
+        if (band !== 'clean') {
+          sound('pollution');
+          // 升档（中→重）才放粒子；从重度降回中度、或净化回干净不庆祝
+          if (band === 'critical' && prevBand !== 'critical') emitFx('pollution-up');
+        }
       }
       const short = report.powerRatio < 1;
       if (short !== phase.powerShort) {

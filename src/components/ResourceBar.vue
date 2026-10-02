@@ -27,6 +27,9 @@ const activeStat = computed(() => (openPower.value ? snap.value.power[openPower.
 function togglePower(key: PowerKey) {
   openPower.value = openPower.value === key ? null : key;
 }
+
+// 离线收益横幅：这次打开页面期间关掉就不再出现（关闭状态放在 store 上，换页不丢）
+const offlineDismissed = computed(() => store.offlineBannerDismissed);
 </script>
 
 <template>
@@ -35,9 +38,14 @@ function togglePower(key: PowerKey) {
       GTNH 增量 · {{ tierName }}
       <span class="muted small">已玩 {{ snap.playTime }}</span>
     </h1>
-    <p v-if="store.offlineNote" class="muted small" style="margin: 4px 0 0">
-      {{ store.offlineNote }}
-    </p>
+    <!-- 离线收益：横幅卡片，看完点 × 收起 -->
+    <div v-if="store.offlineNote && !offlineDismissed" class="offline-banner">
+      <span class="offline-icon" aria-hidden="true">⏱</span>
+      <span class="offline-text">{{ store.offlineNote }}</span>
+      <button type="button" class="offline-close" aria-label="收起离线收益" @click="store.offlineBannerDismissed = true">
+        ×
+      </button>
+    </div>
 
     <!-- ── 第一行：电能 ─────────────────────────────────────── -->
     <h2>电能</h2>

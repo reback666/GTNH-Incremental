@@ -19,9 +19,14 @@
 
 body {
   margin: 0;
-  /* 顶部微亮、底部压暗：比死平一个颜色多一层空间感，面板就浮在环境上 */
+  /*
+    三层背景：顶部环境光 + 极淡的蓝图方格纹（呼应 GT 工业风）+ 底色。
+    方格 28px 一格、透明度 2.5%，扫一眼几乎察觉不到，但画面不再是一张死平的纯色。
+  */
   background:
     radial-gradient(120% 60% at 50% 0%, #1a2029 0%, rgba(26, 32, 41, 0) 60%),
+    repeating-linear-gradient(0deg, rgba(88, 196, 163, 0.025) 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(90deg, rgba(88, 196, 163, 0.025) 0 1px, transparent 1px 28px),
     var(--bg);
   background-attachment: fixed;
   color: var(--text);
@@ -275,6 +280,40 @@ button.big {
 
 .note {
   margin: 0 0 6px;
+}
+
+/* ── 离线收益横幅（资源条标题下方） ─────────────────────── */
+.offline-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 2px;
+  padding: 8px 10px;
+  border: 1px solid rgba(88, 196, 163, 0.4);
+  border-radius: 8px;
+  background: rgba(88, 196, 163, 0.09);
+  font-size: 12.5px;
+}
+
+.offline-icon {
+  flex: none;
+  opacity: 0.8;
+}
+
+.offline-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.offline-close {
+  flex: none;
+  width: 24px;
+  min-height: 24px;
+  padding: 0;
+  line-height: 1;
+  font-size: 15px;
+  border-radius: 6px;
+  color: var(--muted);
 }
 
 /*
@@ -1003,12 +1042,27 @@ h2 .small {
   background: #1a2027;
   opacity: 0.55;
   overflow: hidden;
+  transition:
+    transform 0.15s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .achievement.done {
   opacity: 1;
   border-color: #4a6a5c;
   background: #22322c;
+  /* 达成色的一圈极细内描边：跟未达成拉开一点差距，又不至于喧宾夺主 */
+  box-shadow: inset 0 0 0 1px rgba(88, 196, 163, 0.22);
+}
+
+/* 已达成的悬停轻轻抬起：暗示可以凑近看（悬停有达成时间等说明） */
+.achievement.done:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 0 0 1px rgba(88, 196, 163, 0.35),
+    0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
 .achievement .mark {
@@ -1463,10 +1517,31 @@ h2 .small {
 }
 
 .research-bar span {
+  position: relative;
   display: block;
   height: 100%;
   background: linear-gradient(90deg, #3f6fb0, #6fb3ff);
+  box-shadow: 0 0 8px rgba(111, 179, 255, 0.35);
   transition: width 0.3s ease-out;
+}
+
+/* 缓慢扫过的一道高光：让「进度在走」不用盯数字也能看出来 */
+.research-bar span::after,
+.pollution-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.22) 50%, transparent 100%);
+  animation: bar-sheen 2.6s linear infinite;
+}
+
+@keyframes bar-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
 }
 
 .pollution {
@@ -1501,6 +1576,7 @@ h2 .small {
 }
 
 .pollution-fill {
+  position: relative;
   display: block;
   height: 100%;
   transition: width 0.3s ease-out;
@@ -1508,14 +1584,17 @@ h2 .small {
 
 .pollution-fill.clean {
   background: linear-gradient(90deg, #3f9d6a, #58c48f);
+  box-shadow: 0 0 8px rgba(88, 196, 143, 0.3);
 }
 
 .pollution-fill.mutating {
   background: linear-gradient(90deg, #b08a2a, #e0a33e);
+  box-shadow: 0 0 8px rgba(224, 163, 62, 0.35);
 }
 
 .pollution-fill.critical {
   background: linear-gradient(90deg, #a83c39, #d9524f);
+  box-shadow: 0 0 10px rgba(217, 82, 79, 0.45);
 }
 
 .pollution-mark {
@@ -2218,8 +2297,64 @@ h2 .small {
   overflow-y: auto;
 }
 
-/* 系统开了「减少动态效果」时，砍掉装饰性动画，只留必要的状态变化 */
-@media (prefers-reduced-motion: reduce) {
+/* ── 全屏特效层（FxLayer.vue）：电压解锁烟花与污染升档绿雾 ── */
+.fx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* 烟花：从炸点向外散开、变暗、带一点下坠 */
+.fx-spark {
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes firework-fly {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    /* 落点带一点下坠，像真的烟花烧完往下掉 */
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy) + 30px)) scale(0.7);
+  }
+}
+
+.fx-spark.firework {
+  box-shadow: 0 0 6px currentColor;
+  animation: firework-fly 1.1s cubic-bezier(0.16, 0.6, 0.4, 1) forwards;
+}
+
+/* 污染升档：绿色雾团从屏幕底部慢慢飘上来、越飘越淡 */
+@keyframes smoke-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.8);
+  }
+  20% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), var(--dy)) scale(1.5);
+  }
+}
+
+.fx-spark.smoke {
+  border-radius: 40%;
+  filter: blur(3px);
+  animation: smoke-rise 2.6s ease-out forwards;
+}
+
+/* 系统开了「减少动态效果」时，砍掉装饰性动画，只留必要的状态变化 */@media (prefers-reduced-motion: reduce) {
   .vein-frames,
   .vein-halo-strip,
   .num.up,
@@ -2230,7 +2365,11 @@ h2 .small {
   .hit-core,
   .hit-ray,
   .crack,
-  .icon-pop {
+  .icon-pop,
+  .research-bar span::after,
+  .pollution-fill::after,
+  .fx-spark,
+  .smoke {
     animation: none;
   }
 
