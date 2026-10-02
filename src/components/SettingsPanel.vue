@@ -4,6 +4,7 @@ import { useGameStore } from '../game/store';
 import { VOLTAGE_TIERS } from '../numeric/voltage';
 import { dec } from '../numeric/decimal';
 import type { DevResourceTarget } from '../game/core';
+import type { DisplayMode } from '../numeric/format';
 
 // 设置：污染机制的整体开关、开发者模式（计划书第六章）。
 // 污染读数在第 1 页最下方，电网与转生在别的页面，这里只管设置项。
@@ -13,6 +14,21 @@ const snap = computed(() => store.snap);
 const devMode = computed(() => snap.value.devMode);
 // 开发者工具里「解锁到」下拉选中的等级
 const unlockTier = ref(1);
+
+// 计数方法的下拉菜单：按钮上显示当前选法，点开三选一，选完收起
+const modeMenuOpen = ref(false);
+const DISPLAY_MODE_OPTIONS: { id: DisplayMode; name: string }[] = [
+  { id: 'auto', name: '自动' },
+  { id: 'scientific', name: '科学计数法' },
+  { id: 'full', name: '完整数字' },
+];
+const modeName = computed(
+  () => DISPLAY_MODE_OPTIONS.find((option) => option.id === snap.value.displayMode)?.name ?? '自动',
+);
+function pickMode(id: DisplayMode): void {
+  modeMenuOpen.value = false;
+  if (snap.value.displayMode !== id) store.setDisplayMode(id);
+}
 
 // 开发者工具里「资源」那一行：目标用 'ores' / 'coins' / 'both' 或 'ore:3' / 'coin:3' 表示
 const resTarget = ref('both');
@@ -63,33 +79,33 @@ function cleanAmount(text: string): string | null {
       关掉之后污染不再增长、也不产生任何影响（默认开启）。污染值显示在第 1 页最下方。
     </p>
 
-    <!-- ── 数字显示模式（计划书第二十一章 #9） ──────────────── -->
+    <!-- ── 数字显示（计划书第二十一章 #9） ──────────────────── -->
     <h2 class="mt">数字显示</h2>
     <div class="row">
-      <div class="name">大数字画法</div>
-      <button
-        :class="{ primary: snap.displayMode === 'auto' }"
-        @click="store.setDisplayMode('auto')"
-      >
-        自动
-      </button>
-      <button
-        :class="{ primary: snap.displayMode === 'scientific' }"
-        @click="store.setDisplayMode('scientific')"
-      >
-        科学计数法
-      </button>
-      <button
-        :class="{ primary: snap.displayMode === 'full' }"
-        @click="store.setDisplayMode('full')"
-      >
-        完整数字
-      </button>
+      <div class="name">计数方法</div>
+      <div class="mode-picker">
+        <button type="button" @click="modeMenuOpen = !modeMenuOpen">{{ modeName }} ▾</button>
+        <!-- 透明垫层：菜单开着时点菜单外面就收起 -->
+        <button
+          v-if="modeMenuOpen"
+          type="button"
+          class="mode-backdrop"
+          aria-label="关闭菜单"
+          @click="modeMenuOpen = false"
+        />
+        <div v-if="modeMenuOpen" class="mode-menu">
+          <button
+            v-for="option in DISPLAY_MODE_OPTIONS"
+            :key="option.id"
+            type="button"
+            :class="{ primary: snap.displayMode === option.id }"
+            @click="pickMode(option.id)"
+          >
+            {{ option.name }}
+          </button>
+        </div>
+      </div>
     </div>
-    <p class="muted small" style="margin: 6px 0 0">
-      自动：1000 到 1e18 用 K / M / G 后缀，更大用科学计数法（默认）。
-      科学计数法：全部写成 1.23e9 这类。完整数字：每一位都写出来。界面与日志跟着一起变。
-    </p>
 
     <!-- ── 硅基宇宙：三项 AI 开关（只有拥有这个宇宙才显示） ──── -->
     <template v-if="snap.silicon.active">
