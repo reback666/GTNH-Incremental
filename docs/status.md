@@ -306,6 +306,14 @@ GTNH（GregTech: New Horizons）主题的增量 / 放置游戏：从超低压 UL
 - `h2` 标题前加主题色竖杠（`h2::before`）；滚动条换暗色（`::-webkit-scrollbar`）
 - `prefers-reduced-motion: reduce` 时停用装饰动画（挖矿特效、数字涨跌等）
 
+**排版整理（2026-10-02，用户反馈「矿种多了以后参差不齐」）**：
+
+- 矿石 / GT 币 chip 从「按内容宽度 + 流式换行」改成等宽网格（`auto-fill, minmax(112px, 1fr)`），
+  上下行的列对齐；名字过长省略号截断，悬停明细不再强制单行
+- 同类问题一并修掉：科技树的电压标签（`.tags`，minmax 86px）、
+  设置页统计与灵气/污染读数（`.stats`，minmax 100px）都改成等宽网格
+- 预览图 `docs/chip-grid-mobile.png`（420px 三列）、`docs/chip-grid-desktop.png`（760px 六列）
+
 **界面反馈批（2026-10-02，0.5.1 之后的一批，无存档变化）**：
 
 - 进度条质感：研究条 / 污染条加端点微光（box-shadow）与缓慢扫过的高光（`bar-sheen` 动画）

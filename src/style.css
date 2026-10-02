@@ -322,20 +322,26 @@ button.big {
   用 grid-template-rows 的 0fr↔1fr 过渡，展开高度自动、不会跳。
 */
 .chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
+  /* 等宽网格：所有 chip 同一行里一样宽，上下行的列能对齐
+     （原来是按内容自适应宽度 + 流式换行，名字长短不一导致每行都错位） */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  align-items: start;
   gap: 6px;
 }
 
-/* 技术树的电压标签：只是静态标签，不参与悬停展开 */
+/* 技术树的电压标签：只是静态标签，不参与悬停展开。
+   等宽网格排版，14 个标签上下行的列对齐（原来流式换行每行都错位） */
 .tags {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
   gap: 6px;
 }
 
 .tag {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -353,6 +359,7 @@ button.big {
 }
 
 .chip {
+  min-width: 0;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -380,6 +387,9 @@ button.big {
 }
 
 .chip-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--muted);
 }
 
@@ -410,9 +420,8 @@ button.big {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   padding: 1px 0;
-  white-space: nowrap;
   color: var(--muted);
 }
 
@@ -1955,13 +1964,15 @@ h2 .small {
 }
 
 .stats {
-  display: flex;
-  flex-wrap: wrap;
+  /* 等宽网格：统计小格上下行列对齐（原来按内容宽度流式换行，参差不齐） */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 6px;
   margin: 10px 0 8px;
 }
 
 .stat {
+  min-width: 0;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -1976,6 +1987,7 @@ h2 .small {
 
 .stat dd {
   margin: 0;
+  overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
 
