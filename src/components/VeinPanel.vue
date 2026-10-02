@@ -37,25 +37,16 @@ const crackStyle = computed(() => ({
 
 const echoEl = ref<HTMLElement | null>(null);
 let pulseFrame = 0;
-let lastPulseAt = 0;
 
 function gaussian(): number {
   const u = Math.random() || Number.EPSILON;
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
 }
 
-/*
-  原版 InfinityRenderer.renderPulse：缩放 = 高斯随机 × 0.15 + 0.95，偏移取 (1 - 缩放) / 2。
-  原版是按帧率逐帧随机，小图标上没问题；这里图标有 112px 大，60 次/秒的纯随机
-  会抖成高频闪动（用户反馈「鬼畜」），压到 150ms 一次——正好和贴图 150ms/帧的
-  动画节奏同步，看起来是「呼吸」而不是「抽搐」。
-*/
-const PULSE_INTERVAL_MS = 150;
-
-function pulse(now: number) {
+// 原版 InfinityRenderer.renderPulse：缩放 = 高斯随机 × 0.15 + 0.95，偏移取 (1 - 缩放) / 2
+function pulse() {
   const el = echoEl.value;
-  if (el && now - lastPulseAt >= PULSE_INTERVAL_MS) {
-    lastPulseAt = now;
+  if (el) {
     const scale = gaussian() * 0.15 + 0.95;
     const offset = (1 - scale) / 2;
     el.style.transform = `translate(${offset * 100}%, ${offset * 100}%) scale(${scale})`;
@@ -68,9 +59,7 @@ watch(
   (fx) => {
     if (pulseFrame) cancelAnimationFrame(pulseFrame);
     pulseFrame = 0;
-    if (fx === 'halo' && !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches)) {
-      pulseFrame = requestAnimationFrame(pulse);
-    }
+    if (fx === 'halo') pulseFrame = requestAnimationFrame(pulse);
   },
   { immediate: true },
 );
