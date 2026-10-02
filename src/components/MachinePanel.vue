@@ -273,7 +273,7 @@ function canBuy(model: MachineModelRow): boolean {
                 <span
                   v-if="bar.model.visPowered"
                   class="badge magic"
-                  title="魔法机器：不耗电，改吃灵气；产出是同价电力机型的 2.5 倍"
+                  title="魔法机器：不耗电，改为灵气消耗；产出是同价电力机型的 2.5 倍"
                   >魔法</span
                 >
               </span>

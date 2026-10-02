@@ -1913,8 +1913,8 @@ function abyssStats(core: GameCore): AbyssStats {
   };
 }
 
-// 单台机器的消耗与产出。发电机看「出力 / 烧矿 / 效率」，
-// 采矿机看「产矿 / 耗电」，制造机看「产币 / 耗电 / 吃矿」，存电装置看容量。
+// 单台机器的消耗与产出。发电机看「出力 / 矿物消耗 / 效率」，
+// 采矿机看「产矿 / 耗电」，制造机看「产币 / 耗电 / 矿物消耗」，存电装置看容量。
 // 超频档位不为 0 时，这里给的是超频后的单台数值。
 function singleStats(model: MachineModel, level = 0): { label: string; value: string }[] {
   const speed = overclockSpeedMultiplier(level);
@@ -1941,12 +1941,12 @@ function singleStats(model: MachineModel, level = 0): { label: string; value: st
     if (model.visPowered) {
       return [
         output,
-        { label: '吃灵气', value: `${formatNumber(visPerMachine(model.tier).times(energy))}/秒` },
+        { label: '灵气消耗', value: `${formatNumber(visPerMachine(model.tier).times(energy))}/秒` },
       ];
     }
     return [
       output,
-      { label: '烧矿', value: `${formatNumber(fuelRateOf(model))}/秒` },
+      { label: '矿物消耗', value: `${formatNumber(fuelRateOf(model))}/秒` },
       { label: '燃料效率', value: `${formatNumber(dec(efficiency).times(100))}%` },
     ];
   }
@@ -1956,7 +1956,7 @@ function singleStats(model: MachineModel, level = 0): { label: string; value: st
       value: `${formatNumber(minerOrePerSecond(model.tier).times(speed).times(model.outputFactor))}/秒`,
     };
     return model.visPowered
-      ? [output, { label: '吃灵气', value: `${formatNumber(minerEnergyEU(model.tier).times(energy))}/秒` }]
+      ? [output, { label: '灵气消耗', value: `${formatNumber(minerEnergyEU(model.tier).times(energy))}/秒` }]
       : [output, { label: '耗电', value: `${formatNumber(minerEnergyEU(model.tier).times(energy))} EU/t` }];
   }
   if (model.category === 'storage') {
@@ -1990,7 +1990,7 @@ function singleStats(model: MachineModel, level = 0): { label: string; value: st
   );
   const power = model.visPowered
     ? {
-        label: '吃灵气',
+        label: '灵气消耗',
         value: `${formatNumber(machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier: model.tier }).times(energy))}/秒`,
       }
     : {
@@ -2000,7 +2000,7 @@ function singleStats(model: MachineModel, level = 0): { label: string; value: st
   return [
     { label: '产币', value: `${formatNumber(output.times(speed))}/秒` },
     power,
-    { label: '吃矿', value: `${formatNumber(output.times(speed).div(C.COINS_PER_ORE))}/秒` },
+    { label: '矿物消耗', value: `${formatNumber(output.times(speed).div(C.COINS_PER_ORE))}/秒` },
   ];
 }
 
@@ -2045,7 +2045,7 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
   if (kind === 'generator') {
     return [
       { label: '发电', value: `${formatNumber(eu)} EU/t` },
-      { label: '烧矿', value: `${formatNumber(fuel)}/秒` },
+      { label: '矿物消耗', value: `${formatNumber(fuel)}/秒` },
     ];
   }
   if (kind === 'storage') {
@@ -2094,7 +2094,7 @@ function kindStats(core: GameCore, kind: MachineKind): { label: string; value: s
   return [
     { label: '产币', value: `${formatNumber(coins)}/秒` },
     { label: '耗电', value: `${formatNumber(eu)} EU/t` },
-    { label: '吃矿', value: `${formatNumber(ore)}/秒` },
+    { label: '矿物消耗', value: `${formatNumber(ore)}/秒` },
   ];
 }
 

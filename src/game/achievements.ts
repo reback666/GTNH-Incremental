@@ -346,7 +346,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'arcane-factory',
     name: '魔法工厂',
-    desc: '同时拥有 10 台魔法机器：不接电网，改吃灵气',
+    desc: '同时拥有 10 台魔法机器：不接电网，改为灵气消耗',
     icon: { kind: 'model', id: 'mm-2' },
     check: (state) => state.specials.arcane >= 10,
   },

@@ -1983,7 +1983,11 @@ h2 .small {
 .model-tip {
   position: fixed;
   z-index: 100;
-  width: 178px;
+  /* 宽度跟着内容走：数值长（如「卖回一台 327（卖出后单价的一半）」）时整行撑开，
+     不再把一句话折成两行；320px 封顶，再长的内容才换行 */
+  width: max-content;
+  min-width: 178px;
+  max-width: min(320px, 90vw);
   padding: 8px 10px;
   background: #0f141a;
   border: 1px solid var(--accent);

@@ -147,7 +147,7 @@ function togglePower(key: PowerKey) {
           <dd>{{ snap.arcane.visProduced }}</dd>
         </div>
         <div class="stat">
-          <dt>魔法机器吃灵气</dt>
+          <dt>灵气消耗</dt>
           <dd>{{ snap.arcane.visUsed }}</dd>
         </div>
         <div class="stat">
