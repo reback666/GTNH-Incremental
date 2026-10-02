@@ -288,8 +288,9 @@ GTNH（GregTech: New Horizons）主题的增量 / 放置游戏：从超低压 UL
   「发电 1.38K < 耗电 2.71K 但供电率 100%」的观感）
 - 耗电明细表每个机型行显示「运行 X · 停机 Y」，被整组停机的类别保留在列表里
   （0 EU/t，能看出机器去哪了）；机器面板的第二行里，运行控制按钮挪到行首
-  （缩进对齐第一行机器图标的左缘——机型名因此改成固定 150px），「运行 X · 停机 Y」
-  跟在按钮后面；预览图 `docs/power-run-counts.png`、`docs/run-button-second-line.png`
+  （超频仍在行首、对齐机型名——超频块固定 96px，不可超频的机型用同宽占位；
+  机型名改成固定 150px），「运行 X · 停机 Y」跟在按钮后面；
+  预览图 `docs/power-run-counts.png`、`docs/run-button-second-line.png`
 
 **资源条排序（2026-10-02）**：
 

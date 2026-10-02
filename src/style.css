@@ -662,11 +662,19 @@ h2 .small {
 
 /* 机型行里的超频档位与故障维护 */
 .overclock {
+  /* 固定宽：后面运行按钮的缩进按它算（见 .run-state） */
+  flex: 0 0 96px;
   display: inline-flex;
   align-items: center;
   gap: 3px;
   font-size: 12px;
   color: var(--muted);
+}
+
+/* 不能超频的机型（发电机 / 净化器 / 研究等）占住同样的位置，
+   让运行按钮在所有机型上起点一致 */
+.overclock-slot {
+  flex: 0 0 96px;
 }
 
 .overclock .oc-label {
@@ -1871,8 +1879,9 @@ h2 .small {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  /* 缩进到与第一行机器图标的左缘对齐：机型名固定 150px + 一档 6px 的行内间距 */
-  margin-left: 156px;
+  /* 缩进到与第一行机器图标的左缘对齐：46px 行缩进 + 超频块 96px + 60px 余量，
+     再扣掉行内 6px 的间距余量自己不吃（54 = 60 - 6） */
+  margin-left: 54px;
 }
 
 .run-btn {
