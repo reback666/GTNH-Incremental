@@ -150,6 +150,6 @@ onMounted(() => {
 
   <RiftDialog @accepted="view = 'rebirth'" />
 
-  <!-- 全屏特效层：电压解锁烟花、污染升档绿雾（不挡操作） -->
+  <!-- 全屏特效层：电压解锁烟花（不挡操作） -->
   <FxLayer />
 </template>

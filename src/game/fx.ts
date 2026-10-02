@@ -1,8 +1,8 @@
-// 界面特效事件总线：核心层的「状态变了」（电压解锁、污染升档）与界面层的
+// 界面特效事件总线：核心层的「状态变了」（电压解锁）与界面层的
 // 「放一段粒子」解耦。store 只管 emit，FxLayer 只管订阅，两边互不认识。
 // 与音效（audio.ts）同一触发点，但走独立通道：关特效不该影响音效，反之亦然。
 
-export type FxKind = 'voltage-unlock' | 'pollution-up';
+export type FxKind = 'voltage-unlock';
 
 export interface FxEvent {
   kind: FxKind;

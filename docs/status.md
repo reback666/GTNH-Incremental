@@ -312,13 +312,14 @@ GTNH（GregTech: New Horizons）主题的增量 / 放置游戏：从超低压 UL
 - 离线收益从一行小字改成可关闭的横幅卡片（⏱ 图标 + × 收起）；
   关闭状态放 store（`offlineBannerDismissed`，不进存档）——换页不复活，刷新后重新出现
 - 成就格子：已达成的加一圈极细达成色内描边，悬停轻轻抬起
-- 粒子特效（plan 第二十一章 #10 的候选开动了两项）：新增 `src/game/fx.ts` 特效事件总线
-  与 `FxLayer.vue` 全屏特效层——电压解锁时一簇四色烟花从屏幕上部炸开、
-  污染升到重度时绿雾从屏幕底部飘起；触发点在 store 的 watch()（与音效同源、独立通道）；
-  `prefers-reduced-motion` 时整个特效层不工作
+- 粒子特效（plan 第二十一章 #10 的候选开动了一项）：新增 `src/game/fx.ts` 特效事件总线
+  与 `FxLayer.vue` 全屏特效层——电压解锁时一簇四色烟花从屏幕上部炸开；
+  触发点在 store 的 watch()（与音效同源、独立通道）；
+  `prefers-reduced-motion` 时整个特效层不工作。
+  （污染升档绿雾做过一版，用户看后要求删除，已连同 fx 总线里的类型一起拆掉）
 - 背景叠一层极淡的蓝图方格纹（28px 一格、2.5% 透明度）
 - 键盘 1/2/3 直接换页（输入框打字、输入法组字、转生页不触发）
-- 预览图 `docs/offline-banner.png`、`docs/fx-firework.png`、`docs/fx-pollution-smoke.png`
+- 预览图 `docs/offline-banner.png`、`docs/fx-firework.png`
 - 发现一个既有 bug 待修：全新存档第一次打开时，「距上次存档」被算成 24 小时，
   离线补算把游戏时长直接撑满 24 小时（还会白拿「通宵玩家」成就）
 

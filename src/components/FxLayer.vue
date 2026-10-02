@@ -4,14 +4,12 @@ import { onFx, type FxEvent } from '../game/fx';
 
 /*
   全屏特效层：盖在页面最上方、不挡任何操作，订阅 fx 总线放粒子。
-  - voltage-unlock：一簇烟花从屏幕上部炸开（金 + 主题色两批）
-  - pollution-up：污染升到重度，从屏幕底部飘起一层绿色烟雾
+  voltage-unlock：一簇烟花从屏幕上部炸开（金 + 主题色两批）。
   系统开了「减少动态效果」时整个层不工作。
 */
 
 interface Spark {
   id: number;
-  kind: 'firework' | 'smoke';
   /** left/top 用 vw / vh，散开向量与颜色交给 CSS 变量 */
   left: number;
   top: number;
@@ -35,7 +33,6 @@ function burst(centerLeft: number, centerTop: number, count: number, colors: str
     const id = ++nextId;
     sparks.value.push({
       id,
-      kind: 'firework',
       left: centerLeft,
       top: centerTop,
       dx: Math.cos(angle) * distance,
@@ -47,28 +44,8 @@ function burst(centerLeft: number, centerTop: number, count: number, colors: str
     });
   }
   setTimeout(() => {
-    sparks.value = sparks.value.filter((spark) => spark.kind !== 'firework');
+    sparks.value = [];
   }, 1400);
-}
-
-function smoke(count: number) {
-  for (let i = 0; i < count; i++) {
-    const id = ++nextId;
-    sparks.value.push({
-      id,
-      kind: 'smoke',
-      left: 15 + Math.random() * 70,
-      top: 100,
-      dx: (Math.random() - 0.5) * 60,
-      dy: -(180 + Math.random() * 160),
-      color: 'rgba(110, 231, 168, 0.4)',
-      size: 6 + Math.random() * 8,
-      delay: Math.random() * 0.6,
-    });
-  }
-  setTimeout(() => {
-    sparks.value = sparks.value.filter((spark) => spark.kind !== 'smoke');
-  }, 3200);
 }
 
 onMounted(() => {
@@ -80,8 +57,6 @@ onMounted(() => {
       burst(30 + Math.random() * 40, 18 + Math.random() * 12, 26, FIREWORK_COLORS);
       // 半拍后补一簇小的，层次感
       setTimeout(() => burst(25 + Math.random() * 50, 24 + Math.random() * 10, 14, FIREWORK_COLORS), 180);
-    } else if (event.kind === 'pollution-up') {
-      smoke(18);
     }
   });
 });
@@ -97,12 +72,11 @@ onUnmounted(() => {
       v-for="spark in sparks"
       :key="spark.id"
       class="fx-spark"
-      :class="spark.kind"
       :style="{
         left: spark.left + 'vw',
         top: spark.top + 'vh',
         width: spark.size + 'px',
-        height: spark.kind === 'smoke' ? spark.size * 1.6 + 'px' : spark.size + 'px',
+        height: spark.size + 'px',
         background: spark.color,
         color: spark.color,
         '--dx': spark.dx + 'px',

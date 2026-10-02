@@ -1002,13 +1002,8 @@ export const useGameStore = defineStore('game', {
           'pollution.band',
           `污染进入${POLLUTION_BAND_NAME[band]}（${formatNumber(core.pollution)}%）`,
         );
-        const prevBand = phase.band;
         phase.band = band;
-        if (band !== 'clean') {
-          sound('pollution');
-          // 升档（中→重）才放粒子；从重度降回中度、或净化回干净不庆祝
-          if (band === 'critical' && prevBand !== 'critical') emitFx('pollution-up');
-        }
+        if (band !== 'clean') sound('pollution');
       }
       const short = report.powerRatio < 1;
       if (short !== phase.powerShort) {
