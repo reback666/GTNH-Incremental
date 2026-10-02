@@ -59,8 +59,11 @@ describe('矿脉贴图与特殊渲染', () => {
     core.maxTier = 3;
 
     store.refresh();
-    // 矿石名直接用材料名：资源条与矿脉面板写的是同一个词
-    expect(store.snap.ores[0]!.name).toBe('锻铁');
+    // 矿石名直接用材料名：资源条与矿脉面板写的是同一个词；
+    // 资源条从高等级排到低等级，最高级的排在最前
+    expect(store.snap.ores[0]!.name).toBe('铝');
+    expect(store.snap.ores[0]!.tier).toBe(2);
     expect(store.snap.ores[1]!.name).toBe('铜');
+    expect(store.snap.ores[2]!.name).toBe('锻铁');
   });
 });

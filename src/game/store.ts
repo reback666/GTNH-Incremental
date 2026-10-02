@@ -1000,27 +1000,34 @@ function buildSnapshot(core: GameCore): Snapshot {
   const oreRate = oreRates(core);
   const coinRate = coinRates(core);
   return {
-    ores: core.ores.slice(0, core.maxTier).map((amount, index) => ({
-      tier: index,
-      name: oreMaterial(index),
-      amount: formatNumber(amount),
-      value: amount.toString(),
-      detail: [
-        { label: '产出', value: `${formatNumber(oreRate[index]!.gross)}/秒` },
-        { label: '消耗', value: `${formatNumber(oreRate[index]!.spent)}/秒` },
-        {
-          label: '净变化',
-          value: `${formatNumber(oreRate[index]!.gross.minus(oreRate[index]!.spent))}/秒`,
-        },
-      ],
-    })),
-    coins: core.coins.slice(0, core.maxTier).map((amount, index) => ({
-      tier: index + 1,
-      name: coinName(index + 1),
-      amount: formatNumber(amount),
-      value: amount.toString(),
-      detail: [{ label: '产出', value: `${formatNumber(coinRate[index]!)}/秒` }],
-    })),
+    // 资源条从高等级排到低等级：最新解锁的矿与币排在最前面
+    ores: core.ores
+      .slice(0, core.maxTier)
+      .map((amount, index) => ({
+        tier: index,
+        name: oreMaterial(index),
+        amount: formatNumber(amount),
+        value: amount.toString(),
+        detail: [
+          { label: '产出', value: `${formatNumber(oreRate[index]!.gross)}/秒` },
+          { label: '消耗', value: `${formatNumber(oreRate[index]!.spent)}/秒` },
+          {
+            label: '净变化',
+            value: `${formatNumber(oreRate[index]!.gross.minus(oreRate[index]!.spent))}/秒`,
+          },
+        ],
+      }))
+      .reverse(),
+    coins: core.coins
+      .slice(0, core.maxTier)
+      .map((amount, index) => ({
+        tier: index + 1,
+        name: coinName(index + 1),
+        amount: formatNumber(amount),
+        value: amount.toString(),
+        detail: [{ label: '产出', value: `${formatNumber(coinRate[index]!)}/秒` }],
+      }))
+      .reverse(),
     // 两类机器是条件出现的：灵气节点要奥术宇宙，研究类要到 LuV 才解锁
     columns: COLUMN_ORDER.filter(
       (kind) =>
