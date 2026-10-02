@@ -306,6 +306,13 @@ GTNH（GregTech: New Horizons）主题的增量 / 放置游戏：从超低压 UL
 - `h2` 标题前加主题色竖杠（`h2::before`）；滚动条换暗色（`::-webkit-scrollbar`）
 - `prefers-reduced-motion: reduce` 时停用装饰动画（挖矿特效、数字涨跌等）
 
+**无尽矿脉重影降频（2026-10-02，用户反馈「鬼畜」）**：
+
+- 脉动重影原样照搬原版 `renderPulse`（逐帧随机缩放），60 次/秒的纯随机在 112px 大图标上
+  是高频闪动；压到 150ms 一次（`PULSE_INTERVAL_MS`），与无尽贴图 150ms/帧的动画节奏同步，
+  观感从「抽搐」变「呼吸」；`prefers-reduced-motion` 时整段脉冲不跑
+- 预览图 `docs/infinity-vein-calm.png`；实测重影每秒变化 60 → 7 次
+
 **排版整理（2026-10-02，用户反馈「矿种多了以后参差不齐」）**：
 
 - 矿石 / GT 币 chip 从「按内容宽度 + 流式换行」改成等宽网格（`auto-fill, minmax(112px, 1fr)`），
