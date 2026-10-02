@@ -1870,7 +1870,9 @@ h2 .small {
 .run-state {
   display: inline-flex;
   align-items: center;
-  margin-left: auto;
+  gap: 6px;
+  /* 缩进到与第一行机器图标的左缘对齐：机型名固定 150px + 一档 6px 的行内间距 */
+  margin-left: 156px;
 }
 
 .run-btn {
@@ -1946,7 +1948,8 @@ h2 .small {
 
 /* 机型名：同一等级下会有好几行，名字占一格固定宽度，后面再接图标与按钮 */
 .model-name {
-  flex: 1 1 132px;
+  /* 固定宽：第二行的运行按钮要按它的右缘缩进对齐机器图标的左缘（见 .run-state） */
+  flex: 0 0 150px;
   min-width: 0;
   display: inline-flex;
   align-items: center;

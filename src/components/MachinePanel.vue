@@ -291,9 +291,6 @@ function canBuy(model: MachineModelRow): boolean {
               </div>
 
               <span class="count">×{{ bar.model.count }}</span>
-              <span v-if="bar.model.count > 0" class="muted small run-split">
-                运行 {{ bar.model.running }} · 停机 {{ bar.model.idle }}
-              </span>
               <span class="price">
                 <template v-if="payWith === 'coin'">{{ bar.model.price }} {{ bar.group.unit }}</template>
                 <template v-else>{{ bar.model.orePrice }} {{ bar.group.oreLabel }}</template>
@@ -307,6 +304,23 @@ function canBuy(model: MachineModelRow): boolean {
             </div>
 
             <div class="tier-line second">
+              <span v-if="bar.model.stoppable && bar.model.count > 0" class="run-state">
+                <button
+                  class="run-btn"
+                  :class="{ stopped: bar.model.stopped }"
+                  :title="
+                    bar.model.stopped
+                      ? '这一机型全部停机：不产、不耗、不污染。点一下恢复运行'
+                      : '点一下让这一机型全部停机（不产、不耗、不污染）'
+                  "
+                  @click="store.toggleStopped(bar.model.id)"
+                >
+                  {{ bar.model.stopped ? '已停机' : '运行中' }}
+                </button>
+                <span class="muted small run-split">
+                  运行 {{ bar.model.running }} · 停机 {{ bar.model.idle }}
+                </span>
+              </span>
               <span v-if="bar.model.overclockable" class="overclock">
               <span
                 class="oc-label"
@@ -339,20 +353,6 @@ function canBuy(model: MachineModelRow): boolean {
                 故障 {{ bar.model.faulty }} 台
                 <button title="修理这台机型的所有故障机器" @click="store.repair(bar.model.id)">
                   维护
-                </button>
-              </span>
-              <span v-if="bar.model.stoppable && bar.model.count > 0" class="run-state">
-                <button
-                  class="run-btn"
-                  :class="{ stopped: bar.model.stopped }"
-                  :title="
-                    bar.model.stopped
-                      ? '这一机型全部停机：不产、不耗、不污染。点一下恢复运行'
-                      : '点一下让这一机型全部停机（不产、不耗、不污染）'
-                  "
-                  @click="store.toggleStopped(bar.model.id)"
-                >
-                  {{ bar.model.stopped ? '已停机' : '运行中' }}
                 </button>
               </span>
               <span class="trade">
