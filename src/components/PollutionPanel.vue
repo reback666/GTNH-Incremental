@@ -28,7 +28,7 @@ const snap = computed(() => store.snap);
       </div>
       <p class="muted small" style="margin: 6px 0 0">{{ risk.bandName }}</p>
 
-      <dl class="stats">
+      <dl class="stats stats-loose">
         <div class="stat">
           <dt>产生</dt>
           <dd>{{ risk.enabled ? risk.growth : '—' }}</dd>
@@ -59,7 +59,7 @@ const snap = computed(() => store.snap);
 
       <!-- 深渊宇宙：污染既推产出也腐蚀机器 -->
       <template v-if="snap.abyss.active">
-        <dl class="stats">
+        <dl class="stats stats-loose">
           <div class="stat">
             <dt>污染对产出</dt>
             <dd>{{ snap.abyss.pollutionFactor }}</dd>

@@ -1991,6 +1991,13 @@ h2 .small {
   font-variant-numeric: tabular-nums;
 }
 
+/* 灵气区例外：格子数量少、条目长短差得多，等宽网格反而难看（用户拍板），
+   保持原来的按内容宽度流式排 */
+.stats.stats-loose {
+  display: flex;
+  flex-wrap: wrap;
+}
+
 @keyframes icon-pop {
   0% {
     transform: scale(0.3);

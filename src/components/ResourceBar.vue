@@ -149,7 +149,7 @@ const offlineDismissed = computed(() => store.offlineBannerDismissed);
     <!-- ── 奥术宇宙：灵气与源质 ─────────────────────────────── -->
     <template v-if="snap.arcane.active">
       <h2 class="mt">灵气（奥术宇宙）</h2>
-      <dl class="stats">
+      <dl class="stats stats-loose">
         <div class="stat">
           <dt>灵气产出</dt>
           <dd>{{ snap.arcane.visProduced }}</dd>
