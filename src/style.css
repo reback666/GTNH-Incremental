@@ -1134,6 +1134,16 @@ h2 .small {
   font-size: 13px;
 }
 
+.dev-tools .time-slider {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--accent);
+}
+
 /* 树画布：方形框，内容 960×960，按住可拖动查看；打开时停在中心的锚点上 */
 .rebirth-viewport {
   width: 100%;

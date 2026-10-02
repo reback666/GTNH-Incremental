@@ -56,6 +56,9 @@ export const SAVE_KEY = 'gtnh-incremental-save';
 // 离线收益按这个时间戳算（见 save.ts 的 secondsSinceLastSave）
 export const SAVE_TIME_KEY = 'gtnh-incremental-save-time';
 
+// 开发者工具里「存档时间」滑条的上限：直接拨存档里的游玩时长，最多拨到 48 小时
+export const DEV_PLAY_SECONDS_CAP = 48 * 60 * 60;
+
 // 终局装置「普朗克锚」（大纲 C2 轻方案）：花 300 条线缆买一次（永久），
 // 之后 MAX 路线转生的线缆结算 ×1.5（裂缝不受影响）
 export const PLANCK_ANCHOR_COST = '300';

@@ -751,6 +751,14 @@ export class GameCore {
     return true;
   }
 
+  // 测试用：直接把存档里的游玩时长拨到指定秒数（设置页的滑条用）。
+  // 不是快进——不跑模拟、不产资源，只改时间读数本身
+  devSetPlaySeconds(seconds: number): boolean {
+    if (!this.devMode || !(seconds >= 0)) return false;
+    this.playSeconds = Math.min(Math.floor(seconds), C.DEV_PLAY_SECONDS_CAP);
+    return true;
+  }
+
   devClearMachines(): boolean {
     if (!this.devMode) return false;
     this.counts = {};

@@ -424,6 +424,8 @@ export interface Snapshot {
   columns: MachineColumn[];
   maxTier: number;
   playTime: string;
+  // 游玩时长的原始秒数（开发者工具的「存档时间」滑条用它定位当前值）
+  playSeconds: number;
   totalOre: string;
   totalCoins: string;
   power: PowerStats;
@@ -516,8 +518,8 @@ export const useGameStore = defineStore('game', {
     researchListCollapsed: false,
     // 转生页的平行宇宙列表收起来没有（纯界面状态，不进存档；默认收起）
     universesCollapsed: true,
-    // 转生页另外两块同样可折叠：挑战展开（状态行常看），加成树默认收起（画布大）
-    challengesCollapsed: false,
+    // 转生页另外两块同样可折叠：挑战也默认收起（挂没挂在摘要里看），加成树默认收起（画布大）
+    challengesCollapsed: true,
     treeCollapsed: true,
     historyCollapsed: true,
     // 科技页的电网列表，同样默认收起（摘要显示使用中的电网）
@@ -778,6 +780,13 @@ export const useGameStore = defineStore('game', {
       this.save();
       return ok;
     },
+    // 开发者工具：把存档里的游玩时长拨到滑条指定的秒数
+    devSetPlaySeconds(seconds: number): boolean {
+      const ok = getCore().devSetPlaySeconds(seconds);
+      this.refresh();
+      this.save();
+      return ok;
+    },
     devClearMachines(): boolean {
       const ok = getCore().devClearMachines();
       this.refresh();
@@ -1016,6 +1025,7 @@ function buildSnapshot(core: GameCore): Snapshot {
     ).map((kind) => machineColumn(core, kind)),
     maxTier: core.maxTier,
     playTime: formatDuration(core.playSeconds),
+    playSeconds: core.playSeconds,
     totalOre: formatNumber(core.totalOre),
     totalCoins: formatNumber(core.totalCoins),
     power: powerStats(core),
