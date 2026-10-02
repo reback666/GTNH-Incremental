@@ -3,6 +3,13 @@
 // 浏览器要求首次交互后才能出声：交互类音效（挖矿、购买…）天然满足，
 // 启动阶段的事件音效会被 AudioContext 创建失败/挂起挡掉，属于预期行为。
 
+import { BUTTON_DOWN_OGG } from './samples/button-down';
+
+// 各音效要用到的采样名（音效表之外的第二层素材）。需要新采样时在这里登记。
+const SAMPLE_SOURCES: Partial<Record<SoundId, string>> = {
+  toggle: BUTTON_DOWN_OGG,
+};
+
 export type SoundId =
   | 'mine'
   | 'buy'
@@ -33,7 +40,7 @@ export const SOUNDS: readonly SoundDef[] = [
   { id: 'mine', name: '挖矿', group: '操作', desc: '手动挖矿点击：石头被敲下来的闷响' },
   { id: 'buy', name: '购买', group: '操作', desc: '购买机器 / 镐子升级 / 买加成树节点' },
   { id: 'sell', name: '卖出', group: '操作', desc: '卖出机器找回零钱' },
-  { id: 'toggle', name: '开关', group: '操作', desc: '超频升降档 / 运行-停机切换' },
+  { id: 'toggle', name: '开关', group: '操作', desc: '超频升降档 / 运行-停机切换（GT 机器启停的机械咔哒）' },
   { id: 'unlock', name: '电压解锁', group: '事件', desc: '电压上限提升（仿 MC 经验升级的琶音）' },
   { id: 'achievement', name: '研究 / 成就', group: '事件', desc: '研究完成、成就达成' },
   { id: 'rebirth', name: '裂缝 / 转生', group: '事件', desc: '时空裂缝出现、转生完成' },
@@ -82,7 +89,7 @@ function audio(): AudioContext | null {
 }
 
 // 所有声音都汇到主音量节点再出去：整体响度一处调
-function output(c: AudioContext): AudioNode {
+function output(c: RecipeContext): AudioNode {
   return master ?? c.destination;
 }
 
@@ -97,7 +104,7 @@ interface ToneOptions {
 }
 
 // 一个音符：起音 5ms、指数衰减。全部音效的积木。
-function tone(c: AudioContext, freq: number, options: ToneOptions = {}): void {
+function tone(c: RecipeContext, freq: number, options: ToneOptions = {}): void {
   const { at = 0, dur = 0.15, type = 'sine', vol = 1, glideTo } = options;
   const t0 = c.currentTime + at;
   const osc = c.createOscillator();
@@ -114,7 +121,7 @@ function tone(c: AudioContext, freq: number, options: ToneOptions = {}): void {
 }
 
 // 一段白噪声（过低通）：敲击、崩裂的积木。
-function thump(c: AudioContext, options: { at?: number; dur?: number; vol?: number; filter?: number } = {}): void {
+function thump(c: RecipeContext, options: { at?: number; dur?: number; vol?: number; filter?: number } = {}): void {
   const { at = 0, dur = 0.08, vol = 1, filter = 500 } = options;
   const t0 = c.currentTime + at;
   const length = Math.max(1, Math.floor(c.sampleRate * dur));
@@ -133,7 +140,10 @@ function thump(c: AudioContext, options: { at?: number; dur?: number; vol?: numb
   src.start(t0);
 }
 
-const RECIPES: Record<SoundId, (c: AudioContext) => void> = {
+type RecipeContext = BaseAudioContext;
+type SampleMap = ReadonlyMap<SoundId, AudioBuffer>;
+
+const RECIPES: Record<SoundId, (c: RecipeContext, samples: SampleMap) => void> = {
   // 石头闷响「咚」：低频噪声垫底 + 短促的低音滑落
   mine: (c) => {
     thump(c, { dur: 0.06, vol: 0.9, filter: 420 });
@@ -149,8 +159,16 @@ const RECIPES: Record<SoundId, (c: AudioContext) => void> = {
     tone(c, 1319, { dur: 0.05, vol: 0.55 });
     tone(c, 1760, { at: 0.06, dur: 0.1, vol: 0.5 });
   },
-  // 开关：一记很薄的短促咔哒
-  toggle: (c) => {
+  // 开关：GT 机器启停的机械「咔哒」（真实采样）；解码失败退回合成短音
+  toggle: (c, samples) => {
+    const buffer = samples.get('toggle');
+    if (buffer) {
+      const src = c.createBufferSource();
+      src.buffer = buffer;
+      src.connect(output(c));
+      src.start();
+      return;
+    }
     tone(c, 440, { dur: 0.03, type: 'square', vol: 0.35 });
   },
   // 电压解锁：仿 MC 经验升级——一串往上跑的拨弦琶音
@@ -234,17 +252,36 @@ const RECIPES: Record<SoundId, (c: AudioContext) => void> = {
   },
 };
 
+// 把该音效要用的采样解码出来（采样是 ogg，需要异步 decode）。
+// 解码失败只影响这一声，配方各自有合成兜底。
+async function prepareSamples(id: SoundId, c: RecipeContext): Promise<SampleMap> {
+  const source = SAMPLE_SOURCES[id];
+  const map = new Map<SoundId, AudioBuffer>();
+  if (source === undefined) return map;
+  try {
+    const raw = Uint8Array.from(atob(source), (ch) => ch.charCodeAt(0));
+    const buffer = await c.decodeAudioData(raw.buffer);
+    map.set(id, buffer);
+  } catch {
+    // 浏览器解不动这个 ogg 就走合成兜底
+  }
+  return map;
+}
+
 // 播放入口：enabled = 总开关，muted = 被单独关掉的音效 id 列表。
 // 播不出来（没有 WebAudio / 还没发生过用户手势）就静默跳过。
 export function playSound(id: SoundId, enabled: boolean, muted: readonly string[]): void {
   if (!enabled || muted.includes(id)) return;
   const c = audio();
   if (c === null || c.state !== 'running') return;
-  try {
-    RECIPES[id](c);
-  } catch {
-    // 某个音效合成出错不影响游戏
-  }
+  void (async () => {
+    const samples = await prepareSamples(id, c);
+    try {
+      RECIPES[id](c, samples);
+    } catch {
+      // 某个音效合成出错不影响游戏
+    }
+  })();
 }
 
 // ── 离线渲染：把某个音效渲染成 AudioBuffer（导出 wav 试听用） ──────────────
@@ -253,14 +290,15 @@ export async function renderSound(id: SoundId, seconds = 2): Promise<AudioBuffer
   if (typeof OfflineAudioContext === 'undefined') return null;
   const sampleRate = 44100;
   const offline = new OfflineAudioContext(1, Math.floor(sampleRate * seconds), sampleRate);
-  // 挂上与游戏内相同的主音量；配方是同步接线的，接完立刻恢复，不影响实时播放
+  // 采样先解码完，再同步接线（接线期间挂上离线主音量，接完立刻恢复）
+  const samples = await prepareSamples(id, offline);
   const gain = offline.createGain();
   gain.gain.value = MASTER_VOLUME;
   gain.connect(offline.destination);
   const prevMaster = master;
   master = gain;
   try {
-    RECIPES[id](offline);
+    RECIPES[id](offline, samples);
   } finally {
     master = prevMaster;
   }

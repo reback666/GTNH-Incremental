@@ -284,6 +284,9 @@ GTNH（GregTech: New Horizons）主题的增量 / 放置游戏：从超低压 UL
 **音效系统（2026-10-02，plan 第二十一章 #10，用户拍板：先用合成音试效果）**：
 
 - `src/game/audio.ts`：全部现场合成（振荡器 + 噪声过滤波器），零音频资产，主音量 0.22；
+  **唯一例外是「开关」**：用户拍板换 GT 机器启停的机械咔哒——从 GT5-Unofficial dev jar
+  提取 `buttonDown.ogg`（7.4KB）base64 内嵌（`src/game/samples/button-down.ts`），
+  playSound / renderSound 走异步解码，解码失败退回合成短音；
   WebAudio 不可用或页面还没发生过交互（AudioContext 挂起）时静默跳过
 - 16 种音效（`SOUNDS` 表）：操作 4 种（挖矿=低频闷「咚」、购买、卖出、超频/停机开关），
   事件 12 种（电压解锁=仿 MC 经验升级琶音、研究/成就、裂缝/转生、挑战通过/失效、
