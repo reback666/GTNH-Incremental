@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { deserialize, serialize, type SaveData } from '../src/game/save';
 import { GameCore } from '../src/game/core';
@@ -127,5 +127,39 @@ describe('数字显示模式（v21）', () => {
     expect(store.snap.displayMode).toBe('full');
     expect(store.snap.totalOre).toBe('1230000000');
     expect(getCore().displayMode).toBe('full');
+  });
+});
+
+describe('自动存档间隔（v22）', () => {
+  it('进存档并完整往返；旧档缺字段退回 10 秒，越界值收进 5~60', () => {
+    const core = new GameCore();
+    core.autosaveSeconds = 30;
+    expect(serialize(core).autosaveSeconds).toBe(30);
+    expect(deserialize(serialize(core)).autosaveSeconds).toBe(30);
+
+    expect(deserialize(emptySave()).autosaveSeconds).toBe(10);
+    expect(deserialize({ ...emptySave(), autosaveSeconds: 999 }).autosaveSeconds).toBe(60);
+    expect(deserialize({ ...emptySave(), autosaveSeconds: 0 }).autosaveSeconds).toBe(5);
+  });
+
+  it('存档框滑条改间隔后，snapshot 与 core 同步，非法输入被拒', () => {
+    setActivePinia(createPinia());
+    const store = useGameStore();
+    store.boot();
+    // 换假时钟：动作里会按新间隔起定时器，测试里不能留真定时器
+    vi.useFakeTimers();
+    try {
+      expect(store.setAutosaveSeconds(30)).toBe(true);
+      expect(store.snap.autosaveSeconds).toBe(30);
+      expect(getCore().autosaveSeconds).toBe(30);
+
+      expect(store.setAutosaveSeconds(999)).toBe(true);
+      expect(store.snap.autosaveSeconds).toBe(60);
+
+      expect(store.setAutosaveSeconds(Number.NaN)).toBe(false);
+      expect(getCore().autosaveSeconds).toBe(60);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

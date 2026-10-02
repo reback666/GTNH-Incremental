@@ -62,26 +62,6 @@ describe('开发者模式', () => {
     expect(core.playSeconds).toBe(60);
   });
 
-  it('存档时间滑条：直接拨游玩时长，负数拒绝、超过上限收在 48 小时', () => {
-    const core = new GameCore();
-    // 关着开发者模式不生效
-    expect(core.devSetPlaySeconds(3600)).toBe(false);
-    core.setDevMode(true);
-
-    expect(core.devSetPlaySeconds(90.7)).toBe(true);
-    expect(core.playSeconds).toBe(90); // 向下取整
-
-    expect(core.devSetPlaySeconds(-1)).toBe(false);
-    expect(core.devSetPlaySeconds(48 * 3600 + 1)).toBe(true);
-    expect(core.playSeconds).toBe(48 * 3600);
-
-    // 只改时间读数，不跑模拟：不产资源也不涨累计
-    core.devClearMachines();
-    core.devSetPlaySeconds(7200);
-    expect(core.playSeconds).toBe(7200);
-    expect(core.totalEU.isZero()).toBe(true);
-  });
-
   it('指定资源与数量：单种、整档都能增能减，减到 0 就停', () => {
     const core = new GameCore();
     core.setDevMode(true);

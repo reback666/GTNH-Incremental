@@ -349,6 +349,17 @@ h2 .small {
   font-size: 13px;
 }
 
+/* ── 滑条（存档框的自动存档间隔等） ─────────────────────── */
+.time-slider {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--accent);
+}
+
 /* ── 设置页「计数方法」下拉 ─────────────────────────────── */
 /* 按钮显示当前选法，点开三选一；透明垫层负责「点菜单外收起」 */
 .mode-picker {
@@ -1134,15 +1145,6 @@ h2 .small {
   font-size: 13px;
 }
 
-.dev-tools .time-slider {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  accent-color: var(--accent);
-}
 
 /* 树画布：方形框，内容 960×960，按住可拖动查看；打开时停在中心的锚点上 */
 .rebirth-viewport {

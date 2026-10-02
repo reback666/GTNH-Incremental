@@ -12,7 +12,14 @@ import { ACHIEVEMENTS } from './achievements';
 import { REBIRTH_NODES } from './rebirth';
 import { UNIVERSES } from './universes';
 import { isChallengeId, type ChallengeId } from './challenges';
-import { SAVE_KEY, SAVE_TIME_KEY, SAVE_VERSION } from './constants';
+import {
+  AUTOSAVE_SECONDS_DEFAULT,
+  AUTOSAVE_SECONDS_MAX,
+  AUTOSAVE_SECONDS_MIN,
+  SAVE_KEY,
+  SAVE_TIME_KEY,
+  SAVE_VERSION,
+} from './constants';
 import { errorText, logEvent } from './log';
 
 // 计划书第十四章：存档 = 状态序列化成 JSON，带版本号；
@@ -80,6 +87,8 @@ export interface SaveData {
   planckAnchor?: boolean;
   // v21：数字显示模式（设置页的界面偏好，跨周目保留）
   displayMode?: string;
+  // v22：自动存档间隔（秒，存档框的滑条）
+  autosaveSeconds?: number;
   // v13：镐子的三条升级线（金刚杵等级、连锁采集等级、连锁爆破已用机会数）
   pickaxeVajra?: number;
   pickaxeCollect?: number;
@@ -154,6 +163,7 @@ export function serialize(core: GameCore): SaveData {
     runHistory: core.runHistory.map((entry) => ({ ...entry })),
     planckAnchor: core.planckAnchor,
     displayMode: core.displayMode,
+    autosaveSeconds: core.autosaveSeconds,
     pickaxeVajra: core.pickaxeVajra,
     pickaxeCollect: core.pickaxeCollect,
     pickaxeBlast: core.pickaxeBlast,
@@ -280,6 +290,7 @@ export function deserialize(data: SaveData): GameCore {
   core.runHistory = cleanRunHistory(data.runHistory);
   core.planckAnchor = booleanOr(data.planckAnchor, false);
   core.displayMode = cleanDisplayMode(data.displayMode);
+  core.autosaveSeconds = cleanAutosaveSeconds(data.autosaveSeconds);
   core.pickaxeVajra = clampInt(data.pickaxeVajra, 0, vajraMaxLevel(), 0);
   core.pickaxeCollect = clampInt(data.pickaxeCollect, 0, collectChances(MAX_TIER), 0);
   core.pickaxeBlast = clampInt(data.pickaxeBlast, 0, blastChances(MAX_TIER), 0);
@@ -338,6 +349,13 @@ const DISPLAY_MODES = new Set<string>(['auto', 'scientific', 'full']);
 
 function cleanDisplayMode(value: unknown): DisplayMode {
   return typeof value === 'string' && DISPLAY_MODES.has(value) ? (value as DisplayMode) : 'auto';
+}
+
+// 存档间隔收在滑条的合法范围里，丢了或乱写退回默认的 10 秒
+function cleanAutosaveSeconds(value: unknown): number {
+  const seconds = typeof value === 'number' ? Math.floor(value) : Number.NaN;
+  if (!Number.isFinite(seconds)) return AUTOSAVE_SECONDS_DEFAULT;
+  return Math.min(AUTOSAVE_SECONDS_MAX, Math.max(AUTOSAVE_SECONDS_MIN, seconds));
 }
 
 // 存档里的大数值统一走这里：不是合法十进制字符串就退回 0，负数也当 0。
@@ -553,7 +571,7 @@ export function saveToStorage(core: GameCore): void {
       logEvent('info', 'save.write', '存档恢复正常，能写进去了');
     }
   } catch (error) {
-    // 配额满、隐私模式、被策略禁掉都会抛。存档每 10 秒写一次，
+    // 配额满、隐私模式、被策略禁掉都会抛。按设定的间隔自动存档，
     // 所以只在「第一次失败」和「恢复后再次失败」时记录，不刷屏。
     if (!writeFailureLogged) {
       writeFailureLogged = true;

@@ -424,8 +424,8 @@ export interface Snapshot {
   columns: MachineColumn[];
   maxTier: number;
   playTime: string;
-  // 游玩时长的原始秒数（开发者工具的「存档时间」滑条用它定位当前值）
-  playSeconds: number;
+  // 自动存档间隔（秒）：存档框的滑条读当前值、说明文案用它
+  autosaveSeconds: number;
   totalOre: string;
   totalCoins: string;
   power: PowerStats;
@@ -457,6 +457,9 @@ export const TIER_ICON_LIMIT = 24;
 
 // 模拟连续崩这么多拍就停下来，并在日志里写明已暂停
 const CRASH_STREAK_LIMIT = 5;
+
+// 自动存档定时器句柄：只有 restartAutosave 碰它
+let autosaveTimer: ReturnType<typeof setInterval> | null = null;
 
 // 离线收益：最多补算这么久，按这么久一片分次跑
 const OFFLINE_CAP_SECONDS = 24 * 60 * 60;
@@ -762,6 +765,16 @@ export const useGameStore = defineStore('game', {
       this.refresh();
       this.save();
     },
+    // 自动存档间隔（秒）：存档框的滑条，改完立刻按新间隔重启定时器
+    setAutosaveSeconds(seconds: number): boolean {
+      const ok = getCore().setAutosaveSeconds(seconds);
+      if (ok) {
+        this.restartAutosave();
+        this.refresh();
+        this.save();
+      }
+      return ok;
+    },
     devUnlockTo(tier: number): boolean {
       const ok = getCore().devUnlockTo(tier);
       this.refresh();
@@ -776,13 +789,6 @@ export const useGameStore = defineStore('game', {
     },
     devAdvance(seconds: number): boolean {
       const ok = getCore().devAdvance(seconds);
-      this.refresh();
-      this.save();
-      return ok;
-    },
-    // 开发者工具：把存档里的游玩时长拨到滑条指定的秒数
-    devSetPlaySeconds(seconds: number): boolean {
-      const ok = getCore().devSetPlaySeconds(seconds);
       this.refresh();
       this.save();
       return ok;
@@ -895,6 +901,12 @@ export const useGameStore = defineStore('game', {
     save() {
       saveToStorage(getCore());
     },
+    // 自动存档的定时器：间隔存在 core 上（随存档走），玩家改滑条时按新间隔重启。
+    // 定时器句柄放模块级，不进 Pinia 的响应式状态
+    restartAutosave(): void {
+      if (autosaveTimer !== null) clearInterval(autosaveTimer);
+      autosaveTimer = setInterval(() => this.save(), getCore().autosaveSeconds * 1000);
+    },
     reset() {
       logEvent('info', 'save.reset', '重开一局（本地存档已清除）');
       clearStorage();
@@ -910,7 +922,7 @@ export const useGameStore = defineStore('game', {
         this.step(C.SIM_STEP_MS / 1000);
       }, C.SIM_STEP_MS);
       // 界面跟着模拟拍与玩家操作刷新（数字的平滑过渡由 AnimatedNumber 负责）
-      setInterval(() => this.save(), 10_000);
+      this.restartAutosave();
       window.addEventListener('beforeunload', () => this.save());
       // iOS / Android 上 beforeunload 常常不触发：切后台、页面被丢弃时也补一次存档，
       // 否则最后几秒的进度会丢（10 秒自动存档兜底，最多丢 10 秒）
@@ -1025,7 +1037,7 @@ function buildSnapshot(core: GameCore): Snapshot {
     ).map((kind) => machineColumn(core, kind)),
     maxTier: core.maxTier,
     playTime: formatDuration(core.playSeconds),
-    playSeconds: core.playSeconds,
+    autosaveSeconds: core.autosaveSeconds,
     totalOre: formatNumber(core.totalOre),
     totalCoins: formatNumber(core.totalCoins),
     power: powerStats(core),

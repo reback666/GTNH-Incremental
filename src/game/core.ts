@@ -237,6 +237,8 @@ export class GameCore {
   devMode = false;
   // 数字显示模式：纯界面偏好（设置页切换，计划书第二十一章 #9），跨周目保留
   displayMode: DisplayMode = 'auto';
+  // 自动存档间隔（秒）：存档框的滑条设置，随存档走
+  autosaveSeconds = C.AUTOSAVE_SECONDS_DEFAULT;
   // 已经拥有的平行宇宙（转生时选一个，选过的永久叠加）
   universes: UniverseId[] = [];
   // 已经选好、等下一次转生带走的宇宙（只存选择本身，转生时才生效）
@@ -677,6 +679,15 @@ export class GameCore {
     this.displayMode = mode;
   }
 
+  setAutosaveSeconds(seconds: number): boolean {
+    if (!Number.isFinite(seconds)) return false;
+    this.autosaveSeconds = Math.min(
+      C.AUTOSAVE_SECONDS_MAX,
+      Math.max(C.AUTOSAVE_SECONDS_MIN, Math.floor(seconds)),
+    );
+    return true;
+  }
+
   // 直接把电压推到某一级：开放矿脉、把该级及以前的机型都标记成已研究
   devUnlockTo(tier: number): boolean {
     if (!this.devMode || !isValidTier(tier)) return false;
@@ -748,14 +759,6 @@ export class GameCore {
   devAdvance(seconds: number): boolean {
     if (!this.devMode || !(seconds > 0)) return false;
     this.tick(seconds);
-    return true;
-  }
-
-  // 测试用：直接把存档里的游玩时长拨到指定秒数（设置页的滑条用）。
-  // 不是快进——不跑模拟、不产资源，只改时间读数本身
-  devSetPlaySeconds(seconds: number): boolean {
-    if (!this.devMode || !(seconds >= 0)) return false;
-    this.playSeconds = Math.min(Math.floor(seconds), C.DEV_PLAY_SECONDS_CAP);
     return true;
   }
 

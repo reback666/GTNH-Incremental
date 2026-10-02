@@ -5,7 +5,6 @@ import { VOLTAGE_TIERS } from '../numeric/voltage';
 import { dec } from '../numeric/decimal';
 import type { DevResourceTarget } from '../game/core';
 import type { DisplayMode } from '../numeric/format';
-import { DEV_PLAY_SECONDS_CAP as PLAY_SECONDS_CAP } from '../game/constants';
 
 // 设置：污染机制的整体开关、开发者模式（计划书第六章）。
 // 污染读数在第 1 页最下方，电网与转生在别的页面，这里只管设置项。
@@ -216,26 +215,6 @@ function cleanAmount(text: string): string | null {
         <button @click="store.devAdvance(600)">快进 10 分钟</button>
         <button @click="store.devAdvance(3600)">快进 1 小时</button>
       </div>
-      <div class="row">
-        <div class="name">存档时间</div>
-        <input
-          class="time-slider"
-          type="range"
-          min="0"
-          :max="PLAY_SECONDS_CAP"
-          step="60"
-          :value="snap.playSeconds"
-          aria-label="存档时间（游玩时长）"
-          @change="
-            store.devSetPlaySeconds(Number(($event.target as HTMLInputElement).value))
-          "
-        />
-        <span class="count">{{ snap.playTime }}</span>
-      </div>
-      <p class="muted small" style="margin: 2px 0 0">
-        滑竿直接把存档里的游玩时长拨到指定位置（最多 48 小时），不跑模拟、不产资源；
-        松手才生效。快进是照常跑模拟，两者互不影响。
-      </p>
       <div class="row">
         <div class="name">机器</div>
         <button @click="store.devClearMachines()">清空全部机器</button>
