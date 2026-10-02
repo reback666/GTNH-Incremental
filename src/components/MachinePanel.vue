@@ -291,6 +291,9 @@ function canBuy(model: MachineModelRow): boolean {
               </div>
 
               <span class="count">×{{ bar.model.count }}</span>
+              <span v-if="bar.model.count > 0" class="muted small run-split">
+                运行 {{ bar.model.running }} · 停机 {{ bar.model.idle }}
+              </span>
               <span class="price">
                 <template v-if="payWith === 'coin'">{{ bar.model.price }} {{ bar.group.unit }}</template>
                 <template v-else>{{ bar.model.orePrice }} {{ bar.group.oreLabel }}</template>

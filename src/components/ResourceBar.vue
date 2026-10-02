@@ -83,7 +83,12 @@ function togglePower(key: PowerKey) {
                       <span>{{ row.name }}</span>
                     </span>
                   </td>
-                  <td class="num-cell">×{{ row.count }}</td>
+                  <td class="num-cell">
+                    ×{{ row.count }}
+                    <span v-if="row.running !== undefined" class="muted small run-split">
+                      运行 {{ row.running }} · 停机 {{ row.stopped }}
+                    </span>
+                  </td>
                   <td class="num-cell">{{ row.amount }}</td>
                 </tr>
               </tbody>

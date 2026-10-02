@@ -349,6 +349,13 @@ h2 .small {
   font-size: 13px;
 }
 
+/* 运行 / 停机台数的小字（耗电明细与机器面板机型行共用） */
+.run-split {
+  display: inline-block;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
 /* ── 滑条（存档框的自动存档间隔等） ─────────────────────── */
 .time-slider {
   flex: 1;

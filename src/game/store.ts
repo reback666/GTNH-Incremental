@@ -87,6 +87,10 @@ export interface PowerDetailRow {
   name: string;
   count: number;
   amount: string;
+  // 真正在运行的台数与停机台数（停机 = 手动停机 + 故障 + 被 AI 调度停机）。
+  // 只有耗电明细填这两个字段：发电机的台数不参与停机调度
+  running?: number;
+  stopped?: number;
 }
 
 export interface PowerStat {
@@ -150,6 +154,9 @@ export interface MachineModelRow {
   // 单台的消耗与产出，鼠标移到机器名上时显示
   single: { label: string; value: string }[];
   count: number;
+  // 真正干活的台数与停机台数（停机 = 手动停机 + 故障 + 被 AI 调度停机）
+  running: number;
+  idle: number;
   // 玩家手动停机：停机的一台都不产不耗，也不产生污染
   stopped: boolean;
   // 能不能停机。存电装置是容量型装置，没有「运行」这回事
@@ -1461,6 +1468,8 @@ function pickaxeEffectNow(core: GameCore, line: PickaxeLine): string {
 
 function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
   const meta = COLUMN_META[kind];
+  // 上一拍被硅基 AI 整组停机的类别：这些类别的机器这一拍全都不干活
+  const shedKinds = new Set<MachineKind>(core.lastReport.sheddedKinds as MachineKind[]);
   // 先按等级分桶（一次遍历），再逐级取：比每个等级都去品类清单里筛一遍便宜
   const buckets = new Map<number, MachineModel[]>();
   for (const model of modelsOf(kind)) {
@@ -1495,6 +1504,9 @@ function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
           visPowered: model.visPowered === true,
           single: singleStats(model, level),
           count,
+          // 真正干活的台数与停机台数（手动停机 + 故障 + 被 AI 调度停机）
+          running: shedKinds.has(kind) ? 0 : core.workingCountOf(model.id),
+          idle: shedKinds.has(kind) ? count : count - core.workingCountOf(model.id),
           stopped: core.isStopped(model.id),
           stoppable: model.category !== 'storage',
           overclock: level,
@@ -2158,6 +2170,10 @@ function powerStats(core: GameCore): PowerStats {
   let demand = ZERO;
   // 电网模式的耗电倍率作用在耗电机器上：明细与合计都按折后值显示
   const gridMul = gridEnergyMultiplier(core.grid);
+  // 与模拟同口径：只算真正在耗电的机器。上一拍被 AI 停机调度的类别、
+  // 被手动停机的机型、出故障的台数都剔除（工作台数 workingCountOf 已含后两者）
+  const settledNow = core.lastReport;
+  const shedKinds = new Set<MachineKind>(settledNow.sheddedKinds as MachineKind[]);
 
   const push = (
     list: PowerDetailRow[],
@@ -2183,31 +2199,46 @@ function powerStats(core: GameCore): PowerStats {
     if (n === 0) continue;
     rated = push(generated, model, n, generatorOutputEU(model.tier, model.outputFactor).times(n), rated);
   }
+  // 耗电机器逐类收集：amount 按「真正在跑的台数」计，被停的台数写进 running/stopped。
+  // 整类被 AI 停机时 running 为 0，这一行不进合计，但行还留着——界面能看到机器去哪了
+  const pushDemand = (
+    model: MachineModel,
+    drainPerWorking: Decimal,
+  ): void => {
+    const total = core.countOf(model.id);
+    if (total === 0) return;
+    const running = shedKinds.has(model.category) ? 0 : core.workingCountOf(model.id);
+    const amount = running === 0 ? ZERO : drainPerWorking.times(gridMul);
+    consumed.push({
+      tier: model.tier,
+      voltage: VOLTAGE_TIERS[model.tier - 1] ?? `T${model.tier}`,
+      modelId: model.id,
+      kind: model.category,
+      name: model.name,
+      count: total,
+      amount: `${formatNumber(amount)} EU/t`,
+      running,
+      stopped: total - running,
+    });
+    demand = demand.plus(amount);
+  };
   for (const model of core.unlockedModels('miner')) {
     // 魔法机器吃灵气、不接电网，和模拟里的耗电结算保持一致
     if (model.visPowered) continue;
-    const n = core.countOf(model.id);
-    if (n === 0) continue;
-    demand = push(consumed, model, n, core.minerEnergyDrain(model).times(gridMul), demand);
+    pushDemand(model, core.minerEnergyDrain(model));
   }
   for (const model of core.unlockedModels('machine')) {
     if (model.visPowered) continue;
-    const n = core.countOf(model.id);
-    if (n === 0) continue;
-    demand = push(consumed, model, n, core.machineEnergyDrain(model).times(gridMul), demand);
+    pushDemand(model, core.machineEnergyDrain(model));
   }
   for (const model of core.unlockedModels('purifier')) {
     if (model.visPowered) continue;
-    const n = core.countOf(model.id);
-    if (n === 0) continue;
-    demand = push(consumed, model, n, core.purifierEnergyDrain(model).times(gridMul), demand);
+    pushDemand(model, core.purifierEnergyDrain(model));
   }
   for (const model of core.unlockedModels('research')) {
     if (model.visPowered) continue;
     if (model.computeRole !== 'produce') continue;
-    const n = core.countOf(model.id);
-    if (n === 0) continue;
-    demand = push(consumed, model, n, core.computerEnergyDrain(model).times(gridMul), demand);
+    pushDemand(model, core.computerEnergyDrain(model));
   }
 
   // 存电装置：每台容量 × 台数，合起来是一个池子
