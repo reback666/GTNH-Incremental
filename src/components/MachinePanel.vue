@@ -336,15 +336,17 @@ function canBuy(model: MachineModelRow): boolean {
               <span v-if="bar.model.stoppable && bar.model.count > 0" class="run-state">
                 <button
                   class="run-btn"
-                  :class="{ stopped: bar.model.stopped }"
+                  :class="{ stopped: bar.model.stopped || bar.model.running === 0 }"
                   :title="
                     bar.model.stopped
                       ? '这一机型全部停机：不产、不耗、不污染。点一下恢复运行'
-                      : '点一下让这一机型全部停机（不产、不耗、不污染）'
+                      : bar.model.running === 0
+                        ? '这一机型当前全部停机（故障或被 AI 停机调度）。点一下设为手动停机，恢复供电后也不会自动运行'
+                        : '点一下让这一机型全部停机（不产、不耗、不污染）'
                   "
                   @click="store.toggleStopped(bar.model.id)"
                 >
-                  {{ bar.model.stopped ? '已停机' : '运行中' }}
+                  {{ bar.model.stopped || bar.model.running === 0 ? '已停机' : '运行中' }}
                 </button>
                 <span class="muted small run-split">
                   运行 {{ bar.model.running }} · 停机 {{ bar.model.idle }}
