@@ -206,6 +206,53 @@ def tint_vajra_strip(tier: int, ore_frames: list[Image.Image]) -> Image.Image:
     return out
 
 
+# 连锁采集的贴图分两部分：右上的金属钻头（低饱和且亮）随等级换电压色，
+# 左下的机体保持 IC2 原版不上色（用户要求保留）；钻头的深色沟槽不参与，金属层次留得住。
+DRILL_SAT_MAX = 0.25
+DRILL_VAL_MIN = 0.45
+
+
+def is_drill_head(pixel: tuple[int, int, int, int]) -> bool:
+    if pixel[3] == 0:
+        return False
+    _, sat, val = colorsys.rgb_to_hsv(pixel[0] / 255, pixel[1] / 255, pixel[2] / 255)
+    return sat < DRILL_SAT_MAX and val >= DRILL_VAL_MIN
+
+
+def tint_drill(source: Image.Image, color: tuple[int, int, int]) -> Image.Image:
+    image = source.convert("RGBA")
+    tinted = image.copy()
+    for y in range(image.height):
+        for x in range(image.width):
+            pixel = image.getpixel((x, y))
+            if not is_drill_head(pixel):
+                continue
+            shade = SHADE_FLOOR + (1 - SHADE_FLOOR) * luma(pixel)
+            tinted.putpixel(
+                (x, y),
+                (round(color[0] * shade), round(color[1] * shade), round(color[2] * shade), pixel[3]),
+            )
+    return tinted
+
+
+def tint_drill_strip(source: Image.Image, infinity_strip: Image.Image) -> Image.Image:
+    """满级钻头：跟无尽矿石的流动色（每帧取最近斑点色），机体保持原版。"""
+    image = source.convert("RGBA")
+    frames = infinity_strip.height // infinity_strip.width
+    out = Image.new("RGBA", (OUT_SIZE, OUT_SIZE * frames), (0, 0, 0, 0))
+    for index in range(frames):
+        frame = infinity_strip.crop((0, index * 32, 32, (index + 1) * 32))
+        ore_map = nearest_ore_map(frame)
+        copy = image.copy()
+        for y in range(image.height):
+            for x in range(image.width):
+                pixel = image.getpixel((x, y))
+                if is_drill_head(pixel):
+                    copy.putpixel((x, y), ore_map[(x % 32, y % 32)])
+        out.paste(copy, (0, index * OUT_SIZE))
+    return out
+
+
 def find_jar(pattern: str) -> Path:
     matches = sorted(glob.glob(pattern))
     if not matches:
@@ -239,18 +286,22 @@ def main() -> None:
         strip.save(OUT_DIR / f"vajra-{tier}.png")
     print(f"vajra: 材质包贴图 → {MAX_TIER} 条动画条带（{len(VAJRA_SEQUENCE)} 拍 × {VAJRA_FRAME_MS}ms）")
 
-    # 连锁采集 / 连锁爆破：1~13 级电压色，满级无尽矿石流动
-    try:
-        for line, (jar_id, path) in LINES.items():
-            source = Image.open(io.BytesIO(jars[jar_id].read(path)))
-            for tier in range(1, MAX_TIER):
-                tint_tool(source, tier).save(OUT_DIR / f"{line}-{tier}.png")
-            strip = tint_max_strip(source, infinity_strip)
-            strip.save(OUT_DIR / f"{line}-{MAX_TIER}.png")
-            print(f"{line}: {path} → {MAX_TIER - 1} 张静态 + 满级动画条带 {strip.size}")
-    finally:
-        for archive in jars.values():
-            archive.close()
+    # 连锁爆破：1~13 级电压色，满级无尽矿石流动
+    blast = Image.open(io.BytesIO(jars["ic2"].read(LINES["blast"][1])))
+    for tier in range(1, MAX_TIER):
+        tint_tool(blast, tier).save(OUT_DIR / f"blast-{tier}.png")
+    strip = tint_max_strip(blast, infinity_strip)
+    strip.save(OUT_DIR / f"blast-{MAX_TIER}.png")
+    print(f"blast: → {MAX_TIER - 1} 张静态 + 满级动画条带 {strip.size}")
+
+    # 连锁采集：机体保持 IC2 原版，只有右上角的金属钻头随等级换电压色；
+    # 满级钻头跟无尽矿石的流动色（用户要求保留两段式结构）
+    drill = Image.open(io.BytesIO(jars["ic2"].read(LINES["drill"][1])))
+    for tier in range(1, MAX_TIER):
+        tint_drill(drill, tier_color(tier)).save(OUT_DIR / f"drill-{tier}.png")
+    strip = tint_drill_strip(drill, infinity_strip)
+    strip.save(OUT_DIR / f"drill-{MAX_TIER}.png")
+    print(f"drill: 原版机体 + 电压色钻头 → {MAX_TIER - 1} 张静态 + 满级流动条带 {strip.size}")
 
 
 if __name__ == "__main__":
