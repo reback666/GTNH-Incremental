@@ -16,12 +16,7 @@ import {
 } from '../numeric/overclock';
 import { formatNumber } from '../numeric/format';
 import MachineIcon from './MachineIcon.vue';
-import {
-  pickaxeIconUrl,
-  pickaxeIconIsStrip,
-  pickaxeStripMeta,
-  PICKAXE_MAX_TIER,
-} from '../game/pickaxe-icons';
+import { pickaxeIconUrl, pickaxeIconIsStrip, pickaxeStripMeta } from '../game/pickaxe-icons';
 
 const props = defineProps<{ columns: MachineColumn[] }>();
 const store = useGameStore();
@@ -61,8 +56,8 @@ function lineAnimated(line: { id: 'vajra' | 'collect' | 'blast'; iconTier: numbe
   return pickaxeIconIsStrip(line.id, line.iconTier);
 }
 
-function stripStyle(line: { id: 'vajra' | 'collect' | 'blast'; iconTier: number }) {
-  const meta = pickaxeStripMeta(line.id, line.iconTier);
+function stripStyle(line: { id: 'vajra' | 'collect' | 'blast' }) {
+  const meta = pickaxeStripMeta(line.id);
   return {
     '--frames': String(meta.frames),
     '--loop': `${meta.frames * meta.frameMs}ms`,
@@ -73,7 +68,7 @@ const pickaxeTabAnimated = computed(() =>
   lineAnimated({ id: 'vajra', iconTier: store.snap.pickaxe.lines[0]?.iconTier ?? 1 }),
 );
 
-const pickaxeTabStripStyle = computed(() => stripStyle({ id: 'vajra', iconTier: PICKAXE_MAX_TIER }));
+const pickaxeTabStripStyle = computed(() => stripStyle({ id: 'vajra' }));
 // 计划书第七章规定用 GT 币买；开局没有产币机器，所以再给一条用矿石建造的路子。
 const payWith = ref<PayWith>('coin');
 

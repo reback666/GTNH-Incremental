@@ -11,11 +11,8 @@
 from __future__ import annotations
 
 import base64
-import colorsys
 import sys
 from pathlib import Path
-
-from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -72,93 +69,6 @@ MACHINE_GROUPS: list[tuple[str, str]] = [
 
 def data_url(path: Path) -> str:
     return "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode()
-
-
-def data_url_image(image) -> str:
-    import io
-    buf = io.BytesIO()
-    image.save(buf, "PNG")
-    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
-
-
-def _load_icon_module():
-    # build-pickaxe-icons.py 文件名带连字符，不能直接 import，按路径加载
-    import importlib.util
-    spec = importlib.util.spec_from_file_location(
-        "build_pickaxe_icons", ROOT / "scripts" / "build-pickaxe-icons.py"
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def mineral_variants():
-    # 矿物材质试验版：金刚杵曲线 / 爆破药体改染对应矿脉的材质色，
-    # 与连锁采集钻头同一套色系（等级 n = T(n-1) 矿脉斑点的平均色）。
-    # 只生成预览图，不写 src/assets/pickaxe/——游戏图标不受影响。
-    import io
-    import zipfile
-    from pathlib import Path as _Path
-
-    module = _load_icon_module()
-    veins = ROOT / "src" / "assets" / "veins"
-
-    def mineral(tier):
-        # 灰白黑的矿脉斑点没有色相（锻铁/不锈钢/钯/硅岩/中子素），
-        # 直接平涂会看起来「没颜色」：给它们统一的钢蓝色相（s=0.35），
-        # 明度保留各自材质的深浅——银/钢材质的惯例表现
-        def boost(rgb):
-            hue, sat, val = colorsys.rgb_to_hsv(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255)
-            if sat < 0.15:
-                hue, sat = 0.58, 0.35
-            sat = max(sat, 0.35)
-            return tuple(round(c * 255) for c in colorsys.hsv_to_rgb(hue, sat, val))
-
-        vein = Image.open(veins / ("t" + str(tier - 1) + ".png")).convert("RGBA")
-        return boost(module.dominant_ore_color(vein))
-
-    minerals = {tier: mineral(tier) for tier in range(1, 15)}
-
-    # 金刚杵：曲线染矿脉材质色（本体动画保留）。tint_vajra_strip 从模块全局取
-    # tier_color，临时替换成矿物色表，生成完还原
-    original = module.tier_color
-    module.tier_color = lambda tier: minerals[tier]
-    infinity_strip = Image.open(ROOT / "src" / "assets" / "veins" / "t10.png").convert("RGBA")
-    ore_frames = [
-        infinity_strip.crop((0, i * 32, 32, (i + 1) * 32))
-        for i in range(infinity_strip.height // 32)
-    ]
-    vajra = {tier: module.tint_vajra_strip(tier, ore_frames) for tier in range(1, 15)}
-    module.tier_color = original
-
-    # 连锁爆破：药体（饱和像素）染矿脉材质色，保留像素明度
-    ic2_glob = str(
-        _Path.home()
-        / ".gradle/caches/modules-2/files-2.1/curse.maven/ic2-*/*/*/ic2-*.jar"
-    )
-    ic2 = sorted(zipfile.ZipFile(p2) for p2 in __import__("glob").glob(ic2_glob))[-1]
-    blast_src = Image.open(io.BytesIO(ic2.read("assets/ic2/textures/items/itemDynamite.png"))).convert("RGBA")
-    blast = {}
-    for tier in range(1, 15):
-        mineral = minerals[tier]
-        mh, ms, mv = colorsys.rgb_to_hsv(mineral[0] / 255, mineral[1] / 255, mineral[2] / 255)
-        # 矿物自身的明度也参与：硅岩黑就深、不锈钢白就浅，几支银灰色系才分得开
-        value_scale = 0.25 + 0.75 * mv
-        image = blast_src.copy()
-        for y in range(image.height):
-            for x in range(image.width):
-                pixel = image.getpixel((x, y))
-                if pixel[3] == 0:
-                    continue
-                _h, sat, val = colorsys.rgb_to_hsv(pixel[0] / 255, pixel[1] / 255, pixel[2] / 255)
-                if sat >= 0.35:
-                    red, green, blue = (
-                        round(c * 255)
-                        for c in colorsys.hsv_to_rgb(mh, ms, max(val * value_scale, 0.12))
-                    )
-                    image.putpixel((x, y), (red, green, blue, pixel[3]))
-        blast[tier] = image
-    return vajra, blast
 
 
 def tile(url: str, frames: int, frame_ms: int, label: str, note: str = "") -> str:
@@ -224,15 +134,6 @@ def main() -> None:
             url = data_url(f)
             items.append(tile(url, 1, 0, f.stem))
         parts.append(section(f"机器图标 · {cname}（{prefix}-*）", items))
-
-    # ── 试验预览：矿物材质版（未启用） ────────────────────
-    vajra_variants, blast_variants = mineral_variants()
-    items = []
-    for tier in range(1, 15):
-        items.append(tile(data_url_image(vajra_variants[tier]), 33, 50, f"金刚杵 {tier}"))
-    for tier in range(1, 15):
-        items.append(tile(data_url_image(blast_variants[tier]), 1, 0, f"连锁爆破 {tier}"))
-    parts.append(section("试验预览 · 矿物材质版（未启用，对比用）", items))
 
     # ── 特效贴图 ─────────────────────────────────────────
     items = []
