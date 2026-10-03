@@ -104,8 +104,18 @@ def mineral_variants():
     veins = ROOT / "src" / "assets" / "veins"
 
     def mineral(tier):
+        # 灰白黑的矿脉斑点没有色相（锻铁/不锈钢/钯/硅岩/中子素），
+        # 直接平涂会看起来「没颜色」：给它们统一的钢蓝色相（s=0.35），
+        # 明度保留各自材质的深浅——银/钢材质的惯例表现
+        def boost(rgb):
+            hue, sat, val = colorsys.rgb_to_hsv(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255)
+            if sat < 0.15:
+                hue, sat = 0.58, 0.35
+            sat = max(sat, 0.35)
+            return tuple(round(c * 255) for c in colorsys.hsv_to_rgb(hue, sat, val))
+
         vein = Image.open(veins / ("t" + str(tier - 1) + ".png")).convert("RGBA")
-        return module.dominant_ore_color(vein)
+        return boost(module.dominant_ore_color(vein))
 
     minerals = {tier: mineral(tier) for tier in range(1, 15)}
 
@@ -131,7 +141,9 @@ def mineral_variants():
     blast = {}
     for tier in range(1, 15):
         mineral = minerals[tier]
-        mh, ms, _mv = colorsys.rgb_to_hsv(mineral[0] / 255, mineral[1] / 255, mineral[2] / 255)
+        mh, ms, mv = colorsys.rgb_to_hsv(mineral[0] / 255, mineral[1] / 255, mineral[2] / 255)
+        # 矿物自身的明度也参与：硅岩黑就深、不锈钢白就浅，几支银灰色系才分得开
+        value_scale = 0.25 + 0.75 * mv
         image = blast_src.copy()
         for y in range(image.height):
             for x in range(image.width):
@@ -142,7 +154,7 @@ def mineral_variants():
                 if sat >= 0.35:
                     red, green, blue = (
                         round(c * 255)
-                        for c in colorsys.hsv_to_rgb(mh, ms, max(val, 0.3))
+                        for c in colorsys.hsv_to_rgb(mh, ms, max(val * value_scale, 0.12))
                     )
                     image.putpixel((x, y), (red, green, blue, pixel[3]))
         blast[tier] = image
