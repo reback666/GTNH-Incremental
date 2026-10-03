@@ -155,7 +155,8 @@ def tint_vajra_strip(tier: int, ore_frames: list[Image.Image]) -> Image.Image:
     本体里那条红色曲线是随帧呼吸的（明度逐帧变化），染色时只换色相/饱和度、保留每帧
     明度（下限 0.35 防糊黑），动画的呼吸感原样保留；满级曲线改用无尽矿石的流动色。
     """
-    base_strip = Image.open(VAJRA_BASE).convert("RGBA")
+    # 用户要求水平翻转：把手朝右、曲线从右上扫到左下（原版朝向反过来）
+    base_strip = Image.open(VAJRA_BASE).convert("RGBA").transpose(Image.FLIP_LEFT_RIGHT)
     target = tier_color(tier)
     target_hsv = (
         colorsys.rgb_to_hsv(target[0] / 255, target[1] / 255, target[2] / 255) if target else None
