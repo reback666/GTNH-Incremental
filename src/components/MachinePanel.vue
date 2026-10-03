@@ -19,7 +19,8 @@ import MachineIcon from './MachineIcon.vue';
 import {
   pickaxeIconUrl,
   pickaxeIconIsStrip,
-  PICKAXE_STRIP_META,
+  pickaxeStripMeta,
+  PICKAXE_MAX_TIER,
 } from '../game/pickaxe-icons';
 
 const props = defineProps<{ columns: MachineColumn[] }>();
@@ -54,13 +55,14 @@ function lineIcon(line: { id: 'vajra' | 'collect' | 'blast'; iconTier: number })
   return pickaxeIconUrl(line.id, line.iconTier);
 }
 
-// 条带图标走矿脉动画结构；帧数与循环时长按线取（金刚杵 33 拍，采集/爆破 31 帧）
+// 条带图标走矿脉动画结构；帧数与循环时长按线、按等级取（金刚杵 33 拍，
+// 采集跟对应矿脉的帧动画，爆破满级 31 帧）
 function lineAnimated(line: { id: 'vajra' | 'collect' | 'blast'; iconTier: number }): boolean {
   return pickaxeIconIsStrip(line.id, line.iconTier);
 }
 
-function stripStyle(line: { id: 'vajra' | 'collect' | 'blast' }) {
-  const meta = PICKAXE_STRIP_META[line.id];
+function stripStyle(line: { id: 'vajra' | 'collect' | 'blast'; iconTier: number }) {
+  const meta = pickaxeStripMeta(line.id, line.iconTier);
   return {
     '--frames': String(meta.frames),
     '--loop': `${meta.frames * meta.frameMs}ms`,
@@ -71,7 +73,7 @@ const pickaxeTabAnimated = computed(() =>
   lineAnimated({ id: 'vajra', iconTier: store.snap.pickaxe.lines[0]?.iconTier ?? 1 }),
 );
 
-const pickaxeTabStripStyle = computed(() => stripStyle({ id: 'vajra' }));
+const pickaxeTabStripStyle = computed(() => stripStyle({ id: 'vajra', iconTier: PICKAXE_MAX_TIER }));
 // 计划书第七章规定用 GT 币买；开局没有产币机器，所以再给一条用矿石建造的路子。
 const payWith = ref<PayWith>('coin');
 

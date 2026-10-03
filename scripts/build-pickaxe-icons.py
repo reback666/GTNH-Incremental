@@ -96,6 +96,21 @@ def nearest_ore_map(frame: Image.Image) -> dict[tuple[int, int], tuple[int, int,
             if is_ore(frame.getpixel((x, y))):
                 queue.append((x, y))
                 result[(x, y)] = frame.getpixel((x, y))
+    if not queue:
+        # 低饱和矿脉（如宇宙中子素的银斑）一帧里可能没有饱和斑点：
+        # 退一步用「与底色色距 > 60」的像素当种子（与 dominant_ore_color 同一判据）
+        counts: dict[tuple[int, int, int, int], int] = {}
+        for y in range(height):
+            for x in range(width):
+                pixel = frame.getpixel((x, y))
+                counts[pixel] = counts.get(pixel, 0) + 1
+        background = max(counts, key=counts.get)
+        for y in range(height):
+            for x in range(width):
+                pixel = frame.getpixel((x, y))
+                if sum((a - b) ** 2 for a, b in zip(pixel[:3], background[:3])) > 3600:
+                    queue.append((x, y))
+                    result[(x, y)] = pixel
     while queue:
         x, y = queue.popleft()
         color = result[(x, y)]
@@ -236,6 +251,27 @@ def tint_drill(source: Image.Image, mineral: tuple[int, int, int]) -> Image.Imag
     return tinted
 
 
+def tint_drill_strip(source: Image.Image, vein: Image.Image) -> Image.Image:
+    """动画矿脉的钻头：本体保留，钻头每帧取该帧「最近矿石色」——跟着矿脉表面一起流动。"""
+    image = source.convert("RGBA")
+    frames = vein.height // vein.width
+    out = Image.new("RGBA", (OUT_SIZE, OUT_SIZE * frames), (0, 0, 0, 0))
+    for index in range(frames):
+        frame = vein.crop((0, index * vein.width, vein.width, (index + 1) * vein.width))
+        ore_map = nearest_ore_map(frame)
+        copy = image.copy()
+        for y in range(image.height):
+            for x in range(image.width):
+                pixel = image.getpixel((x, y))
+                if pixel[3] == 0:
+                    continue
+                _, sat, val = colorsys.rgb_to_hsv(pixel[0] / 255, pixel[1] / 255, pixel[2] / 255)
+                if sat < 0.25 and val >= 0.45:
+                    copy.putpixel((x, y), ore_map[(x % vein.width, y % vein.width)])
+        out.paste(copy, (0, index * OUT_SIZE))
+    return out
+
+
 def find_jar(pattern: str) -> Path:
     matches = sorted(glob.glob(pattern))
     if not matches:
@@ -269,15 +305,21 @@ def main() -> None:
         strip.save(OUT_DIR / f"vajra-{tier}.png")
     print(f"vajra: 材质包贴图 → {MAX_TIER} 条动画条带（{len(VAJRA_SEQUENCE)} 拍 × {VAJRA_FRAME_MS}ms）")
 
-    # 连锁采集：机体保持 IC2 原版不上色，只有右上角的金属钻头随等级换成对应矿脉的材质色
-    # （等级 n 开采 T(n-1) 矿脉，钻头就是那一级矿脉的材料）
+    # 连锁采集：机体保持 IC2 原版不上色，只有右上角的金属钻头随等级换成对应矿脉的材质
+    # （等级 n 开采 T(n-1) 矿脉）。矿脉本身带动画的（宇宙中子素/无尽/龙芯/时空），
+    # 钻头也是流动动画条带；静态矿脉就是平面材质色
     veins = Path(ROOT / "src" / "assets" / "veins")
     drill = Image.open(io.BytesIO(jars["ic2"].read(LINES["drill"][1])))
     for tier in range(1, MAX_TIER + 1):
         vein = Image.open(veins / f"t{tier - 1}.png").convert("RGBA")
-        mineral = dominant_ore_color(vein)
-        tint_drill(drill, mineral).save(OUT_DIR / f"drill-{tier}.png")
-    print(f"drill: IC2 原版机体 + 矿脉材质色钻头 → {MAX_TIER} 张静态")
+        if vein.height > vein.width:
+            strip = tint_drill_strip(drill, vein)
+            strip.save(OUT_DIR / f"drill-{tier}.png")
+            print(f"drill T{tier - 1}: 动画条带 {strip.size}")
+        else:
+            mineral = dominant_ore_color(vein)
+            tint_drill(drill, mineral).save(OUT_DIR / f"drill-{tier}.png")
+    print("drill: IC2 原版机体 + 矿脉材质钻头（动画矿脉跟着流动）")
 
     # 连锁爆破：1~13 级电压色，满级无尽矿石流动
     blast = Image.open(io.BytesIO(jars["ic2"].read(LINES["blast"][1])))
