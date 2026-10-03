@@ -1,32 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useGameStore } from '../game/store';
-import { VOLTAGE_TIERS } from '../numeric/voltage';
 import AnimatedNumber from './AnimatedNumber.vue';
-import MachineIcon from './MachineIcon.vue';
 
 const store = useGameStore();
 const snap = computed(() => store.snap);
-const tierName = computed(() => VOLTAGE_TIERS[snap.value.maxTier - 1] ?? 'ULV');
-
-// 电能四格：点哪一格就从下面拉出对应的明细表
-type PowerKey = 'stored' | 'generated' | 'consumed';
-const openPower = ref<PowerKey | null>(null);
-
-const powerBoxes = computed(
-  () =>
-    [
-      { key: 'stored' as PowerKey, label: '存电量', stat: snap.value.power.stored },
-      { key: 'generated' as PowerKey, label: '发电能力', stat: snap.value.power.generated },
-      { key: 'consumed' as PowerKey, label: '总耗电量', stat: snap.value.power.consumed },
-    ] as const,
-);
-
-const activeStat = computed(() => (openPower.value ? snap.value.power[openPower.value] : null));
-
-function togglePower(key: PowerKey) {
-  openPower.value = openPower.value === key ? null : key;
-}
 
 // 离线收益横幅：这次打开页面期间关掉就不再出现（关闭状态放在 store 上，换页不丢）
 const offlineDismissed = computed(() => store.offlineBannerDismissed);
@@ -34,10 +12,6 @@ const offlineDismissed = computed(() => store.offlineBannerDismissed);
 
 <template>
   <section class="panel">
-    <h1>
-      GTNH 增量 · {{ tierName }}
-      <span class="muted small">已玩 {{ snap.playTime }}</span>
-    </h1>
     <!-- 离线收益：横幅卡片，看完点 × 收起 -->
     <div v-if="store.offlineNote && !offlineDismissed" class="offline-banner">
       <span class="offline-icon" aria-hidden="true">⏱</span>
@@ -47,68 +21,8 @@ const offlineDismissed = computed(() => store.offlineBannerDismissed);
       </button>
     </div>
 
-    <!-- ── 第一行：电能 ─────────────────────────────────────── -->
-    <h2>电能</h2>
-    <div class="power-row">
-      <button
-        v-for="box in powerBoxes"
-        :key="box.key"
-        type="button"
-        class="power-box"
-        :class="{ active: openPower === box.key }"
-        @click="togglePower(box.key)"
-      >
-        <span class="power-label">{{ box.label }}</span>
-        <b class="power-value">{{ box.stat.value }}</b>
-      </button>
-      <div class="power-box static" :class="{ danger: snap.power.ratioShort }">
-        <span class="power-label">供电率</span>
-        <b class="power-value">{{ snap.power.ratio }}</b>
-      </div>
-    </div>
-
-    <!-- 点击后从下面拉出的明细表，按电压等级排序 -->
-    <div class="power-detail" :class="{ open: activeStat !== null }">
-      <div class="power-clip">
-        <div class="power-pad">
-          <template v-if="activeStat">
-            <p v-if="activeStat.note" class="muted small note">{{ activeStat.note }}</p>
-            <table v-if="activeStat.rows.length" class="detail-table">
-              <thead>
-                <tr>
-                  <th>电压</th>
-                  <th>机器</th>
-                  <th>数量</th>
-                  <th>合计</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in activeStat.rows" :key="row.name + row.tier">
-                  <td>{{ row.voltage }}</td>
-                  <td>
-                    <span class="model-cell">
-                      <MachineIcon :model-id="row.modelId" :kind="row.kind" :size="20" />
-                      <span>{{ row.name }}</span>
-                    </span>
-                  </td>
-                  <td class="num-cell">
-                    ×{{ row.count }}
-                    <span v-if="row.running !== undefined" class="muted small run-split">
-                      运行 {{ row.running }} · 停机 {{ row.stopped }}
-                    </span>
-                  </td>
-                  <td class="num-cell">{{ row.amount }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-else class="muted small note">{{ activeStat.emptyText }}</p>
-          </template>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── 第二行：矿石 ─────────────────────────────────────── -->
-    <h2 class="mt">矿石</h2>
+    <!-- ── 矿石（电能四格与标题已搬进左侧仪表侧栏，换页常驻） ── -->
+    <h2>矿石</h2>
     <div class="chips">
       <!-- 鼠标移上去（或键盘聚焦）时，框向下拉伸出这一级的实时产量 -->
       <div v-for="row in snap.ores" :key="row.tier" class="chip" tabindex="0">

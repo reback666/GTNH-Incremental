@@ -10,7 +10,7 @@ import GridPanel from './components/GridPanel.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import RebirthPage from './components/RebirthPage.vue';
 import RiftDialog from './components/RiftDialog.vue';
-import PageNav from './components/PageNav.vue';
+import Sidebar from './components/Sidebar.vue';
 import AchievementPanel from './components/AchievementPanel.vue';
 import LogPanel from './components/LogPanel.vue';
 import FxLayer from './components/FxLayer.vue';
@@ -62,10 +62,13 @@ onMounted(() => {
   <RebirthPage v-if="view === 'rebirth'" @close="view = 'factory'" />
 
   <template v-else>
-    <PageNav :page="page" :pages="pages" @change="goTo" />
+    <!-- 桌面双栏：左侧仪表侧栏（铭牌 / 页签 / 电能 / 研究）+ 右侧内容区 -->
+    <div class="app-shell">
+      <Sidebar :page="page" :pages="pages" @change="goTo" />
 
-    <Transition name="page" mode="out-in">
-      <div :key="page" class="page-body">
+      <main class="page-body">
+        <Transition name="page" mode="out-in">
+          <div :key="page">
         <!-- 第 1 页：工厂 -->
         <template v-if="page === 1">
           <ResourceBar />
@@ -144,8 +147,10 @@ onMounted(() => {
           </section>
           <LogPanel />
         </template>
-      </div>
-    </Transition>
+          </div>
+        </Transition>
+      </main>
+    </div>
   </template>
 
   <RiftDialog @accepted="view = 'rebirth'" />

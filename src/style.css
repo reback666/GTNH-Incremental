@@ -131,9 +131,9 @@ body {
 }
 
 #app {
-  max-width: 760px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 12px 12px 40px;
+  padding: 12px 16px 40px;
 }
 
 h1 {
@@ -990,64 +990,159 @@ h2 .small {
 
 /* 设置与风险：污染条与电网选择 */
 /* 转生：永久加成树 */
-/* 右侧页码条：当前页的按钮放大、点亮 */
-.page-nav {
-  position: fixed;
-  right: 14px;
-  top: 50%;
-  z-index: 10;
+
+/* ── 桌面双栏骨架：左侧仪表侧栏 + 右侧内容区 ─────────────── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.page-body {
+  min-width: 0;
+}
+
+/* 侧栏跟着屏幕滚（sticky），换页时电能与研究读数常驻可见 */
+.sidebar {
+  position: sticky;
+  top: 12px;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+}
+
+/* 工厂铭牌：名号 + 电压徽标 + 已玩时长 */
+.side-brand {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+
+.side-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* 电压徽标：按该级电压色描边（MAX 用彩虹渐变字） */
+.volt-badge {
+  padding: 0 8px;
+  border: 1px solid var(--tier-c, var(--accent));
+  color: var(--tier-c, var(--accent));
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: 12.5px;
+  line-height: 20px;
+  letter-spacing: 0.04em;
+}
+
+.volt-badge.volt-max {
+  border-color: transparent;
+  background: var(--vt14);
+  -webkit-background-clip: padding-box;
+  background-clip: padding-box;
+  /* 彩虹以渐变字呈现，边框留白 */
+  color: transparent;
+  background-origin: border-box;
+  -webkit-text-fill-color: transparent;
+}
+
+.side-play {
+  flex-basis: 100%;
+}
+
+/* 页签：替代旧的右侧竖排页码 */
+.side-nav {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 4px;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  transform: translateY(-50%);
+  min-height: 42px;
+  padding: 0 12px;
+  text-align: left;
 }
 
-.page-dot {
-  width: 38px;
-  height: 38px;
-  min-height: 38px;
-  padding: 0;
-  border-radius: 12px;
+.nav-key {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--line);
-  background: rgba(26, 32, 39, 0.86);
   color: var(--muted);
-  font-size: 14px;
-  font-weight: 600;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    color 0.18s ease,
-    background 0.18s ease;
+  font-family: var(--font-num);
+  font-size: 11px;
+  line-height: 1;
 }
 
-.page-dot:hover {
-  border-color: #4a5563;
-  color: var(--text);
-}
-
-.page-dot.active {
-  transform: scale(1.18);
-  border-color: var(--accent);
-  background: rgba(var(--accent-rgb), 0.18);
-  color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.12);
+.nav-name {
+  flex: 1;
 }
 
 /* 这一页有新东西要看（设置页里出现了错误日志） */
-.page-dot {
-  position: relative;
-}
-
-.page-badge {
-  position: absolute;
-  top: 5px;
-  right: 5px;
+.nav-badge {
+  flex: none;
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--danger);
-  box-shadow: 0 0 0 2px rgba(18, 22, 28, 0.9);
+  box-shadow: 0 0 0 2px rgba(13, 16, 21, 0.9);
+}
+
+.nav-btn.active {
+  background: rgba(var(--accent-rgb), 0.16);
+  color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.55) inset;
+}
+
+.nav-btn.active .nav-key {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 侧栏电能四格：两行两列 */
+.side-power-row {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* 侧栏研究进度 */
+.side-research-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.side-research-pct {
+  font-family: var(--font-num);
+}
+
+.side-progress {
+  position: relative;
+  height: 10px;
+  margin-top: 5px;
+  background: #14181e;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.side-progress span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease-out;
+}
+
+.side-research-note {
+  margin: 4px 0 0;
 }
 
 /* 换页过渡：先淡出上一页，再淡入下一页 */
@@ -1068,14 +1163,18 @@ h2 .small {
   transform: translateY(-8px);
 }
 
-/* 窄屏放不下右侧竖排，改成底部居中横排 */
-@media (max-width: 880px) {
-  .page-nav {
-    top: auto;
-    right: 50%;
-    bottom: 12px;
-    flex-direction: row;
-    transform: translateX(50%);
+/* 窄窗口退回单列：侧栏变成顶部横排（桌面优先，这里只是保底不破版） */
+@media (max-width: 980px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+  }
+
+  .side-power-row {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
