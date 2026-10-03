@@ -90,7 +90,8 @@ GTNH（GregTech: New Horizons）主题的增量 / 放置游戏：从超低压 UL
   按钮三态是「未开放 / 升级 / 已满级」，币不够时按钮点不动、悬停写明差多少；
   标签角标只在「有机会又买得起」时写「可升级」（高亮），其余情况一个字都不显示
 - 三条线各有自己的工具图标（金刚杵取自 GT 的 `gt.Tool_Vajra.png`、连锁采集用 IC2 的电动钻头、
-  连锁爆破用 IC2 的炸药），按各自升了多少次往前挪：没升是 ULV 色，升满（13 / 7 / 28 次）是 MAX 的彩虹
+  连锁爆破用 IC2 的炸药），按各自升了多少次往前挪：没升是 ULV 色，升满（13 / 7 / 28 次）
+  是无尽矿石材质（采样 `src/assets/veins/t10.png` 第一帧，2026-10-03 用户要求替换掉原来的 MAX 彩虹）
   （`python scripts/build-pickaxe-icons.py`，预览图 `docs/pickaxe-tiers.png`）
 - 三条升级线（公式见 `src/numeric/pickaxe.ts`，设计见 `plan.txt` 第四章）：
   金刚杵从 LV 起每电压 1 次（ULV 不给机会）、每次多挖一级矿脉；连锁采集每 2 个电压 1 次、每次产出 ×2；

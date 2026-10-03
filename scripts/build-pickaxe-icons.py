@@ -9,7 +9,9 @@
 底图本身是彩色的，直接淡染（机器那套 tint_casing）几乎看不出等级差别，
 所以这里先按感知亮度转成明暗，再乘上该等级的电压色 —— 形状与层次保留，色相换成电压色。
 
-配色表复用 scripts/gtnh_tiers.py（与机器图标同一套），MAX 用横向彩虹。
+配色表复用 scripts/gtnh_tiers.py（与机器图标同一套）。
+满级（MAX）不用纯色也不走横向彩虹：直接采样无尽矿石贴图（src/assets/veins/t10.png
+第一帧），工具看起来就是无尽材质做的。
 
 用法：python scripts/build-pickaxe-icons.py
 产物：src/assets/pickaxe/<线>-<等级>.png（32×32，与机器图标同规格）
@@ -25,10 +27,13 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from gtnh_tiers import MAX_RAINBOW, tier_color  # noqa: E402
+from gtnh_tiers import tier_color  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "src" / "assets" / "pickaxe"
+
+# 满级图标用的「无尽材质」：矿脉贴图条带的第一帧（16×16）
+INFINITY_TEXTURE = ROOT / "src" / "assets" / "veins" / "t10.png"
 
 JAR_GLOB = str(
     Path.home()
@@ -54,7 +59,7 @@ def luma(pixel: tuple[int, int, int, int]) -> float:
     return (0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]) / 255
 
 
-def tint_tool(source: Image.Image, tier: int) -> Image.Image:
+def tint_tool(source: Image.Image, tier: int, infinity: Image.Image | None) -> Image.Image:
     image = source.convert("RGBA")
     width, height = image.size
     scale = max(1, OUT_SIZE // max(width, height))
@@ -67,9 +72,11 @@ def tint_tool(source: Image.Image, tier: int) -> Image.Image:
             if pixel[3] == 0:
                 continue
             shade = SHADE_FLOOR + (1 - SHADE_FLOOR) * luma(pixel)
-            if color is None:
-                index = min(len(MAX_RAINBOW) - 1, x * len(MAX_RAINBOW) // max(1, width))
-                base = MAX_RAINBOW[index]
+            if tier >= MAX_TIER and infinity is not None:
+                # 满级：按位置采样无尽矿石贴图（超出 16×16 就平铺），工具即无尽材质
+                base = infinity.getpixel((x % infinity.width, y % infinity.height))
+            elif color is None:
+                base = tier_color(MAX_TIER)
             else:
                 base = color
             tinted.putpixel(
@@ -101,12 +108,14 @@ def main() -> None:
         "gt": zipfile.ZipFile(find_jar(JAR_GLOB)),
         "ic2": zipfile.ZipFile(find_jar(IC2_GLOB)),
     }
+    # 矿脉条带是竖排 31 帧，取最上面一帧当满级配色
+    infinity = Image.open(INFINITY_TEXTURE).convert("RGBA").crop((0, 0, 16, 16))
 
     try:
         for line, (jar_id, path) in LINES.items():
             source = Image.open(io.BytesIO(jars[jar_id].read(path)))
             for tier in range(1, MAX_TIER + 1):
-                tint_tool(source, tier).save(OUT_DIR / f"{line}-{tier}.png")
+                tint_tool(source, tier, infinity).save(OUT_DIR / f"{line}-{tier}.png")
             print(f"{line}: {path} → {MAX_TIER} 张")
     finally:
         for archive in jars.values():
