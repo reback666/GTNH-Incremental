@@ -46,6 +46,10 @@
   --btn-face: #23262e;
   --btn-text: #e8edf4;
 
+  /* 页面环境与轨道（内凹条）用的底色，亮肤会整组换掉 */
+  --bg-glow: #1a2029;
+  --track: #14181e;
+
   /* 数字/电压代号字体 */
   --font-num: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
 
@@ -84,6 +88,9 @@
   --skin-btn-pressed: url('./assets/gui/btn-pressed.png');
   --skin-btn-disabled: url('./assets/gui/btn-disabled.png');
   --skin-slot: url('./assets/gui/slot-item.png');
+  --bg: #90909a;
+  --bg-glow: #a2a2ac;
+  --track: #81818b;
   color-scheme: light;
 }
 
@@ -100,7 +107,7 @@ body {
     方格 28px 一格、透明度 2.5%，扫一眼几乎察觉不到，但画面不再是一张死平的纯色。
   */
   background:
-    radial-gradient(120% 60% at 50% 0%, #1a2029 0%, rgba(26, 32, 41, 0) 60%),
+    radial-gradient(120% 60% at 50% 0%, var(--bg-glow) 0%, rgba(26, 32, 41, 0) 60%),
     repeating-linear-gradient(0deg, rgba(var(--accent-rgb), 0.025) 0 1px, transparent 1px 28px),
     repeating-linear-gradient(90deg, rgba(var(--accent-rgb), 0.025) 0 1px, transparent 1px 28px),
     var(--bg);
@@ -262,6 +269,7 @@ button.big {
   }
 }
 
+/* GT 插槽格：凹槽感来自原版 18×18 插槽贴图（1px 深边 + 灰底），切片拉伸 */
 .power-box {
   display: flex;
   flex-direction: column;
@@ -270,12 +278,13 @@ button.big {
   min-height: 52px;
   padding: 8px 10px;
   text-align: left;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 9px;
+  border: 1px solid;
+  border-image: var(--skin-slot) 1 fill / 1px stretch;
+  border-radius: 0;
+  background: none;
   transition:
-    border-color 0.2s ease,
-    background 0.2s ease;
+    filter 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .power-box:not(.static) {
@@ -283,12 +292,11 @@ button.big {
 }
 
 .power-box:not(.static):hover {
-  border-color: #4a5a6c;
+  filter: brightness(1.18);
 }
 
 .power-box.active {
-  border-color: var(--accent);
-  background: #262e39;
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.55) inset;
 }
 
 .power-box.static {
@@ -296,7 +304,7 @@ button.big {
 }
 
 .power-box.danger {
-  border-color: var(--danger);
+  box-shadow: 0 0 0 2px rgba(217, 82, 79, 0.6) inset;
 }
 
 .power-label {
@@ -330,7 +338,7 @@ button.big {
 
 .power-pad {
   padding: 8px 10px;
-  background: #141920;
+  background: var(--track);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
@@ -452,23 +460,21 @@ button.big {
   margin-left: 4px;
 }
 
+/* 资源 chip：同 slot 贴图的插槽格，悬停提亮（border 被贴图接管，不再描色） */
 .chip {
   min-width: 0;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 9px;
+  border: 1px solid;
+  border-image: var(--skin-slot) 1 fill / 1px stretch;
+  border-radius: 0;
   padding: 5px 10px;
   font-size: 12px;
   cursor: default;
-  transition:
-    border-color 0.22s ease,
-    background 0.22s ease;
+  transition: filter 0.22s ease;
 }
 
 .chip:hover,
 .chip:focus {
-  border-color: var(--accent);
-  background: #262e39;
+  filter: brightness(1.18);
   outline: none;
 }
 
@@ -707,20 +713,24 @@ h2 .small {
 }
 
 /* ── 矿脉与挖矿特效 ──────────────────────────────────────── */
+/* 矿脉展示柜：横向布局，贴图居左、说明居右（宽屏内容区下竖排太空） */
 .vein-btn {
   position: relative;
   width: 100%;
-  min-height: 188px;
+  min-height: 168px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 26px;
   /* 留出原版光晕外扩的空间（光晕本身比图标大 2.25 倍） */
-  padding: 34px 0 18px;
+  padding: 30px 24px 24px;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 65%, #232b35 0%, #171c23 70%);
-  border-color: #3a4553;
+  background: radial-gradient(circle at 50% 65%, var(--bg-glow) 0%, var(--bg) 70%);
+  border-style: solid;
+  border-width: 3px;
+  border-image: var(--skin-panel) 3 / 3px stretch;
+  border-radius: 0;
 }
 
 .vein-btn:active {
@@ -823,8 +833,8 @@ h2 .small {
 
 .vein-label {
   position: relative;
-  font-size: 13px;
-  color: var(--muted);
+  font-size: 15px;
+  color: var(--text);
   letter-spacing: 0.12em;
 }
 
@@ -1129,7 +1139,7 @@ h2 .small {
   position: relative;
   height: 10px;
   margin-top: 5px;
-  background: #14181e;
+  background: var(--track);
   border: 1px solid var(--line);
   overflow: hidden;
 }
@@ -1399,7 +1409,7 @@ h2 .small {
   padding: 8px;
   max-height: 320px;
   overflow-y: auto;
-  background: #141920;
+  background: var(--track);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
@@ -1471,7 +1481,7 @@ h2 .small {
   padding: 6px 8px;
   max-height: 200px;
   overflow: auto;
-  background: #0f141a;
+  background: var(--track);
   border: 1px solid var(--line);
   border-radius: 6px;
   color: var(--muted);
@@ -1495,7 +1505,7 @@ h2 .small {
   height: 160px;
   margin-top: 8px;
   padding: 8px;
-  background: #141920;
+  background: var(--track);
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--text);
@@ -1552,7 +1562,7 @@ h2 .small {
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: #141a20;
+  background: var(--track);
   cursor: grab;
   scrollbar-width: thin;
   overscroll-behavior: contain;
@@ -1765,7 +1775,7 @@ h2 .small {
   height: 10px;
   margin-top: 6px;
   border-radius: 5px;
-  background: #1b2129;
+  background: var(--track);
   border: 1px solid #333c48;
   overflow: hidden;
 }
@@ -1820,7 +1830,7 @@ h2 .small {
   height: 10px;
   margin-top: 6px;
   border-radius: 5px;
-  background: #1b2129;
+  background: var(--track);
   border: 1px solid #333c48;
   overflow: hidden;
 }
@@ -2146,7 +2156,7 @@ h2 .small {
 }
 
 .machine-tab.active {
-  background: #2a3444;
+  background: rgba(var(--accent-rgb), 0.2);
   box-shadow:
     0 0 0 2px rgba(var(--accent-rgb), 0.6) inset,
     0 0 10px rgba(var(--accent-rgb), 0.12);
@@ -2207,9 +2217,9 @@ h2 .small {
 
 .stat {
   min-width: 0;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  border: 1px solid;
+  border-image: var(--skin-slot) 1 fill / 1px stretch;
+  border-radius: 0;
   padding: 4px 8px;
   font-size: 12px;
 }
@@ -2371,7 +2381,7 @@ h2 .small {
   min-height: 22px;
   overflow: hidden;
   padding: 0 4px;
-  background: #141920;
+  background: var(--track);
   border: 1px solid var(--line);
   border-radius: 6px;
 }
@@ -2410,7 +2420,7 @@ h2 .small {
   min-width: 178px;
   max-width: min(320px, 90vw);
   padding: 8px 10px;
-  background: #0f141a;
+  background: var(--track);
   border: 1px solid var(--accent);
   border-radius: 8px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
