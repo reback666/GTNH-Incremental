@@ -191,6 +191,51 @@ def tint_vajra_strip(tier: int, ore_frames: list[Image.Image]) -> Image.Image:
     return out
 
 
+def dominant_ore_color(vein: Image.Image) -> tuple[int, int, int]:
+    """矿脉贴图里「跟石头底色明显不同」的像素平均色 = 这一级矿物材质的钻头颜色。
+
+    不能用饱和度筛：锻铁是白斑、硅岩是黑斑、中子素是银斑，全是低饱和的。
+    石头底色取出现最多的像素色，与之色距超过阈值（噪声筛掉）的算矿石斑点。
+    """
+    frame = vein.crop((0, 0, vein.width, vein.width))
+    counts: dict[tuple[int, int, int, int], int] = {}
+    for y in range(frame.height):
+        for x in range(frame.width):
+            pixel = frame.getpixel((x, y))
+            counts[pixel] = counts.get(pixel, 0) + 1
+    background = max(counts, key=counts.get)
+    picked = [
+        pixel[:3]
+        for pixel, count in counts.items()
+        if sum((a - b) ** 2 for a, b in zip(pixel[:3], background[:3])) > 3600
+    ]
+    if not picked:
+        return (150, 150, 150)
+    return tuple(round(sum(c[i] for c in picked) / len(picked)) for i in range(3))
+
+
+def tint_drill(source: Image.Image, mineral: tuple[int, int, int]) -> Image.Image:
+    """连锁采集：机体保持 IC2 原版，右上角的金属钻头（低饱和且亮）染成矿物材质色。
+
+    钻头上的深色纹路（饱和度低但偏暗）保持原样——金属沟槽的层次留得住。
+    """
+    image = source.convert("RGBA")
+    tinted = image.copy()
+    for y in range(image.height):
+        for x in range(image.width):
+            pixel = image.getpixel((x, y))
+            if pixel[3] == 0:
+                continue
+            _, sat, val = colorsys.rgb_to_hsv(pixel[0] / 255, pixel[1] / 255, pixel[2] / 255)
+            if sat < 0.25 and val >= 0.45:
+                shade = SHADE_FLOOR + (1 - SHADE_FLOOR) * luma(pixel)
+                tinted.putpixel(
+                    (x, y),
+                    (round(mineral[0] * shade), round(mineral[1] * shade), round(mineral[2] * shade), pixel[3]),
+                )
+    return tinted
+
+
 def find_jar(pattern: str) -> Path:
     matches = sorted(glob.glob(pattern))
     if not matches:
@@ -224,17 +269,23 @@ def main() -> None:
         strip.save(OUT_DIR / f"vajra-{tier}.png")
     print(f"vajra: 材质包贴图 → {MAX_TIER} 条动画条带（{len(VAJRA_SEQUENCE)} 拍 × {VAJRA_FRAME_MS}ms）")
 
-    try:
-        for line, (jar_id, path) in LINES.items():
-            source = Image.open(io.BytesIO(jars[jar_id].read(path)))
-            for tier in range(1, MAX_TIER):
-                tint_tool(source, tier).save(OUT_DIR / f"{line}-{tier}.png")
-            strip = tint_max_strip(source, infinity_strip)
-            strip.save(OUT_DIR / f"{line}-{MAX_TIER}.png")
-            print(f"{line}: {path} → {MAX_TIER - 1} 张静态 + 满级动画条带 {strip.size}")
-    finally:
-        for archive in jars.values():
-            archive.close()
+    # 连锁采集：机体保持 IC2 原版不上色，只有右上角的金属钻头随等级换成对应矿脉的材质色
+    # （等级 n 开采 T(n-1) 矿脉，钻头就是那一级矿脉的材料）
+    veins = Path(ROOT / "src" / "assets" / "veins")
+    drill = Image.open(io.BytesIO(jars["ic2"].read(LINES["drill"][1])))
+    for tier in range(1, MAX_TIER + 1):
+        vein = Image.open(veins / f"t{tier - 1}.png").convert("RGBA")
+        mineral = dominant_ore_color(vein)
+        tint_drill(drill, mineral).save(OUT_DIR / f"drill-{tier}.png")
+    print(f"drill: IC2 原版机体 + 矿脉材质色钻头 → {MAX_TIER} 张静态")
+
+    # 连锁爆破：1~13 级电压色，满级无尽矿石流动
+    blast = Image.open(io.BytesIO(jars["ic2"].read(LINES["blast"][1])))
+    for tier in range(1, MAX_TIER):
+        tint_tool(blast, tier).save(OUT_DIR / f"blast-{tier}.png")
+    strip = tint_max_strip(blast, infinity_strip)
+    strip.save(OUT_DIR / f"blast-{MAX_TIER}.png")
+    print(f"blast: → {MAX_TIER - 1} 张静态 + 满级动画条带 {strip.size}")
 
 
 if __name__ == "__main__":

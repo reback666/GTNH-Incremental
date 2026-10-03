@@ -59,7 +59,7 @@ describe('机型图标', () => {
     }
   });
 
-  it('镐子三条线各有 14 张图标：金刚杵全线是 32×1056 动画条带，采集/爆破 1~13 级 32×32、满级 32×992', () => {
+  it('镐子三条线各有 14 张图标：金刚杵全线是 32×1056 动画条带，采集全线与爆破 1~13 级是 32×32，爆破满级 32×992', () => {
     const dir = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
       '..',
@@ -67,10 +67,11 @@ describe('机型图标', () => {
       'assets',
       'pickaxe',
     );
-    // 金刚杵用材质包贴图，全线 33 拍动画（33×32=1056）；采集/爆破满级 31 帧无尽矿石流动
+    // 金刚杵用材质包贴图，全线 33 拍动画（33×32=1056）；
+    // 采集全线静态（机体原版+矿脉材质色钻头）；爆破满级 31 帧无尽矿石流动
     const stripHeight: Record<string, (tier: number) => number> = {
       vajra: () => 1056,
-      drill: (tier) => (tier === 14 ? 992 : 32),
+      drill: () => 32,
       blast: (tier) => (tier === 14 ? 992 : 32),
     };
     for (const line of ['vajra', 'drill', 'blast']) {
