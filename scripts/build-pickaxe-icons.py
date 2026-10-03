@@ -2,10 +2,10 @@
 
 三条线各自的满级前的配色规则不同，但产物统一收在 src/assets/pickaxe/：
 
-    金刚杵 vajra   用户材质包（Modernity-GTNH）的金刚杵贴图：本体 + 可染色核心，
+    金刚杵 vajra   用户材质包（Modernity-GTNH）的金刚杵本体贴图，
                    **全部 14 级都是动画条带**——本体按材质包 mcmeta 的序列流动（33 拍、
-                   50ms/拍），核心按亮度转灰后乘电压色（不同等级就是中间换色，
-                   用户拍板）；满级核心改用无尽矿石的流动色（毕业 = 无尽材质）
+                   50ms/拍），发光曲线随等级换电压色（用户拍板）；
+                   满级曲线改用无尽矿石的流动色（毕业 = 无尽材质）
     连锁采集 drill assets/ic2/textures/items/itemToolDrill.png（32×32，电动钻头）
     连锁爆破 blast assets/ic2/textures/items/itemDynamite.png（16×16，炸药）
 
@@ -37,9 +37,10 @@ OUT_DIR = ROOT / "src" / "assets" / "pickaxe"
 # 无尽矿脉贴图（竖排帧条带）：drill / blast 满级的材质与节奏来源
 INFINITY_STRIP = ROOT / "src" / "assets" / "veins" / "t10.png"
 
-# 用户材质包（Modernity-GTNH）的金刚杵贴图：本体动画条带（16×256，16 帧）与可染色核心
+# 用户材质包（Modernity-GTNH）的金刚杵本体动画条带（16×256，16 帧）。
+# 注意：材质包里另有 itemVajraCore.png，那是 Gravisuite 版金刚杵的电量指示层
+# （100% 蓝芯 / 0% 红芯），与电压等级无关，不要合到图标上（2026-10-03 用户指正）。
 VAJRA_BASE = ROOT / "scripts" / "textures" / "vajra-base.png"
-VAJRA_CORE = ROOT / "scripts" / "textures" / "vajra-core.png"
 # 材质包 mcmeta 里的播放序列：停 4 拍 → 1..15 → 14..1 往复；frametime 1 = 50ms
 VAJRA_SEQUENCE: list[int] = [
     0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
@@ -147,15 +148,14 @@ def tint_max_strip(source: Image.Image, infinity_strip: Image.Image) -> Image.Im
 
 
 def tint_vajra_strip(tier: int, ore_frames: list[Image.Image]) -> Image.Image:
-    """金刚杵（材质包贴图）：本体动画保留、发光曲线与核心按等级染色，输出竖排条带。
+    """金刚杵（材质包贴图）：本体动画保留、发光曲线按等级染色，输出竖排条带。
 
-    本体贴图里那条红色曲线是随帧呼吸的（明度逐帧变化），染色时只换色相/饱和度、
-    保留每帧的明度（下限 0.35 防糊黑），动画的呼吸感原样保留。
-    核心里只有彩色宝石换等级色，白色棋盘格保持原样（与用户材质包截图一致）；
-    满级曲线与宝石都改用无尽矿石的流动色（33 拍的帧序按比例取样 31 帧矿脉动画）。
+    只用本体条带（`vajra-base.png`）——材质包里的 `itemVajraCore.png` 是 Gravisuite
+    版金刚杵的**电量指示层**（100% 蓝芯 / 0% 红芯），与电压等级无关，不往上合（用户指正）。
+    本体里那条红色曲线是随帧呼吸的（明度逐帧变化），染色时只换色相/饱和度、保留每帧
+    明度（下限 0.35 防糊黑），动画的呼吸感原样保留；满级曲线改用无尽矿石的流动色。
     """
     base_strip = Image.open(VAJRA_BASE).convert("RGBA")
-    core = Image.open(VAJRA_CORE).convert("RGBA")
     target = tier_color(tier)
     target_hsv = (
         colorsys.rgb_to_hsv(target[0] / 255, target[1] / 255, target[2] / 255) if target else None
@@ -172,7 +172,7 @@ def tint_vajra_strip(tier: int, ore_frames: list[Image.Image]) -> Image.Image:
                 if pixel[3] == 0:
                     continue
                 hue, sat, val = colorsys.rgb_to_hsv(pixel[0] / 255, pixel[1] / 255, pixel[2] / 255)
-                if sat >= 0.35:  # 发光曲线：材质包里唯一的彩色区域
+                if sat >= 0.35:  # 发光曲线：本体里唯一的彩色区域
                     if tier < MAX_TIER:
                         # 目标色的色相/饱和度/明度全部参与（有些等级色只差明度），
                         # 像素本帧的明度保留呼吸感
@@ -185,31 +185,7 @@ def tint_vajra_strip(tier: int, ore_frames: list[Image.Image]) -> Image.Image:
                     else:  # 满级：曲线跟无尽矿石的流动色一起走
                         red, green, blue, _ = ore_map[(x % ore_frame.size[0], y % ore_frame.size[0])]
                         base.putpixel((x, y), (red, green, blue, pixel[3]))
-
-        tinted = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-        for y in range(16):
-            for x in range(16):
-                pixel = core.getpixel((x, y))
-                if pixel[3] == 0:
-                    continue
-                hue, sat, val = colorsys.rgb_to_hsv(pixel[0] / 255, pixel[1] / 255, pixel[2] / 255)
-                # 只换核心上的彩色宝石（饱和度高），白色棋盘格保持原样
-                if sat < 0.35:
-                    tinted.putpixel((x, y), pixel)
-                    continue
-                if tier < MAX_TIER:
-                    value = max(val * target_hsv[2], 0.35)
-                    red, green, blue = (
-                        round(c * 255)
-                        for c in colorsys.hsv_to_rgb(target_hsv[0], target_hsv[1], value)
-                    )
-                else:
-                    red, green, blue, _ = ore_map[(x % ore_frame.size[0], y % ore_frame.size[0])]
-                tinted.putpixel((x, y), (red, green, blue, pixel[3]))
-        composed = Image.alpha_composite(
-            base.resize((OUT_SIZE, OUT_SIZE), Image.NEAREST),
-            tinted.resize((OUT_SIZE, OUT_SIZE), Image.NEAREST),
-        )
+        composed = base.resize((OUT_SIZE, OUT_SIZE), Image.NEAREST)
         out.paste(composed, (0, index * OUT_SIZE))
     return out
 
