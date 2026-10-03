@@ -1,4 +1,4 @@
-"""生成镐子三条升级线的 14 级图标：GT / IC2 的工具贴图按电压配色上色。
+"""生成镐子三条升级线的图标：1~13 级按电压配色，满级（14）是无尽矿石材质的流动动画。
 
 三条线各一张底图：
 
@@ -6,21 +6,22 @@
     连锁采集 drill assets/ic2/textures/items/itemToolDrill.png（32×32，电动钻头）
     连锁爆破 blast assets/ic2/textures/items/itemDynamite.png（16×16，炸药）
 
-底图本身是彩色的，直接淡染（机器那套 tint_casing）几乎看不出等级差别，
-所以这里先按感知亮度转成明暗，再乘上该等级的电压色 —— 形状与层次保留，色相换成电压色。
-
-配色表复用 scripts/gtnh_tiers.py（与机器图标同一套）。
-满级（MAX）不用纯色也不走横向彩虹：直接采样世界崩解之镐（Avaritia World Breaker）
-的 16×16 贴图，工具看起来就是那把毕业镐的材质。
+1~13 级：底图按感知亮度转成明暗，再乘上该等级的电压色（形状与层次保留，色相换成电压色）。
+满级（MAX）：输出**竖排 31 帧的动画条带**（32×992），颜色只取无尽矿石贴图
+（src/assets/veins/t10.png，与矿脉面板同一张、同一套 150ms/帧节奏）里**矿石斑点自己的颜色**
+——灰白石底不参与（用户拍板），采不到斑点的格子取同一帧里最近的斑点色，
+播放起来就是整把工具裹着一层流动的矿石材质。
 
 用法：python scripts/build-pickaxe-icons.py
-产物：src/assets/pickaxe/<线>-<等级>.png（32×32，与机器图标同规格）
+产物：src/assets/pickaxe/<线>-<等级>.png（32×32；满级为 32×(32×31) 的动画条带）
 """
 
 from __future__ import annotations
 
+import colorsys
 import glob
 import sys
+from collections import deque
 from pathlib import Path
 
 from PIL import Image
@@ -32,12 +33,8 @@ from gtnh_tiers import tier_color  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "src" / "assets" / "pickaxe"
 
-# 满级配色来源：世界崩解之镐（Avaritia World Breaker）的 16×16 原始贴图。
-# 取自 mcmod 渲染图按 8 倍最近邻还原，来源记录在 texture-sources.md。
-WORLDBREAKER_TEXTURE = ROOT / "scripts" / "textures" / "worldbreaker-16.png"
-
-# 满级色带从贴图里提几段
-WB_GRADIENT_STEPS = 10
+# 满级动画的材质与节奏来源：无尽矿脉贴图（竖排帧条带，与矿脉面板共用同一份文件）
+INFINITY_STRIP = ROOT / "src" / "assets" / "veins" / "t10.png"
 
 JAR_GLOB = str(
     Path.home()
@@ -58,47 +55,49 @@ OUT_SIZE = 32
 # 明暗下限：原图的暗红柄亮度只有 0.19，直接用会把柄压成黑色，看不出形状。
 SHADE_FLOOR = 0.45
 
+# 「矿石斑点」的判定：饱和度 ≥ 0.2 即为矿石色（灰白石底饱和度接近 0，实测 0.36 封顶）
+ORE_SATURATION_FLOOR = 0.2
+ORE_VALUE_FLOOR = 0.3
+
 
 def luma(pixel: tuple[int, int, int, int]) -> float:
     return (0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]) / 255
 
 
-def worldbreaker_gradient() -> list[tuple[int, int, int]]:
-    """从世界崩解之镐贴图提取镐头的光谱色带。
+def is_ore(pixel: tuple[int, int, int, int]) -> bool:
+    if pixel[3] < 128:
+        return False
+    _, sat, val = colorsys.rgb_to_hsv(pixel[0] / 255, pixel[1] / 255, pixel[2] / 255)
+    return sat >= ORE_SATURATION_FLOOR and val >= ORE_VALUE_FLOOR
 
-    只取不透明且高饱和的像素（镐头彩虹 + 青绿宝石，剔掉灰棋盘柄和透明背景），
-    沿镐头的对角线方向排序后分成若干段，每段取平均 —— 得到橙→金→紫→蓝→青绿的
-    渐变色带，就是「世界崩解之镐镐头那种」配色。
+
+def nearest_ore_map(frame: Image.Image) -> dict[tuple[int, int], tuple[int, int, int, int]]:
+    """帧内每一格 → 最近的矿石斑点颜色（灰石底与透明格子也被映射成斑点色）。
+
+    从全部斑点格同时做 BFS 外扩，保证每个格子拿到的是「最近的那颗斑点」，
+    斑点随帧移动时整张映射图跟着流动，不会出现灰底残块。
     """
-    import colorsys
-    import statistics
-
-    image = Image.open(WORLDBREAKER_TEXTURE).convert("RGBA")
-    vivid = []
-    for y in range(image.height):
-        for x in range(image.width):
-            pixel = image.getpixel((x, y))
-            if pixel[3] < 128:
-                continue
-            hue, sat, val = colorsys.rgb_to_hsv(pixel[0] / 255, pixel[1] / 255, pixel[2] / 255)
-            if sat > 0.45 and val > 0.3:
-                vivid.append((x + y, (pixel[0], pixel[1], pixel[2])))
-    vivid.sort(key=lambda item: item[0])
-    per = max(1, len(vivid) // WB_GRADIENT_STEPS)
-    bands = []
-    for index in range(WB_GRADIENT_STEPS):
-        chunk = vivid[index * per:] if index == WB_GRADIENT_STEPS - 1 else vivid[index * per:(index + 1) * per]
-        if not chunk:
-            continue
-        bands.append((
-            round(statistics.mean(c[1][0] for c in chunk)),
-            round(statistics.mean(c[1][1] for c in chunk)),
-            round(statistics.mean(c[1][2] for c in chunk)),
-        ))
-    return bands
+    width, height = frame.size
+    queue: deque[tuple[int, int]] = deque()
+    result: dict[tuple[int, int], tuple[int, int, int, int]] = {}
+    for y in range(height):
+        for x in range(width):
+            if is_ore(frame.getpixel((x, y))):
+                queue.append((x, y))
+                result[(x, y)] = frame.getpixel((x, y))
+    while queue:
+        x, y = queue.popleft()
+        color = result[(x, y)]
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < width and 0 <= ny < height and (nx, ny) not in result:
+                result[(nx, ny)] = color
+                queue.append((nx, ny))
+    return result
 
 
-def tint_tool(source: Image.Image, tier: int, max_gradient: list[tuple[int, int, int]]) -> Image.Image:
+def tint_tool(source: Image.Image, tier: int) -> Image.Image:
+    """1~13 级：明暗 × 电压色的静态图标。"""
     image = source.convert("RGBA")
     width, height = image.size
     scale = max(1, OUT_SIZE // max(width, height))
@@ -111,17 +110,30 @@ def tint_tool(source: Image.Image, tier: int, max_gradient: list[tuple[int, int,
             if pixel[3] == 0:
                 continue
             shade = SHADE_FLOOR + (1 - SHADE_FLOOR) * luma(pixel)
-            if tier >= MAX_TIER and max_gradient:
-                # 满级：世界崩解之镐镐头的光谱渐变，沿工具的对角线铺开
-                index = min(len(max_gradient) - 1, (x + y) * len(max_gradient) // max(1, width + height))
-                base = max_gradient[index]
-            else:
-                base = color
             tinted.putpixel(
                 (x, y),
-                (round(base[0] * shade), round(base[1] * shade), round(base[2] * shade), pixel[3]),
+                (round(color[0] * shade), round(color[1] * shade), round(color[2] * shade), pixel[3]),
             )
     return tinted.resize((width * scale, height * scale), Image.NEAREST)
+
+
+def tint_max_strip(source: Image.Image, infinity_strip: Image.Image) -> Image.Image:
+    """满级：无尽矿石材质的流动动画，输出竖排帧条带（帧大小 OUT_SIZE×OUT_SIZE）。"""
+    image = source.convert("RGBA").resize((OUT_SIZE, OUT_SIZE), Image.NEAREST)
+    frames = infinity_strip.height // infinity_strip.width
+    frame_size = infinity_strip.width
+    out = Image.new("RGBA", (OUT_SIZE, OUT_SIZE * frames), (0, 0, 0, 0))
+    for index in range(frames):
+        frame = infinity_strip.crop((0, index * frame_size, frame_size, (index + 1) * frame_size))
+        ore_map = nearest_ore_map(frame)
+        for y in range(OUT_SIZE):
+            for x in range(OUT_SIZE):
+                pixel = image.getpixel((x, y))
+                if pixel[3] == 0:
+                    continue
+                color = ore_map[(x % frame_size, y % frame_size)]
+                out.putpixel((x, index * OUT_SIZE + y), color)
+    return out
 
 
 def find_jar(pattern: str) -> Path:
@@ -146,21 +158,22 @@ def main() -> None:
         "gt": zipfile.ZipFile(find_jar(JAR_GLOB)),
         "ic2": zipfile.ZipFile(find_jar(IC2_GLOB)),
     }
-    # 从世界崩解之镐贴图提取满级色带
-    gradient = worldbreaker_gradient()
-    print(f"满级色带（{len(gradient)} 段）: {gradient}")
+    infinity_strip = Image.open(INFINITY_STRIP).convert("RGBA")
+    frames = infinity_strip.height // infinity_strip.width
 
     try:
         for line, (jar_id, path) in LINES.items():
             source = Image.open(io.BytesIO(jars[jar_id].read(path)))
-            for tier in range(1, MAX_TIER + 1):
-                tint_tool(source, tier, gradient).save(OUT_DIR / f"{line}-{tier}.png")
-            print(f"{line}: {path} → {MAX_TIER} 张")
+            for tier in range(1, MAX_TIER):
+                tint_tool(source, tier).save(OUT_DIR / f"{line}-{tier}.png")
+            strip = tint_max_strip(source, infinity_strip)
+            strip.save(OUT_DIR / f"{line}-{MAX_TIER}.png")
+            print(f"{line}: {path} → {MAX_TIER - 1} 张静态 + 满级动画条带 {strip.size}")
     finally:
         for archive in jars.values():
             archive.close()
 
-    print(f"共写入 {len(LINES) * MAX_TIER} 张工具图标到 {OUT_DIR}")
+    print(f"满级动画 {frames} 帧 × 150ms（与无尽矿脉贴图同节奏），共写入 {len(LINES) * MAX_TIER} 个文件")
 
 
 if __name__ == "__main__":

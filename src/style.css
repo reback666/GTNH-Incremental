@@ -721,6 +721,20 @@ h2 .small {
   image-rendering: pixelated;
 }
 
+/* 满级镐子的流动矿石材质：竖排帧条带，结构与矿脉动画一致（vein-clip/vein-frames），
+   只是容器缩到 32×32（vein-stage 默认 112×112 是矿脉面板的尺寸） */
+.pickaxe-vein-icon {
+  position: relative;
+  display: block;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+}
+
+.pickaxe-vein-icon .vein-frames {
+  image-rendering: pixelated;
+}
+
 /* 有没用掉的机会就提示出来，玩家一眼看到哪条线还能升 */
 .machine-tab .tab-count.can {
   color: var(--warn);

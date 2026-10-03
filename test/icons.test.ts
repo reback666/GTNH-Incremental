@@ -59,7 +59,7 @@ describe('机型图标', () => {
     }
   });
 
-  it('镐子三条线各有 14 张 32×32 图标，同一线内按电压色两两不同', () => {
+  it('镐子三条线各有 14 张图标，1~13 级是 32×32 静态图，满级是 32×992 的 31 帧动画条带', () => {
     const dir = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
       '..',
@@ -73,7 +73,8 @@ describe('机型图标', () => {
         const file = path.join(dir, `${line}-${tier}.png`);
         expect(existsSync(file), `缺 ${line}-${tier}.png`).toBe(true);
         const bytes = readFileSync(file);
-        expect(pngSize(bytes), `${line}-${tier} 尺寸`).toBe('32x32');
+        // 满级是流动的矿石材质动画条带：32×(32×31)，帧数与无尽矿脉贴图一致
+        expect(pngSize(bytes), `${line}-${tier} 尺寸`).toBe(tier === 14 ? '32x992' : '32x32');
         hashes.add(createHash('md5').update(bytes).digest('hex'));
       }
       expect(hashes.size, `${line} 系列的图标数`).toBe(14);

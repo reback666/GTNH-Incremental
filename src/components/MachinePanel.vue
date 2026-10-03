@@ -16,7 +16,7 @@ import {
 } from '../numeric/overclock';
 import { formatNumber } from '../numeric/format';
 import MachineIcon from './MachineIcon.vue';
-import { pickaxeIconUrl } from '../game/pickaxe-icons';
+import { pickaxeIconUrl, PICKAXE_MAX_TIER, PICKAXE_STRIP } from '../game/pickaxe-icons';
 
 const props = defineProps<{ columns: MachineColumn[] }>();
 const store = useGameStore();
@@ -49,6 +49,21 @@ const pickaxeVeinLocked = computed(
 function lineIcon(line: { id: 'vajra' | 'collect' | 'blast'; iconTier: number }): string | undefined {
   return pickaxeIconUrl(line.id, line.iconTier);
 }
+
+// 满级图标是竖排帧条带，要走矿脉动画那套结构而不是 <img>
+function lineAnimated(line: { iconTier: number }): boolean {
+  return line.iconTier >= PICKAXE_MAX_TIER;
+}
+
+const pickaxeTabAnimated = computed(() =>
+  (store.snap.pickaxe.lines[0]?.iconTier ?? 1) >= PICKAXE_MAX_TIER,
+);
+
+// 条带动画的 CSS 变量：帧数与循环时长来自生成脚本的同源约定
+const stripStyle = {
+  '--frames': String(PICKAXE_STRIP.frames),
+  '--loop': `${PICKAXE_STRIP.frames * PICKAXE_STRIP.frameMs}ms`,
+};
 // 计划书第七章规定用 GT 币买；开局没有产币机器，所以再给一条用矿石建造的路子。
 const payWith = ref<PayWith>('coin');
 
@@ -205,7 +220,16 @@ function canBuy(model: MachineModelRow): boolean {
         @focus="showColumnTip($event, '镐子', store.snap.pickaxe.modifiers)"
         @blur="hideTip"
       >
-        <img v-if="pickaxeTabIcon" class="tab-icon" :src="pickaxeTabIcon" alt="" />
+        <span
+          v-if="pickaxeTabIcon && pickaxeTabAnimated"
+          class="tab-icon pickaxe-vein-icon"
+          :style="stripStyle"
+        >
+          <span class="vein-clip">
+            <span class="vein-frames" :style="{ backgroundImage: `url(${pickaxeTabIcon})` }" />
+          </span>
+        </span>
+        <img v-else-if="pickaxeTabIcon" class="tab-icon" :src="pickaxeTabIcon" alt="" />
         <span class="tab-name">镐子</span>
         <span v-if="pickaxeCanUpgrade" class="tab-count can">可升级</span>
       </button>
@@ -466,7 +490,16 @@ function canBuy(model: MachineModelRow): boolean {
           </p>
 
           <div v-for="line in pickaxeLines" :key="line.id" class="pickaxe-line">
-            <img v-if="lineIcon(line)" class="pickaxe-line-icon" :src="lineIcon(line)" alt="" />
+            <span
+              v-if="lineIcon(line) && lineAnimated(line)"
+              class="pickaxe-line-icon pickaxe-vein-icon"
+              :style="stripStyle"
+            >
+              <span class="vein-clip">
+                <span class="vein-frames" :style="{ backgroundImage: `url(${lineIcon(line)})` }" />
+              </span>
+            </span>
+            <img v-else-if="lineIcon(line)" class="pickaxe-line-icon" :src="lineIcon(line)" alt="" />
             <div class="pickaxe-line-text">
               <span class="pickaxe-line-name">{{ line.name }}</span>
               <span class="muted small">{{ line.hint }}</span>
