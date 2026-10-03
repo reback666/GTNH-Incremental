@@ -16,7 +16,11 @@ import {
 } from '../numeric/overclock';
 import { formatNumber } from '../numeric/format';
 import MachineIcon from './MachineIcon.vue';
-import { pickaxeIconUrl, PICKAXE_MAX_TIER, PICKAXE_STRIP } from '../game/pickaxe-icons';
+import {
+  pickaxeIconUrl,
+  pickaxeIconIsStrip,
+  PICKAXE_STRIP_META,
+} from '../game/pickaxe-icons';
 
 const props = defineProps<{ columns: MachineColumn[] }>();
 const store = useGameStore();
@@ -50,20 +54,24 @@ function lineIcon(line: { id: 'vajra' | 'collect' | 'blast'; iconTier: number })
   return pickaxeIconUrl(line.id, line.iconTier);
 }
 
-// 满级图标是竖排帧条带，要走矿脉动画那套结构而不是 <img>
-function lineAnimated(line: { iconTier: number }): boolean {
-  return line.iconTier >= PICKAXE_MAX_TIER;
+// 条带图标走矿脉动画结构；帧数与循环时长按线取（金刚杵 33 拍，采集/爆破 31 帧）
+function lineAnimated(line: { id: 'vajra' | 'collect' | 'blast'; iconTier: number }): boolean {
+  return pickaxeIconIsStrip(line.id, line.iconTier);
+}
+
+function stripStyle(line: { id: 'vajra' | 'collect' | 'blast' }) {
+  const meta = PICKAXE_STRIP_META[line.id];
+  return {
+    '--frames': String(meta.frames),
+    '--loop': `${meta.frames * meta.frameMs}ms`,
+  };
 }
 
 const pickaxeTabAnimated = computed(() =>
-  (store.snap.pickaxe.lines[0]?.iconTier ?? 1) >= PICKAXE_MAX_TIER,
+  lineAnimated({ id: 'vajra', iconTier: store.snap.pickaxe.lines[0]?.iconTier ?? 1 }),
 );
 
-// 条带动画的 CSS 变量：帧数与循环时长来自生成脚本的同源约定
-const stripStyle = {
-  '--frames': String(PICKAXE_STRIP.frames),
-  '--loop': `${PICKAXE_STRIP.frames * PICKAXE_STRIP.frameMs}ms`,
-};
+const pickaxeTabStripStyle = computed(() => stripStyle({ id: 'vajra' }));
 // 计划书第七章规定用 GT 币买；开局没有产币机器，所以再给一条用矿石建造的路子。
 const payWith = ref<PayWith>('coin');
 
@@ -223,7 +231,7 @@ function canBuy(model: MachineModelRow): boolean {
         <span
           v-if="pickaxeTabIcon && pickaxeTabAnimated"
           class="tab-icon pickaxe-vein-icon"
-          :style="stripStyle"
+          :style="pickaxeTabStripStyle"
         >
           <span class="vein-clip">
             <span class="vein-frames" :style="{ backgroundImage: `url(${pickaxeTabIcon})` }" />
@@ -493,7 +501,7 @@ function canBuy(model: MachineModelRow): boolean {
             <span
               v-if="lineIcon(line) && lineAnimated(line)"
               class="pickaxe-line-icon pickaxe-vein-icon"
-              :style="stripStyle"
+              :style="stripStyle(line)"
             >
               <span class="vein-clip">
                 <span class="vein-frames" :style="{ backgroundImage: `url(${lineIcon(line)})` }" />

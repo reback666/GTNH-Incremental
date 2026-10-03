@@ -1,12 +1,24 @@
-// 镐子三条升级线的图标：1~13 级是静态 32×32（按电压上色），
-// 满级（14）是**竖排 31 帧的动画条带**（32×992）——无尽矿石材质的流动渲染，
-// 由 scripts/build-pickaxe-icons.py 生成，与无尽矿脉贴图同源同节奏（150ms/帧）。
-// 文件名是「线-电压等级」（vajra-1 = 金刚杵的 ULV 色，vajra-14 = 金刚杵的满级动画条带）。
+// 镐子三条升级线的图标，由 scripts/build-pickaxe-icons.py 生成：
+// - vajra（金刚杵，材质包贴图）：**全部 14 级都是竖排动画条带**（32×1056，33 拍 × 50ms，
+//   与材质包 mcmeta 序列一致），本体流动、发光曲线与核心宝石随等级换色
+// - collect / blast：1~13 级静态 32×32（按电压上色），满级（14）是 32×992 的 31 帧
+//   动画条带（150ms/帧）——无尽矿石材质的流动渲染
+// 文件名是「线-电压等级」（vajra-1 = 金刚杵的 ULV 色，vajra-14 = 满级的无尽流动）。
 import type { PickaxeLine } from '../numeric/pickaxe';
 
-// 界面渲染满级条带时要用这两个参数搭帧动画（与 scripts/build-pickaxe-icons.py 约定一致）
 export const PICKAXE_MAX_TIER = 14;
-export const PICKAXE_STRIP = { frames: 31, frameMs: 150 };
+
+// 条带动画参数（与生成脚本约定一致）：线 → 帧数、每帧毫秒
+export const PICKAXE_STRIP_META: Record<PickaxeLine, { frames: number; frameMs: number }> = {
+  vajra: { frames: 33, frameMs: 50 },
+  collect: { frames: 31, frameMs: 150 },
+  blast: { frames: 31, frameMs: 150 },
+};
+
+// 该图标是不是动画条带（决定界面用矿脉动画结构还是普通 <img>）
+export function pickaxeIconIsStrip(line: PickaxeLine, tier: number): boolean {
+  return line === 'vajra' || tier >= PICKAXE_MAX_TIER;
+}
 
 const files = import.meta.glob('../assets/pickaxe/*.png', {
   eager: true,

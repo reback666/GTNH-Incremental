@@ -138,30 +138,34 @@ T12 海珀珍没有原版贴图可用（它的材质定义在 GT++，颜色取�
 
 ## 镐子图标（金刚杵）
 
-`src/assets/pickaxe/` 下是镐子三条升级线的图标，每条线 14 张（同一个物件在 14 个电压下的样子）：
+`src/assets/pickaxe/` 下是镐子三条升级线的图标，每条线 14 张：
 
 ```
-线          文件前缀        素材                                                      原图
-金刚杵      vajra-<等级>    assets/gregtech/textures/items/gt.Tool_Vajra.png           16×16，金头红柄
-连锁采集    drill-<等级>    assets/ic2/textures/items/itemToolDrill.png                32×32，电动钻头
-连锁爆破    blast-<等级>    assets/ic2/textures/items/itemDynamite.png                 16×16，炸药
+线          文件前缀        素材
+金刚杵      vajra-<等级>    用户材质包（Modernity-GTNH）的金刚杵贴图 + 可染色核心
+                            scripts/textures/vajra-base.png（16×256，16 帧动画条带）
+                            scripts/textures/vajra-core.png（16×16，白棋盘菱形 + 彩色宝石）
+连锁采集    drill-<等级>    assets/ic2/textures/items/itemToolDrill.png（32×32，电动钻头）
+连锁爆破    blast-<等级>    assets/ic2/textures/items/itemDynamite.png（16×16，炸药）
 
-脚本：python scripts/build-pickaxe-icons.py（同时读 GT5-Unofficial 与 IC2 两个 jar）
-产物：32×32，共 42 张；预览图 docs/pickaxe-tiers.png
+脚本：python scripts/build-pickaxe-icons.py（drill/blast 读 IC2 jar）
+产物：32×32 或竖排动画条带；预览图 docs/pickaxe-tiers.png
 ```
 
-原图本身是彩色的，机器那套淡染（`TINT_STRENGTH = 0.2`）用在它身上几乎看不出等级差别，
-所以这里先按感知亮度把原图转成明暗，再乘上该等级的电压色（暗部有 0.45 的亮度保底，
-否则原图里那截暗红柄会糊成黑块）。配色同样取自 `gtnh_tiers.py`。
+**金刚杵全线是动画**：本体按材质包 mcmeta 的序列流动（33 拍 × 50ms：停 4 拍 → 1..15 → 14..1
+往复），发光曲线与核心宝石随等级换色——只动高饱和像素（曲线 ≥0.35 饱和度）、保留每帧
+明度呼吸，白棋盘格不动；换色会把目标等级色的**明度**也乘进去（有的等级色只差明度，
+只换色相会撞档）。图标输出 32×1056 条带，界面元数据 `PICKAXE_STRIP_META.vajra`。
+满级曲线与宝石改用无尽矿石的流动色（毕业 = 无尽材质）。
 
-**满级（14）是无尽矿石材质的流动动画**（2026-10-03 用户拍板，先后否掉「MAX 横向彩虹」「世界崩解之镐
-光谱」「静态矿石斑点」三版）：输出 32×992 的竖排 31 帧条带，颜色只取无尽矿石贴图
-（`src/assets/veins/t10.png`，与矿脉面板共用同一份）里**矿石斑点自己的颜色**——饱和度 ≥ 0.2 才算
-矿石色（灰白石底接近 0，实测斑点 0.36 封顶），采不到斑点的格子由同帧多源 BFS 取最近斑点色，
-所以没有灰底残块；帧节奏与矿脉一致（150ms/帧），界面用矿脉动画同一套 `vein-clip/vein-frames`
-结构播放（`PICKAXE_STRIP`，满级判定 `PICKAXE_MAX_TIER = 14`）。
+drill / blast 1~13 级：原图本身是彩色的，机器那套淡染（`TINT_STRENGTH = 0.2`）用在它身上
+几乎看不出等级差别，所以先按感知亮度把原图转成明暗，再乘上该等级的电压色（暗部有 0.45
+的亮度保底）。配色取自 `gtnh_tiers.py`。**满级（14）是无尽矿石材质的流动动画**（2026-10-03
+用户拍板，先后否掉 MAX 横向彩虹 / 世界崩解之镐光谱 / 静态矿石斑点三版）：输出 32×992 的
+竖排 31 帧条带，颜色只取矿石斑点自身（饱和度 ≥ 0.2，灰白石底不参与，空格由同帧多源 BFS
+取最近斑点色），帧节奏 150ms/帧与矿脉一致。
 
-界面里三条线按**各自升了多少次**上色（`pickaxeIconTier`）：没升是 ULV 色，升满就是流动的矿石材质。
+界面里三条线按**各自升了多少次**上色（`pickaxeIconTier`）。
 分母用「这条线满级时的总次数」（金刚杵 13、连锁采集 7、连锁爆破 28），
 所以金刚杵一级一档、连锁采集一级约两档、连锁爆破两左右一档。
 **分母不能用「当前电压给的机会数」** —— 那个数在前期很小（ULV 时金刚杵只有 1 次），

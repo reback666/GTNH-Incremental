@@ -59,7 +59,7 @@ describe('机型图标', () => {
     }
   });
 
-  it('镐子三条线各有 14 张图标，1~13 级是 32×32 静态图，满级是 32×992 的 31 帧动画条带', () => {
+  it('镐子三条线各有 14 张图标：金刚杵全线是 32×1056 动画条带，采集/爆破 1~13 级 32×32、满级 32×992', () => {
     const dir = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
       '..',
@@ -67,14 +67,19 @@ describe('机型图标', () => {
       'assets',
       'pickaxe',
     );
+    // 金刚杵用材质包贴图，全线 33 拍动画（33×32=1056）；采集/爆破满级 31 帧无尽矿石流动
+    const stripHeight: Record<string, (tier: number) => number> = {
+      vajra: () => 1056,
+      drill: (tier) => (tier === 14 ? 992 : 32),
+      blast: (tier) => (tier === 14 ? 992 : 32),
+    };
     for (const line of ['vajra', 'drill', 'blast']) {
       const hashes = new Set<string>();
       for (let tier = 1; tier <= 14; tier += 1) {
         const file = path.join(dir, `${line}-${tier}.png`);
         expect(existsSync(file), `缺 ${line}-${tier}.png`).toBe(true);
         const bytes = readFileSync(file);
-        // 满级是流动的矿石材质动画条带：32×(32×31)，帧数与无尽矿脉贴图一致
-        expect(pngSize(bytes), `${line}-${tier} 尺寸`).toBe(tier === 14 ? '32x992' : '32x32');
+        expect(pngSize(bytes), `${line}-${tier} 尺寸`).toBe(`32x${stripHeight[line]!(tier)}`);
         hashes.add(createHash('md5').update(bytes).digest('hex'));
       }
       expect(hashes.size, `${line} 系列的图标数`).toBe(14);

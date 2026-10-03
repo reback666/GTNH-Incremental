@@ -1,19 +1,20 @@
-"""生成镐子三条升级线的图标：1~13 级按电压配色，满级（14）是无尽矿石材质的流动动画。
+"""生成镐子三条升级线的图标。
 
-三条线各一张底图：
+三条线各自的满级前的配色规则不同，但产物统一收在 src/assets/pickaxe/：
 
-    金刚杵 vajra   assets/gregtech/textures/items/gt.Tool_Vajra.png（16×16，金头红柄）
+    金刚杵 vajra   用户材质包（Modernity-GTNH）的金刚杵贴图：本体 + 可染色核心，
+                   **全部 14 级都是动画条带**——本体按材质包 mcmeta 的序列流动（33 拍、
+                   50ms/拍），核心按亮度转灰后乘电压色（不同等级就是中间换色，
+                   用户拍板）；满级核心改用无尽矿石的流动色（毕业 = 无尽材质）
     连锁采集 drill assets/ic2/textures/items/itemToolDrill.png（32×32，电动钻头）
     连锁爆破 blast assets/ic2/textures/items/itemDynamite.png（16×16，炸药）
 
-1~13 级：底图按感知亮度转成明暗，再乘上该等级的电压色（形状与层次保留，色相换成电压色）。
-满级（MAX）：输出**竖排 31 帧的动画条带**（32×992），颜色只取无尽矿石贴图
-（src/assets/veins/t10.png，与矿脉面板同一张、同一套 150ms/帧节奏）里**矿石斑点自己的颜色**
-——灰白石底不参与（用户拍板），采不到斑点的格子取同一帧里最近的斑点色，
-播放起来就是整把工具裹着一层流动的矿石材质。
+drill / blast：1~13 级底图按感知亮度转明暗再乘电压色（静态 32×32）；
+满级（14）输出**竖排 31 帧动画条带**（32×992，150ms/帧），颜色只取无尽矿石贴图
+（src/assets/veins/t10.png，与矿脉面板同一份）里矿石斑点自己的颜色——灰白石底不参与。
 
 用法：python scripts/build-pickaxe-icons.py
-产物：src/assets/pickaxe/<线>-<等级>.png（32×32；满级为 32×(32×31) 的动画条带）
+产物：32×32 或竖排动画条带（界面用矿脉动画同一套结构播放，元数据见 pickaxe-icons.ts）
 """
 
 from __future__ import annotations
@@ -33,8 +34,18 @@ from gtnh_tiers import tier_color  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "src" / "assets" / "pickaxe"
 
-# 满级动画的材质与节奏来源：无尽矿脉贴图（竖排帧条带，与矿脉面板共用同一份文件）
+# 无尽矿脉贴图（竖排帧条带）：drill / blast 满级的材质与节奏来源
 INFINITY_STRIP = ROOT / "src" / "assets" / "veins" / "t10.png"
+
+# 用户材质包（Modernity-GTNH）的金刚杵贴图：本体动画条带（16×256，16 帧）与可染色核心
+VAJRA_BASE = ROOT / "scripts" / "textures" / "vajra-base.png"
+VAJRA_CORE = ROOT / "scripts" / "textures" / "vajra-core.png"
+# 材质包 mcmeta 里的播放序列：停 4 拍 → 1..15 → 14..1 往复；frametime 1 = 50ms
+VAJRA_SEQUENCE: list[int] = [
+    0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+    14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
+]
+VAJRA_FRAME_MS = 50
 
 JAR_GLOB = str(
     Path.home()
@@ -43,9 +54,8 @@ JAR_GLOB = str(
 
 MAX_TIER = 14
 
-# 线 id →（来源 jar，贴图路径）
+# 线 id →（来源 jar，贴图路径）；vajra 不走 jar，用材质包贴图单独处理
 LINES: dict[str, tuple[str, str]] = {
-    "vajra": ("gt", "assets/gregtech/textures/items/gt.Tool_Vajra.png"),
     "drill": ("ic2", "assets/ic2/textures/items/itemToolDrill.png"),
     "blast": ("ic2", "assets/ic2/textures/items/itemDynamite.png"),
 }
@@ -97,7 +107,7 @@ def nearest_ore_map(frame: Image.Image) -> dict[tuple[int, int], tuple[int, int,
 
 
 def tint_tool(source: Image.Image, tier: int) -> Image.Image:
-    """1~13 级：明暗 × 电压色的静态图标。"""
+    """静态电压色图标（drill / blast 的 1~13 级）。"""
     image = source.convert("RGBA")
     width, height = image.size
     scale = max(1, OUT_SIZE // max(width, height))
@@ -136,6 +146,74 @@ def tint_max_strip(source: Image.Image, infinity_strip: Image.Image) -> Image.Im
     return out
 
 
+def tint_vajra_strip(tier: int, ore_frames: list[Image.Image]) -> Image.Image:
+    """金刚杵（材质包贴图）：本体动画保留、发光曲线与核心按等级染色，输出竖排条带。
+
+    本体贴图里那条红色曲线是随帧呼吸的（明度逐帧变化），染色时只换色相/饱和度、
+    保留每帧的明度（下限 0.35 防糊黑），动画的呼吸感原样保留。
+    核心里只有彩色宝石换等级色，白色棋盘格保持原样（与用户材质包截图一致）；
+    满级曲线与宝石都改用无尽矿石的流动色（33 拍的帧序按比例取样 31 帧矿脉动画）。
+    """
+    base_strip = Image.open(VAJRA_BASE).convert("RGBA")
+    core = Image.open(VAJRA_CORE).convert("RGBA")
+    target = tier_color(tier)
+    target_hsv = (
+        colorsys.rgb_to_hsv(target[0] / 255, target[1] / 255, target[2] / 255) if target else None
+    )
+
+    out = Image.new("RGBA", (OUT_SIZE, OUT_SIZE * len(VAJRA_SEQUENCE)), (0, 0, 0, 0))
+    for index, frame_id in enumerate(VAJRA_SEQUENCE):
+        base = base_strip.crop((0, frame_id * 16, 16, (frame_id + 1) * 16)).copy()
+        ore_frame = ore_frames[index * len(ore_frames) // len(VAJRA_SEQUENCE)]
+        ore_map = nearest_ore_map(ore_frame)
+        for y in range(16):
+            for x in range(16):
+                pixel = base.getpixel((x, y))
+                if pixel[3] == 0:
+                    continue
+                hue, sat, val = colorsys.rgb_to_hsv(pixel[0] / 255, pixel[1] / 255, pixel[2] / 255)
+                if sat >= 0.35:  # 发光曲线：材质包里唯一的彩色区域
+                    if tier < MAX_TIER:
+                        # 目标色的色相/饱和度/明度全部参与（有些等级色只差明度），
+                        # 像素本帧的明度保留呼吸感
+                        value = max(val * target_hsv[2], 0.35)
+                        red, green, blue = (
+                            round(c * 255)
+                            for c in colorsys.hsv_to_rgb(target_hsv[0], target_hsv[1], value)
+                        )
+                        base.putpixel((x, y), (red, green, blue, pixel[3]))
+                    else:  # 满级：曲线跟无尽矿石的流动色一起走
+                        red, green, blue, _ = ore_map[(x % ore_frame.size[0], y % ore_frame.size[0])]
+                        base.putpixel((x, y), (red, green, blue, pixel[3]))
+
+        tinted = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+        for y in range(16):
+            for x in range(16):
+                pixel = core.getpixel((x, y))
+                if pixel[3] == 0:
+                    continue
+                hue, sat, val = colorsys.rgb_to_hsv(pixel[0] / 255, pixel[1] / 255, pixel[2] / 255)
+                # 只换核心上的彩色宝石（饱和度高），白色棋盘格保持原样
+                if sat < 0.35:
+                    tinted.putpixel((x, y), pixel)
+                    continue
+                if tier < MAX_TIER:
+                    value = max(val * target_hsv[2], 0.35)
+                    red, green, blue = (
+                        round(c * 255)
+                        for c in colorsys.hsv_to_rgb(target_hsv[0], target_hsv[1], value)
+                    )
+                else:
+                    red, green, blue, _ = ore_map[(x % ore_frame.size[0], y % ore_frame.size[0])]
+                tinted.putpixel((x, y), (red, green, blue, pixel[3]))
+        composed = Image.alpha_composite(
+            base.resize((OUT_SIZE, OUT_SIZE), Image.NEAREST),
+            tinted.resize((OUT_SIZE, OUT_SIZE), Image.NEAREST),
+        )
+        out.paste(composed, (0, index * OUT_SIZE))
+    return out
+
+
 def find_jar(pattern: str) -> Path:
     matches = sorted(glob.glob(pattern))
     if not matches:
@@ -155,11 +233,19 @@ def main() -> None:
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     jars = {
-        "gt": zipfile.ZipFile(find_jar(JAR_GLOB)),
         "ic2": zipfile.ZipFile(find_jar(IC2_GLOB)),
     }
     infinity_strip = Image.open(INFINITY_STRIP).convert("RGBA")
-    frames = infinity_strip.height // infinity_strip.width
+    infinity_frames = [
+        infinity_strip.crop((0, i * 32, 32, (i + 1) * 32))
+        for i in range(infinity_strip.height // 32)
+    ]
+
+    # 金刚杵：材质包贴图，14 级全部是动画条带
+    for tier in range(1, MAX_TIER + 1):
+        strip = tint_vajra_strip(tier, infinity_frames)
+        strip.save(OUT_DIR / f"vajra-{tier}.png")
+    print(f"vajra: 材质包贴图 → {MAX_TIER} 条动画条带（{len(VAJRA_SEQUENCE)} 拍 × {VAJRA_FRAME_MS}ms）")
 
     try:
         for line, (jar_id, path) in LINES.items():
@@ -172,8 +258,6 @@ def main() -> None:
     finally:
         for archive in jars.values():
             archive.close()
-
-    print(f"满级动画 {frames} 帧 × 150ms（与无尽矿脉贴图同节奏），共写入 {len(LINES) * MAX_TIER} 个文件")
 
 
 if __name__ == "__main__":
