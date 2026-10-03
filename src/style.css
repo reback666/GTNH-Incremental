@@ -1,14 +1,90 @@
+/* 数字与等级代号用的等宽字体（拉丁子集，约 43KB，构建时内联）。
+   中文继续走系统字体，只有数字/单位/电压代号落到 JetBrains Mono 上 */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('./assets/fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('./assets/fonts/jetbrains-mono-latin-700-normal.woff2') format('woff2');
+}
+
+/*
+  GT 机器 GUI 深度复刻的 token 层（2026-10-04 拍板）。
+  · 面板/按钮/插槽的立体感来自 GT 原版贴图（--skin-*，scripts/build-gui-skins.py 生成），
+    贴图负责「像」，交互态与颜色由 CSS 叠。
+  · 交互色是中性钢灰（--accent），与 GT 无关的旧青色已退役；红黄警示保留。
+  · 14 级电压色（--vt1..--vt13，MAX 是彩虹）取自 scripts/gtnh_tiers.py，
+    与机器图标染色同源，全局等级标识用。
+  · 亮灰原版皮肤（.skin-light）换掉 --skin-* 与文字色即可，样张阶段两版对比。
+*/
 :root {
-  --bg: #12161c;
-  --panel: #1b2129;
-  --panel-2: #232b35;
-  --line: #2f3946;
+  --bg: #0d1015;
+  --panel: #1e222a;
+  --panel-2: #262b34;
+  --line: #3a414d;
   --text: #d7dee8;
   --muted: #8b97a7;
-  --accent: #58c4a3;
+  --accent: #aebdce;
+  --accent-rgb: 174, 189, 206;
   --warn: #e0a33e;
   --danger: #d9524f;
+
+  /* GT GUI 骨架贴图（暗钢皮肤默认值） */
+  --skin-panel: url('./assets/gui/panel-dark.png');
+  --skin-btn: url('./assets/gui/btn-dark.png');
+  --skin-btn-pressed: url('./assets/gui/btn-dark-pressed.png');
+  --skin-btn-disabled: url('./assets/gui/btn-dark-disabled.png');
+  --skin-slot: url('./assets/gui/slot-dark.png');
+  --btn-face: #23262e;
+  --btn-text: #e8edf4;
+
+  /* 数字/电压代号字体 */
+  --font-num: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  /* 14 级电压色（1=ULV … 13=UXV；14=MAX 用 --vt14 彩虹渐变） */
+  --vt1: #ff5555;
+  --vt2: #778899;
+  --vt3: #ff8c00;
+  --vt4: #ffd700;
+  --vt5: #696969;
+  --vt6: #4169e1;
+  --vt7: #ff00ff;
+  --vt8: #00ced1;
+  --vt9: #008000;
+  --vt10: #8b0000;
+  --vt11: #8b008b;
+  --vt12: #0000cd;
+  --vt13: #aa0000;
+  --vt14: linear-gradient(90deg, #ff5555, #ffaa00, #ffff55, #55ff55, #55ffff, #5555ff, #aa00aa, #ff55ff);
+
   color-scheme: dark;
+}
+
+/* 亮灰原版皮肤：换骨架贴图与文字色，其余 token 全部沿用 */
+.skin-light {
+  --panel: #c6c6c6;
+  --panel-2: #b0b0b0;
+  --line: #8f8f9d;
+  --text: #1e1e22;
+  --muted: #4c4c56;
+  --accent: #3d5a80;
+  --accent-rgb: 61, 90, 128;
+  --btn-face: #8b8b8b;
+  --btn-text: #16161a;
+  --skin-panel: url('./assets/gui/panel-light.png');
+  --skin-btn: url('./assets/gui/btn.png');
+  --skin-btn-pressed: url('./assets/gui/btn-pressed.png');
+  --skin-btn-disabled: url('./assets/gui/btn-disabled.png');
+  --skin-slot: url('./assets/gui/slot-item.png');
+  color-scheme: light;
 }
 
 * {
@@ -25,8 +101,8 @@ body {
   */
   background:
     radial-gradient(120% 60% at 50% 0%, #1a2029 0%, rgba(26, 32, 41, 0) 60%),
-    repeating-linear-gradient(0deg, rgba(88, 196, 163, 0.025) 0 1px, transparent 1px 28px),
-    repeating-linear-gradient(90deg, rgba(88, 196, 163, 0.025) 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(0deg, rgba(var(--accent-rgb), 0.025) 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(90deg, rgba(var(--accent-rgb), 0.025) 0 1px, transparent 1px 28px),
     var(--bg);
   background-attachment: fixed;
   color: var(--text);
@@ -87,29 +163,35 @@ h2::before {
   opacity: 0.75;
 }
 
+/* GT 机器 GUI 的面板：立体感全在贴图里（3px 高光边 + 平底），方角是 GT 的规矩 */
 .panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  border-style: solid;
+  border-width: 3px;
+  border-image: var(--skin-panel) 3 fill / 3px stretch;
+  border-radius: 0;
   padding: 12px;
   margin-bottom: 12px;
-  /* 上缘一线极淡的高光 + 落影：面板之间有了前后层次 */
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.03),
-    0 2px 8px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
 
+/*
+  GT 按钮：立体感来自贴图（顶左亮 1px、底右暗 1px），不用 fill——
+  内部底色走 background，这样语义态（出售/停机/主按钮）还能用背景色染色。
+  悬停提亮、按下换压态贴图，与 MC 按钮同一套手感。
+*/
 button {
   font: inherit;
   min-height: 44px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--panel-2);
-  color: var(--text);
+  border-radius: 0;
+  border-style: solid;
+  border-width: 2px;
+  border-image: var(--skin-btn) 2 / 2px stretch;
+  background: var(--btn-face);
+  color: var(--btn-text);
   padding: 0 12px;
   cursor: pointer;
   transition:
-    border-color 0.16s ease,
+    filter 0.14s ease,
     background 0.16s ease,
     color 0.16s ease,
     transform 0.08s ease,
@@ -123,28 +205,40 @@ button:focus-visible {
 }
 
 button:not(:disabled):hover {
-  border-color: #4a5a6c;
-  background: #2a3441;
+  filter: brightness(1.16);
 }
 
 button:not(:disabled):active {
+  border-image-source: var(--skin-btn-pressed);
   transform: translateY(1px);
+  filter: brightness(0.94);
 }
 
 button:disabled {
-  opacity: 0.4;
+  border-image-source: var(--skin-btn-disabled);
+  color: var(--muted);
   cursor: not-allowed;
 }
 
+/* 语义态不再能改 border-color（被贴图接管），改用底色染色 + 文字色 */
 button.primary {
-  border-color: var(--accent);
   color: var(--accent);
-  background: rgba(88, 196, 163, 0.08);
+  background: rgba(var(--accent-rgb), 0.16);
 }
 
 button.primary:not(:disabled):hover {
-  background: rgba(88, 196, 163, 0.16);
-  box-shadow: 0 0 12px rgba(88, 196, 163, 0.18);
+  background: rgba(var(--accent-rgb), 0.26);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.22);
+}
+
+/* 折叠开关一类的「透明按钮」：退掉贴图，回到普通细边框 */
+.rebirth-toggle,
+.panel-toggle,
+.research-toggle {
+  border-image: none;
+  border-width: 1px;
+  border-color: transparent;
+  background: transparent;
 }
 
 button.big {
@@ -194,7 +288,7 @@ button.big {
 
 .power-box.active {
   border-color: var(--accent);
-  background: #1d2a2c;
+  background: #262e39;
 }
 
 .power-box.static {
@@ -289,9 +383,9 @@ button.big {
   gap: 8px;
   margin: 8px 0 2px;
   padding: 8px 10px;
-  border: 1px solid rgba(88, 196, 163, 0.4);
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
   border-radius: 8px;
-  background: rgba(88, 196, 163, 0.09);
+  background: rgba(var(--accent-rgb), 0.09);
   font-size: 12.5px;
 }
 
@@ -374,7 +468,7 @@ button.big {
 .chip:hover,
 .chip:focus {
   border-color: var(--accent);
-  background: #1d2a2c;
+  background: #262e39;
   outline: none;
 }
 
@@ -561,6 +655,32 @@ h2 .small {
 }
 
 /* ── 数字涨跌动画 ────────────────────────────────────────── */
+/* 数字、台数、单价、电压代号、时间戳统一落等宽字体：增量游戏的数字是门面，
+   等宽排列让逐帧变化的数值不抖动（font-variant-numeric 由各自规则保留） */
+.num,
+.power-value,
+.count,
+.price,
+.tab-count,
+.chip-head b,
+.chip-line b,
+.stat dd,
+.tier-name,
+.tier-bar .count,
+.tier-bar .price,
+.oc-level,
+.run-split,
+.log-time,
+.badge,
+.tip-row b,
+.tip-mod-value,
+.detail-table .num-cell,
+.research-head b,
+.pollution-head b {
+  font-family: var(--font-num);
+  letter-spacing: 0.01em;
+}
+
 @keyframes num-rise {
   0% {
     transform: translateY(4px) scale(1.08);
@@ -909,9 +1029,9 @@ h2 .small {
 .page-dot.active {
   transform: scale(1.18);
   border-color: var(--accent);
-  background: rgba(88, 196, 163, 0.18);
+  background: rgba(var(--accent-rgb), 0.18);
   color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(88, 196, 163, 0.12);
+  box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.12);
 }
 
 /* 这一页有新东西要看（设置页里出现了错误日志） */
@@ -1021,7 +1141,7 @@ h2 .small {
 
 .universe.picked {
   border-color: var(--accent);
-  background: rgba(88, 196, 163, 0.14);
+  background: rgba(var(--accent-rgb), 0.14);
 }
 
 .universe.owned {
@@ -1044,12 +1164,12 @@ h2 .small {
 }
 
 .tag-owned {
-  background: rgba(88, 196, 163, 0.2);
+  background: rgba(var(--accent-rgb), 0.2);
   color: var(--accent);
 }
 
 .tag-picked {
-  background: rgba(88, 196, 163, 0.25);
+  background: rgba(var(--accent-rgb), 0.25);
   color: var(--accent);
 }
 
@@ -1088,7 +1208,7 @@ h2 .small {
   border-color: #4a6a5c;
   background: #22322c;
   /* 达成色的一圈极细内描边：跟未达成拉开一点差距，又不至于喧宾夺主 */
-  box-shadow: inset 0 0 0 1px rgba(88, 196, 163, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.22);
 }
 
 /* 已达成的悬停轻轻抬起：暗示可以凑近看（悬停有达成时间等说明） */
@@ -1096,7 +1216,7 @@ h2 .small {
   transform: translateY(-2px) scale(1.02);
   border-color: var(--accent);
   box-shadow:
-    inset 0 0 0 1px rgba(88, 196, 163, 0.35),
+    inset 0 0 0 1px rgba(var(--accent-rgb), 0.35),
     0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
@@ -1170,7 +1290,7 @@ h2 .small {
   padding: 10px;
   border: 1px dashed #4a5563;
   border-radius: 8px;
-  background: rgba(88, 196, 163, 0.05);
+  background: rgba(var(--accent-rgb), 0.05);
 }
 
 /* ── 日志（反馈问题时交给作者的材料） ─────────────────────── */
@@ -1374,7 +1494,7 @@ h2 .small {
   padding: 6px 0;
   border: 1px solid var(--accent);
   border-radius: 8px;
-  background: rgba(88, 196, 163, 0.14);
+  background: rgba(var(--accent-rgb), 0.14);
   color: var(--text);
   font-size: 13px;
   text-align: center;
@@ -1411,13 +1531,13 @@ h2 .small {
 
 .rebirth-node.buyable {
   border-color: var(--accent);
-  background: rgba(88, 196, 163, 0.12);
+  background: rgba(var(--accent-rgb), 0.12);
   color: var(--text);
   cursor: pointer;
 }
 
 .rebirth-node.buyable:hover {
-  background: rgba(88, 196, 163, 0.22);
+  background: rgba(var(--accent-rgb), 0.22);
 }
 
 .rebirth-node.gated {
@@ -1667,7 +1787,7 @@ h2 .small {
 
 .grid-mode.active {
   border-color: var(--accent);
-  background: rgba(88, 196, 163, 0.12);
+  background: rgba(var(--accent-rgb), 0.12);
 }
 
 .grid-mode.locked {
@@ -1927,9 +2047,10 @@ h2 .small {
 }
 
 .machine-tab.active {
-  border-color: var(--accent);
-  background: #1d2a2c;
-  box-shadow: 0 0 0 1px rgba(88, 196, 163, 0.25) inset;
+  background: #2a3444;
+  box-shadow:
+    0 0 0 2px rgba(var(--accent-rgb), 0.6) inset,
+    0 0 10px rgba(var(--accent-rgb), 0.12);
 }
 
 .tab-name {
@@ -2091,14 +2212,13 @@ h2 .small {
   min-height: 30px;
   padding: 0 8px;
   font-size: 12px;
-  border-radius: 6px;
-  border-color: var(--accent);
   color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.14);
 }
 
 .run-btn.stopped {
-  border-color: var(--line);
   color: var(--muted);
+  background: rgba(128, 138, 152, 0.1);
 }
 
 /* 停机的机型在名字与图标上压低一点，一眼能看出这排没在跑 */
@@ -2127,12 +2247,11 @@ h2 .small {
 
 /* 出售：退一半的价，配色压低一点，别和建造按钮抢注意力 */
 .sell-btn {
-  border-color: var(--line);
   color: var(--muted);
 }
 
 .sell-btn:not(:disabled):hover {
-  border-color: var(--danger);
+  background: rgba(217, 82, 79, 0.18);
   color: var(--danger);
 }
 

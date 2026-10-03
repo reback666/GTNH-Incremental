@@ -155,7 +155,9 @@ def build_preview(pieces: dict[str, Image.Image], arrows: dict[int, Image.Image]
         "slot-item",
         "slot-dark",
         "btn",
+        "btn-dark",
         "btn-pressed",
+        "btn-dark-pressed",
         "btn-disabled",
         "tab-cover",
         "tab-cover-hover",
@@ -208,6 +210,15 @@ def main() -> None:
         steel = pieces["panel-steel"]
         pieces["panel-dark"] = darken_steel(steel)
         pieces["panel-dark"].save(OUT_DIR / "panel-dark.png")
+        # 暗肤按钮：GT 标准按钮本体是 MC 经典的亮灰，暗色主题里压暗派生
+        for src_name, out_name in (
+            ("btn", "btn-dark"),
+            ("btn-pressed", "btn-dark-pressed"),
+            ("btn-disabled", "btn-dark-disabled"),
+        ):
+            dark_btn = darken_steel(pieces[src_name])
+            dark_btn.save(OUT_DIR / f"{out_name}.png")
+            pieces[out_name] = dark_btn
         arrow = load(archive, ARROW_SRC)
         if arrow.size != (ARROW_FRAME_W, ARROW_FRAME_H * 2):
             raise SystemExit(f"箭头条带尺寸对不上：{arrow.size}")
