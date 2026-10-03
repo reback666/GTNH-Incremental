@@ -32,6 +32,7 @@ GTNH（GregTech: New Horizons）主题的增量 / 放置游戏：从超低压 UL
 | `npm run dev` | 开发服务器（改代码即时预览） |
 | `npm run balance` | 重算 `docs/balance.md` |
 | `python scripts/build-veins.py` | 重新生成矿脉贴图与 `src/game/vein-meta.ts` |
+| `python scripts/build-texture-gallery.py` | 生成 `docs/贴图总览.html`（全部贴图按类展示、动画直接播放，双击即开） |
 | `python scripts/build-facility-icons.py` | 重新生成存电装置 / 净化器 / 计算机 / 研究站图标 |
 
 后两个贴图脚本需要本机的 GTNH 开发包（Gradle 缓存里的 `GT5-Unofficial-*-dev.jar`）
