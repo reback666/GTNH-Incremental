@@ -23,7 +23,8 @@ describe('矿脉贴图与特殊渲染', () => {
       expect(info.frameDurationsMs, `T${info.tier} 帧长数量`).toHaveLength(info.frames);
     }
     const animated = VEIN_TIERS.filter((info) => info.frames > 1).map((info) => info.tier);
-    expect(animated).toEqual([9, 10, 11, 13]);
+    // T12 海珀珍用的是 Modernity-GTNH 材质包里 UXV 线圈的能量流动动画（119 帧 × 50ms）
+    expect(animated).toEqual([9, 10, 11, 12, 13]);
   });
 
   it('动画时长与原版贴图的 frametime 一致', () => {

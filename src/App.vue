@@ -13,6 +13,7 @@ import RiftDialog from './components/RiftDialog.vue';
 import PageNav from './components/PageNav.vue';
 import AchievementPanel from './components/AchievementPanel.vue';
 import LogPanel from './components/LogPanel.vue';
+import FxLayer from './components/FxLayer.vue';
 
 const store = useGameStore();
 // 工厂的内容分三页，右边点页码换页；转生是独立页面，不在页码里
@@ -36,9 +37,24 @@ function goTo(target: number) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// 键盘 1/2/3 直接换页：输入框里打字时不触发
+function onKeydown(event: KeyboardEvent) {
+  if (event.isComposing || view.value !== 'factory') return;
+  const target = event.target as HTMLElement | null;
+  if (target && /^(input|select|textarea)$/i.test(target.tagName)) return;
+  const index = Number(event.key);
+  if (index >= 1 && index <= PAGES.length) {
+    goTo(index);
+    // 焦点还留在旧页码按钮上的话，键盘操作会让它一直挂着聚焦描边（绿框），
+    // 换完页就把它清掉
+    (document.activeElement as HTMLElement | null)?.blur?.();
+  }
+}
+
 onMounted(() => {
   store.boot();
   store.start();
+  window.addEventListener('keydown', onKeydown);
 });
 </script>
 
@@ -133,4 +149,7 @@ onMounted(() => {
   </template>
 
   <RiftDialog @accepted="view = 'rebirth'" />
+
+  <!-- 全屏特效层：电压解锁烟花（不挡操作） -->
+  <FxLayer />
 </template>

@@ -143,9 +143,6 @@ function cleanAmount(text: string): string | null {
         关闭
       </button>
     </div>
-    <p class="muted small" style="margin: 6px 0 0">
-      全部是现场合成的简短提示音。总开关关掉就全静音；点「每种音效单独开关」展开列表逐个调。
-    </p>
     <button
       type="button"
       class="panel-toggle"
