@@ -30,8 +30,9 @@
   --panel: #1e222a;
   --panel-2: #262b34;
   --line: #3a414d;
-  --text: #d7dee8;
-  --muted: #8b97a7;
+  --text: #e3eaf3;
+  /* 灰字提亮到与正文接近一档：面板上的次要读数也要一眼可读（用户反馈） */
+  --muted: #a9b6c6;
   --accent: #aebdce;
   --accent-rgb: 174, 189, 206;
   --warn: #e0a33e;
@@ -113,7 +114,7 @@ body {
     var(--bg);
   background-attachment: fixed;
   color: var(--text);
-  font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font: 16px/1.55 system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -153,7 +154,7 @@ h2 {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 14px;
+  font-size: 16px;
   margin: 0 0 8px;
   color: var(--muted);
   font-weight: 600;
@@ -308,7 +309,7 @@ button.big {
 }
 
 .power-label {
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--muted);
 }
 
@@ -346,7 +347,7 @@ button.big {
 .detail-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .detail-table th,
@@ -394,7 +395,7 @@ button.big {
   border: 1px solid rgba(var(--accent-rgb), 0.4);
   border-radius: 8px;
   background: rgba(var(--accent-rgb), 0.09);
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 
 .offline-icon {
@@ -424,10 +425,10 @@ button.big {
   用 grid-template-rows 的 0fr↔1fr 过渡，展开高度自动、不会跳。
 */
 .chips {
-  /* 等宽网格：所有 chip 同一行里一样宽，上下行的列能对齐
-     （原来是按内容自适应宽度 + 流式换行，名字长短不一导致每行都错位） */
+  /* 等宽网格：一行固定 6 个（用户拍板）——auto-fill 在宽屏下会摆出 7~8 列，
+     「宇宙中子素」这类长材料名显示不全 */
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: start;
   gap: 6px;
 }
@@ -448,7 +449,7 @@ button.big {
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
@@ -466,8 +467,8 @@ button.big {
   border: 1px solid;
   border-image: var(--skin-slot) 1 fill / 1px stretch;
   border-radius: 0;
-  padding: 5px 10px;
-  font-size: 12px;
+  padding: 5px 8px;
+  font-size: 14px;
   cursor: default;
   transition: filter 0.22s ease;
 }
@@ -478,12 +479,16 @@ button.big {
   outline: none;
 }
 
+/* 名字放不下就折行（「宇宙中子素」这类长材料名），不截断；数值保持右缘 */
 .chip-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
-  white-space: nowrap;
+  gap: 6px;
+}
+
+.chip-name {
+  overflow-wrap: anywhere;
 }
 
 .chip-name {
@@ -568,7 +573,7 @@ h2 .small {
 .row button {
   min-height: 36px;
   padding: 0 10px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* 运行 / 停机台数的小字（耗电明细与机器面板机型行共用） */
@@ -657,7 +662,7 @@ h2 .small {
 }
 
 .small {
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* ── 数字涨跌动画 ────────────────────────────────────────── */
@@ -832,7 +837,7 @@ h2 .small {
 
 .vein-label {
   position: relative;
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text);
   letter-spacing: 0.12em;
 }
@@ -940,22 +945,23 @@ h2 .small {
 /* 机型行里的超频档位与故障维护 */
 .overclock {
   /* 固定宽：后面运行按钮的缩进按它算（见 .run-state） */
-  flex: 0 0 96px;
+  flex: 0 0 104px;
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
 }
 
 /* 不能超频的机型（发电机 / 净化器 / 研究等）占住同样的位置，
    让运行按钮在所有机型上起点一致 */
 .overclock-slot {
-  flex: 0 0 96px;
+  flex: 0 0 104px;
 }
 
 .overclock .oc-label {
   letter-spacing: 0.08em;
+  white-space: nowrap;
   cursor: help;
   outline: none;
 }
@@ -984,7 +990,7 @@ h2 .small {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: 14px;
   color: #ffb4a2;
   background: rgba(217, 82, 79, 0.14);
   border: 1px solid rgba(217, 82, 79, 0.35);
@@ -1029,7 +1035,7 @@ h2 .small {
 }
 
 .side-title {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.05em;
 }
@@ -1079,15 +1085,15 @@ h2 .small {
 
 .nav-key {
   flex: none;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--line);
   color: var(--muted);
   font-family: var(--font-num);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
 }
 
@@ -1267,7 +1273,7 @@ h2 .small {
 .tag-picked {
   padding: 1px 6px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
 }
 
@@ -1411,12 +1417,13 @@ h2 .small {
   background: var(--track);
   border: 1px solid var(--line);
   border-radius: 8px;
+  font-size: 13px;
 }
 
 .log-item {
   padding: 4px 0;
   border-bottom: 1px solid #222a34;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .log-item:last-child {
@@ -1431,7 +1438,7 @@ h2 .small {
 
 .log-time {
   flex: none;
-  color: #6d7a89;
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1440,7 +1447,7 @@ h2 .small {
   padding: 0 5px;
   border: 1px solid var(--line);
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -1471,7 +1478,7 @@ h2 .small {
 .log-detail summary {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
 }
 
@@ -1484,7 +1491,7 @@ h2 .small {
   border: 1px solid var(--line);
   border-radius: 6px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   white-space: pre-wrap;
   word-break: break-all;
 }
@@ -1634,7 +1641,7 @@ h2 .small {
 .rebirth-node em {
   font-size: 10px;
   font-style: normal;
-  color: #6d7a89;
+  color: var(--muted);
 }
 
 .rebirth-node.buyable {
@@ -2162,7 +2169,7 @@ h2 .small {
 }
 
 .tab-name {
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .tab-count {
@@ -2220,12 +2227,12 @@ h2 .small {
   border-image: var(--skin-slot) 1 fill / 1px stretch;
   border-radius: 0;
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .stat dt {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12.5px;
 }
 
 .stat dd {
@@ -2271,9 +2278,9 @@ h2 .small {
 }
 
 .pay-row button {
-  min-height: 30px;
-  padding: 0 10px;
-  font-size: 12px;
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 14px;
 }
 
 /* 每个等级一条横杠：等级名 → 机器图标横排 → 数量 → 单价 → 建造按钮 */
@@ -2311,15 +2318,15 @@ h2 .small {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  /* 缩进到与第一行机器图标的左缘对齐：46px 行缩进 + 超频块 96px + 60px 余量，
-     再扣掉行内 6px 的间距余量自己不吃（54 = 60 - 6） */
-  margin-left: 54px;
+  /* 缩进到与第一行机器图标的左缘对齐：46px 行缩进 + 超频块 104px + 余量，
+     再扣掉行内间距（超频块加宽 8px 这里同步收 8px） */
+  margin-left: 46px;
 }
 
 .run-btn {
-  min-height: 30px;
-  padding: 0 8px;
-  font-size: 12px;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 14px;
   color: var(--accent);
   background: rgba(var(--accent-rgb), 0.14);
 }
@@ -2344,7 +2351,7 @@ h2 .small {
 }
 
 .trade .trade-label {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--accent);
   letter-spacing: 0.08em;
 }
@@ -2375,7 +2382,8 @@ h2 .small {
   display: flex;
   align-items: center;
   gap: 2px;
-  flex: 1 1 120px;
+  /* 固定宽：机型名长短不一曾经把它挤得每行不一样长（用户拍板固定） */
+  flex: 0 0 360px;
   min-width: 0;
   min-height: 22px;
   overflow: hidden;
@@ -2392,7 +2400,7 @@ h2 .small {
   min-width: 0;
   display: inline-flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 14px;
   cursor: help;
   outline: none;
 }
@@ -2506,8 +2514,8 @@ h2 .small {
   border: 1px solid var(--line);
   border-radius: 4px;
   color: var(--muted);
-  font-size: 10px;
-  line-height: 15px;
+  font-size: 11px;
+  line-height: 16px;
   vertical-align: middle;
 }
 
@@ -2552,10 +2560,10 @@ h2 .small {
 }
 
 .tier-bar button {
-  min-height: 28px;
+  min-height: 30px;
   flex: none;
-  padding: 0 8px;
-  font-size: 12px;
+  padding: 0 10px;
+  font-size: 14px;
 }
 
 .hint {
@@ -2612,7 +2620,7 @@ h2 .small {
   （研究/污染读数）保持原字号不参与。
 */
 .power-value {
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .chip-head b,
@@ -2626,15 +2634,15 @@ h2 .small {
 .oc-level,
 .tip-row b,
 .tip-mod-value {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .run-split {
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .badge {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 /* 系统开了「减少动态效果」时，砍掉装饰性动画，只留必要的状态变化 */@media (prefers-reduced-motion: reduce) {
