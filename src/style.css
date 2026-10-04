@@ -1058,14 +1058,13 @@ h2 .small {
   letter-spacing: 0.04em;
 }
 
+/* MAX：彩虹渐变字（渐变只染文字本身，别盖住字） */
 .volt-badge.volt-max {
-  border-color: transparent;
-  background: var(--vt14);
-  -webkit-background-clip: padding-box;
-  background-clip: padding-box;
-  /* 彩虹以渐变字呈现，边框留白 */
+  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--vt14) no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
   color: transparent;
-  background-origin: border-box;
   -webkit-text-fill-color: transparent;
 }
 
