@@ -69,6 +69,8 @@
   --vt12: #0000cd;
   --vt13: #aa0000;
   --vt14: linear-gradient(90deg, #ff5555, #ffaa00, #ffff55, #55ff55, #55ffff, #5555ff, #aa00aa, #ff55ff);
+  /* 文字用的亮彩虹：原版彩虹尾部的蓝/深品红在暗底上太暗（MAX 的 X 曾经看不见） */
+  --vt14-text: linear-gradient(90deg, #ff8080, #ffc069, #ffff80, #80ff80, #80ffff, #8fb8ff, #e070e0, #ff90ff);
 
   color-scheme: dark;
 }
@@ -1058,10 +1060,11 @@ h2 .small {
   letter-spacing: 0.04em;
 }
 
-/* MAX：彩虹渐变字（渐变只染文字本身，别盖住字） */
+/* MAX：彩虹边框 + 亮彩虹渐变字（渐变只染文字本身，别盖住字） */
 .volt-badge.volt-max {
-  border-color: rgba(255, 255, 255, 0.3);
-  background: var(--vt14) no-repeat;
+  border: 1px solid;
+  border-image: var(--vt14) 1;
+  background: var(--vt14-text) no-repeat;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -2653,6 +2656,28 @@ h2 .small {
 
 .badge {
   font-size: 12px;
+}
+
+/* 设置页的音效行：长得和其他选项行一样（左标题右箭头），点开折叠列表 */
+.sound-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 0;
+  padding: 6px 0;
+  border-width: 0 0 1px;
+  border-color: var(--line);
+  font-weight: 600;
+  text-align: left;
+}
+
+.sound-toggle:not(:disabled):hover {
+  filter: none;
+  background: transparent;
+  color: var(--text);
 }
 
 /* 系统开了「减少动态效果」时，砍掉装饰性动画，只留必要的状态变化 */@media (prefers-reduced-motion: reduce) {

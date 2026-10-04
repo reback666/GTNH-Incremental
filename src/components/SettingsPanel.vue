@@ -152,7 +152,7 @@ function cleanAmount(text: string): string | null {
     <!-- ── 音效（计划书第二十一章 #10）：点开列表，可单独开关 + 一键全开全关 ── -->
     <button
       type="button"
-      class="panel-toggle"
+      class="panel-toggle sound-toggle"
       :aria-expanded="!store.soundListCollapsed"
       @click="store.toggleSoundList()"
     >
