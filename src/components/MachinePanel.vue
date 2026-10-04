@@ -250,7 +250,7 @@ function canBuy(model: MachineModelRow): boolean {
         @focus="showColumnTip($event, column.title, column.modifiers)"
         @blur="hideTip"
       >
-        <MachineIcon :model-id="tabIconId(column.kind)" :kind="column.kind" :size="30" />
+        <MachineIcon :model-id="tabIconId(column.kind)" :kind="column.kind" :size="38" />
         <span class="tab-name">{{ column.title }}</span>
         <span class="tab-count">已建 {{ column.count }} 台</span>
       </button>
@@ -313,7 +313,7 @@ function canBuy(model: MachineModelRow): boolean {
                   :key="index"
                   :model-id="bar.model.id"
                   :kind="column.kind"
-                  :size="20"
+                  :size="26"
                   class="icon-pop"
                 />
                 <span v-if="bar.model.overflow > 0" class="icon-overflow">+{{ bar.model.overflow }}</span>

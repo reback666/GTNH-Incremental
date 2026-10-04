@@ -852,8 +852,8 @@ h2 .small {
 
 /* 标签上的工具图标：和机器标签一样用 32×32 的贴图 */
 .tab-icon {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   image-rendering: pixelated;
 }
 
@@ -862,9 +862,9 @@ h2 .small {
 .pickaxe-vein-icon {
   position: relative;
   display: block;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
 }
 
 .pickaxe-vein-icon .vein-frames {
@@ -891,9 +891,9 @@ h2 .small {
 }
 
 .pickaxe-line-icon {
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
   image-rendering: pixelated;
 }
 
@@ -2387,7 +2387,7 @@ h2 .small {
   /* 固定宽：机型名长短不一曾经把它挤得每行不一样长（用户拍板固定） */
   flex: 0 0 360px;
   min-width: 0;
-  min-height: 22px;
+  min-height: 30px;
   overflow: hidden;
   padding: 0 4px;
   background: var(--track);

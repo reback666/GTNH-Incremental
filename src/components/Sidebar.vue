@@ -107,7 +107,7 @@ function togglePower(key: PowerKey) {
                   <td>{{ row.voltage }}</td>
                   <td>
                     <span class="model-cell">
-                      <MachineIcon :model-id="row.modelId" :kind="row.kind" :size="20" />
+                      <MachineIcon :model-id="row.modelId" :kind="row.kind" :size="24" />
                       <span>{{ row.name }}</span>
                     </span>
                   </td>
