@@ -974,6 +974,10 @@ h2 .small {
 }
 
 .oc-btn {
+  /* +/− 用弹性居中：字符本身在中文字体里有偏移，靠 text-align 压不正 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 20px;
   height: 20px;
   padding: 0;
@@ -2344,12 +2348,17 @@ h2 .small {
   opacity: 0.5;
 }
 
-/* 买 / 卖按钮组：两个数量按钮 + 一个「买」「卖」字标签 */
+/* 买 / 卖按钮组：两个数量按钮 + 一个「买」「卖」字标签。
+   两行都推到最右：买（第一行）与卖（第二行）右缘对齐 */
 .trade {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   flex: 0 0 auto;
+}
+
+.tier-line:not(.second) .trade {
+  margin-left: auto;
 }
 
 .trade .trade-label {
@@ -2385,7 +2394,7 @@ h2 .small {
   align-items: center;
   gap: 2px;
   /* 固定宽：机型名长短不一曾经把它挤得每行不一样长（用户拍板固定） */
-  flex: 0 0 360px;
+  flex: 0 0 280px;
   min-width: 0;
   min-height: 30px;
   overflow: hidden;

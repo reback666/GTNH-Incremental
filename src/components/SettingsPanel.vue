@@ -55,6 +55,18 @@ const resAmount = ref('1e12');
 // 输入不合法或操作没生效时把原因写在按钮旁边，不做静默失败
 const resError = ref('');
 
+// 一键开全部音效：总开关打开，同时清空「单独关闭」列表
+function allSoundsOn() {
+  store.setSoundEnabled(true);
+  for (const group of SOUND_GROUPS) {
+    for (const item of group.items) {
+      if (snap.value.soundMuted.includes(item.id)) {
+        store.setSoundMuted(item.id as SoundId, false);
+      }
+    }
+  }
+}
+
 function adjustResource(sign: 1 | -1): void {
   const amount = cleanAmount(resAmount.value);
   if (amount === null) {
@@ -94,13 +106,8 @@ function cleanAmount(text: string): string | null {
         关闭
       </button>
     </div>
-    <p class="muted small" style="margin: 6px 0 0">
-      关掉之后污染不再增长、也不产生任何影响（默认开启）。污染值显示在第 1 页最下方。
-    </p>
-
-    <!-- ── 数字显示（计划书第二十一章 #9） ──────────────────── -->
-    <h2 class="mt">数字显示</h2>
-    <div class="row">
+    <!-- ── 计数方法（计划书第二十一章 #9） ───────────────────── -->
+    <div class="row mt">
       <div class="name">计数方法</div>
       <div class="mode-picker">
         <button type="button" @click="modeMenuOpen = !modeMenuOpen">{{ modeName }} ▾</button>
@@ -127,9 +134,8 @@ function cleanAmount(text: string): string | null {
     </div>
 
     <!-- ── 界面主题（GT GUI 重设计）：暗钢 / 原版亮灰两套皮肤 ── -->
-    <h2 class="mt">界面主题</h2>
     <div class="row">
-      <div class="name">皮肤</div>
+      <div class="name">界面主题</div>
       <button
         :class="{ primary: snap.uiTheme === 'dark' }"
         @click="store.setUiTheme('dark')"
@@ -143,37 +149,22 @@ function cleanAmount(text: string): string | null {
         原版亮灰
       </button>
     </div>
-    <p class="muted small" style="margin: 6px 0 0">
-      暗钢是深色的工业控制台观感；原版亮灰照着游戏里 GT 机器界面的浅灰面板画。跟着存档走。
-    </p>
-
-    <!-- ── 音效（计划书第二十一章 #10）：总开关 + 每种音效单独开关 ── -->
-    <h2 class="mt">音效</h2>
-    <div class="row">
-      <div class="name">音效总开关</div>
-      <button
-        :class="{ primary: snap.soundEnabled }"
-        @click="store.setSoundEnabled(true)"
-      >
-        开启
-      </button>
-      <button
-        :class="{ primary: !snap.soundEnabled }"
-        @click="store.setSoundEnabled(false)"
-      >
-        关闭
-      </button>
-    </div>
+    <!-- ── 音效（计划书第二十一章 #10）：点开列表，可单独开关 + 一键全开全关 ── -->
     <button
       type="button"
       class="panel-toggle"
       :aria-expanded="!store.soundListCollapsed"
       @click="store.toggleSoundList()"
     >
-      <span>{{ store.soundListCollapsed ? '▸' : '▾' }} 每种音效单独开关</span>
-      <span class="muted small">已单独关闭 {{ snap.soundMuted.length }} / {{ SOUNDS.length }} 种</span>
+      <span>音效 <span class="muted small">{{ snap.soundEnabled ? '已开启' : '已关闭' }} · 已单独关闭 {{ snap.soundMuted.length }} / {{ SOUNDS.length }} 种</span></span>
+      <span>{{ store.soundListCollapsed ? '▾' : '▴' }}</span>
     </button>
     <template v-if="!store.soundListCollapsed">
+      <div class="row">
+        <div class="name">全部音效</div>
+        <button @click="allSoundsOn()">全部开启</button>
+        <button @click="store.setSoundEnabled(false)">全部关闭</button>
+      </div>
       <template v-for="group in SOUND_GROUPS" :key="group.title">
         <p class="muted small" style="margin: 10px 0 0">{{ group.title }}</p>
         <div v-for="item in group.items" :key="item.id" class="row">
@@ -250,15 +241,11 @@ function cleanAmount(text: string): string | null {
     </template>
 
     <!-- ── 开发者模式 ─────────────────────────────────────────── -->
-    <h2 class="mt">开发者模式</h2>
-    <div class="row">
-      <div class="name">测试用的快捷操作</div>
+    <div class="row mt">
+      <div class="name">开发者模式</div>
       <button :class="{ primary: devMode }" @click="store.setDevMode(true)">开启</button>
       <button :class="{ primary: !devMode }" @click="store.setDevMode(false)">关闭</button>
     </div>
-    <p class="muted small" style="margin: 6px 0 0">
-      打开之后下面会露出一排快捷操作，用来跳过前期、直接测后面的内容。正常玩的时候关掉就行（默认关闭）。
-    </p>
 
     <div v-if="devMode" class="dev-tools">
       <div class="row">

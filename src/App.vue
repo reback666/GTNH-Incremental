@@ -146,7 +146,7 @@ onMounted(() => {
               <span class="count">{{ store.snap.autosaveSeconds }} 秒</span>
             </div>
             <p class="muted" style="margin: 0 0 8px">
-              自动每 {{ store.snap.autosaveSeconds }} 秒存一次，关页面时也会存。累计矿石
+              自动每 {{ store.snap.autosaveSeconds }} 秒存一次。累计矿石
               {{ store.snap.totalOre }}，累计产币 {{ store.snap.totalCoins }}。
             </p>
             <div class="row">
