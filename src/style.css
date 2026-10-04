@@ -30,9 +30,9 @@
   --panel: #1e222a;
   --panel-2: #262b34;
   --line: #3a414d;
-  --text: #e3eaf3;
-  /* 灰字提亮到与正文接近一档：面板上的次要读数也要一眼可读（用户反馈） */
-  --muted: #a9b6c6;
+  --text: #f0f5fb;
+  /* 次要文字只比正文暗半档：灰底上的字不能发灰（用户两轮反馈） */
+  --muted: #c6d1de;
   --accent: #aebdce;
   --accent-rgb: 174, 189, 206;
   --warn: #e0a33e;
