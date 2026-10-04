@@ -2677,7 +2677,12 @@ h2 .small {
   color: var(--text);
 }
 
-/* 矿脉展示柜是「场景」不是按钮：点击只触发挖矿特效，大框本身不跟着按下去 */
+/* 矿脉展示柜是「场景」不是按钮：点击只触发挖矿特效，大框本身不跟着亮/按下去
+   （hover 提亮也要禁——否则按下去 active 归位、松开又回亮，一点击闪一下） */
+.vein-btn:not(:disabled):hover {
+  filter: none;
+}
+
 .vein-btn:not(:disabled):active {
   border-image-source: var(--skin-panel);
   transform: none;
