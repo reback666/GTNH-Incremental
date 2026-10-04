@@ -741,10 +741,6 @@ h2 .small {
   border-radius: 0;
 }
 
-.vein-btn:active {
-  transform: translateY(1px);
-}
-
 .vein-sprite {
   display: block;
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
@@ -841,9 +837,9 @@ h2 .small {
 
 .vein-label {
   position: relative;
-  /* 重设计前的观感：小一号的旧灰 + 宽字距（用户拍板改回） */
+  /* 重设计前的观感：小一号 + 宽字距；颜色比旧灰再亮一档（用户反馈「稍微再显眼」） */
   font-size: 13px;
-  color: #8b97a7;
+  color: #a9b6c6;
   letter-spacing: 0.12em;
 }
 
@@ -2679,6 +2675,13 @@ h2 .small {
   filter: none;
   background: transparent;
   color: var(--text);
+}
+
+/* 矿脉展示柜是「场景」不是按钮：点击只触发挖矿特效，大框本身不跟着按下去 */
+.vein-btn:not(:disabled):active {
+  border-image-source: var(--skin-panel);
+  transform: none;
+  filter: none;
 }
 
 /* 系统开了「减少动态效果」时，砍掉装饰性动画，只留必要的状态变化 */@media (prefers-reduced-motion: reduce) {
