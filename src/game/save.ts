@@ -6,7 +6,7 @@ import { needsResearch } from '../numeric/research';
 import { isValidOverclockLevel } from '../numeric/overclock';
 import { clampPollution } from '../numeric/pollution';
 import { blastChances, collectChances, vajraMaxLevel } from '../numeric/pickaxe';
-import { GameCore, RIFT_FROM_TIER, type MachineKind } from './core';
+import { GameCore, RIFT_FROM_TIER, type MachineKind, type UiTheme } from './core';
 import { MACHINE_MODELS, baseModelOf, type MachineModel } from './models';
 import { ACHIEVEMENTS } from './achievements';
 import { REBIRTH_NODES } from './rebirth';
@@ -93,6 +93,8 @@ export interface SaveData {
   // v23：音效开关（总开关 + 被单独关掉的音效 id）
   soundEnabled?: boolean;
   soundMuted?: string[];
+  // v24：界面主题（暗钢 / 原版亮灰）
+  uiTheme?: string;
   // v13：镐子的三条升级线（金刚杵等级、连锁采集等级、连锁爆破已用机会数）
   pickaxeVajra?: number;
   pickaxeCollect?: number;
@@ -170,6 +172,7 @@ export function serialize(core: GameCore): SaveData {
     autosaveSeconds: core.autosaveSeconds,
     soundEnabled: core.soundEnabled,
     soundMuted: [...core.soundMuted],
+    uiTheme: core.uiTheme,
     pickaxeVajra: core.pickaxeVajra,
     pickaxeCollect: core.pickaxeCollect,
     pickaxeBlast: core.pickaxeBlast,
@@ -299,6 +302,7 @@ export function deserialize(data: SaveData): GameCore {
   core.autosaveSeconds = cleanAutosaveSeconds(data.autosaveSeconds);
   core.soundEnabled = booleanOr(data.soundEnabled, true);
   core.soundMuted = cleanSoundMuted(data.soundMuted);
+  core.uiTheme = cleanUiTheme(data.uiTheme);
   core.pickaxeVajra = clampInt(data.pickaxeVajra, 0, vajraMaxLevel(), 0);
   core.pickaxeCollect = clampInt(data.pickaxeCollect, 0, collectChances(MAX_TIER), 0);
   core.pickaxeBlast = clampInt(data.pickaxeBlast, 0, blastChances(MAX_TIER), 0);
@@ -357,6 +361,11 @@ const DISPLAY_MODES = new Set<string>(['auto', 'scientific', 'full']);
 
 function cleanDisplayMode(value: unknown): DisplayMode {
   return typeof value === 'string' && DISPLAY_MODES.has(value) ? (value as DisplayMode) : 'auto';
+}
+
+// 界面主题只认两套皮肤，乱写的退回暗钢（默认皮肤）
+function cleanUiTheme(value: unknown): UiTheme {
+  return value === 'light' ? 'light' : 'dark';
 }
 
 // 被单独关掉的音效只认音效表里有的 id，重复与乱写直接丢

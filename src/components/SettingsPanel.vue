@@ -126,6 +126,27 @@ function cleanAmount(text: string): string | null {
       </div>
     </div>
 
+    <!-- ── 界面主题（GT GUI 重设计）：暗钢 / 原版亮灰两套皮肤 ── -->
+    <h2 class="mt">界面主题</h2>
+    <div class="row">
+      <div class="name">皮肤</div>
+      <button
+        :class="{ primary: snap.uiTheme === 'dark' }"
+        @click="store.setUiTheme('dark')"
+      >
+        暗钢造型
+      </button>
+      <button
+        :class="{ primary: snap.uiTheme === 'light' }"
+        @click="store.setUiTheme('light')"
+      >
+        原版亮灰
+      </button>
+    </div>
+    <p class="muted small" style="margin: 6px 0 0">
+      暗钢是深色的工业控制台观感；原版亮灰照着游戏里 GT 机器界面的浅灰面板画。跟着存档走。
+    </p>
+
     <!-- ── 音效（计划书第二十一章 #10）：总开关 + 每种音效单独开关 ── -->
     <h2 class="mt">音效</h2>
     <div class="row">

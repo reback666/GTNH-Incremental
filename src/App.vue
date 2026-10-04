@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useGameStore } from './game/store';
 import ResourceBar from './components/ResourceBar.vue';
 import MachinePanel from './components/MachinePanel.vue';
@@ -51,6 +51,15 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
+// 界面主题（设置页切换，随存档走）：亮灰皮肤挂在 body 类上，全站样式跟着换
+watch(
+  () => store.snap.uiTheme,
+  (theme) => {
+    document.body.classList.toggle('skin-light', theme === 'light');
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
   store.boot();
   store.start();
@@ -72,9 +81,12 @@ onMounted(() => {
         <!-- 第 1 页：工厂 -->
         <template v-if="page === 1">
           <ResourceBar />
-          <VeinPanel />
+          <!-- 矿脉与污染都不高，宽屏下并排一行，少滚一屏 -->
+          <div class="factory-duo">
+            <VeinPanel />
+            <PollutionPanel />
+          </div>
           <MachinePanel :columns="store.snap.columns" />
-          <PollutionPanel />
         </template>
 
         <!-- 第 2 页：科技、电网、转生 -->

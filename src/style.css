@@ -138,9 +138,29 @@ body {
 }
 
 #app {
-  max-width: 1200px;
+  /* 桌面 only：宽屏把宽度吃满，纵向就少滚一截 */
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 12px 16px 40px;
+  padding: 12px 20px 40px;
+}
+
+/* 工厂页的并排行：矿脉（展示柜）+ 污染，窄窗口退回上下排 */
+.factory-duo {
+  display: grid;
+  grid-template-columns: minmax(320px, 2fr) 3fr;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.factory-duo .panel {
+  margin-bottom: 0;
+}
+
+@media (max-width: 1100px) {
+  .factory-duo {
+    grid-template-columns: 1fr;
+  }
 }
 
 h1 {
@@ -713,18 +733,18 @@ h2 .small {
 }
 
 /* ── 矿脉与挖矿特效 ──────────────────────────────────────── */
-/* 矿脉展示柜：横向布局，贴图居左、说明居右（宽屏内容区下竖排太空） */
+/* 矿脉展示柜：竖排——贴图居中、名字在贴图正下方（2026-10-04 用户拍板改回） */
 .vein-btn {
   position: relative;
   width: 100%;
   min-height: 168px;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 26px;
+  gap: 6px;
   /* 留出原版光晕外扩的空间（光晕本身比图标大 2.25 倍） */
-  padding: 30px 24px 24px;
+  padding: 30px 24px 20px;
   overflow: hidden;
   background: radial-gradient(circle at 50% 65%, var(--bg-glow) 0%, var(--bg) 70%);
   border-style: solid;

@@ -121,6 +121,9 @@ export const RIFT_CABLES = '1';
 // 两种方式都保留，矿石价 = 币价 ÷ COINS_PER_ORE。
 export type PayWith = 'coin' | 'ore';
 
+// 界面主题（设置页切换，存档 v24）：dark 是暗钢皮肤，light 是 GT/MC 原版亮灰
+export type UiTheme = 'dark' | 'light';
+
 // 开发者模式里「指定资源增减」的目标：
 //   ores / coins / both 是每一级都给一份
 //   ore / coin 只动指定等级的那一种
@@ -241,6 +244,8 @@ export class GameCore {
   devMode = false;
   // 数字显示模式：纯界面偏好（设置页切换，计划书第二十一章 #9），跨周目保留
   displayMode: DisplayMode = 'auto';
+  // 界面主题：GT GUI 重设计的两套皮肤（暗钢 / 原版亮灰），纯界面偏好，跨周目保留
+  uiTheme: UiTheme = 'dark';
   // 自动存档间隔（秒）：存档框的滑条设置，随存档走
   autosaveSeconds = C.AUTOSAVE_SECONDS_DEFAULT;
   // 音效：总开关与被单独关掉的音效 id（见 game/audio.ts 的 SOUNDS）
@@ -684,6 +689,10 @@ export class GameCore {
 
   setDisplayMode(mode: DisplayMode): void {
     this.displayMode = mode;
+  }
+
+  setUiTheme(theme: UiTheme): void {
+    this.uiTheme = theme;
   }
 
   setSoundEnabled(enabled: boolean): void {
