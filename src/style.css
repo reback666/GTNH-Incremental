@@ -479,26 +479,28 @@ button.big {
   outline: none;
 }
 
-/* 名字放不下就折行（「宇宙中子素」这类长材料名），不截断；数值保持右缘 */
+/*
+  chip 头两行：名字一行、数值一行（用户拍板不折行）——
+  「宇宙中子素币」6 个字单独占一行放得下，数值在下面右对齐。
+*/
 .chip-head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 6px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1px;
 }
 
 .chip-name {
-  overflow-wrap: anywhere;
-}
-
-.chip-name {
+  display: block;
   min-width: 0;
   overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--muted);
 }
 
 .chip-head b {
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
