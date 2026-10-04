@@ -138,29 +138,9 @@ body {
 }
 
 #app {
-  /* 桌面 only：宽屏把宽度吃满，纵向就少滚一截 */
-  max-width: 1440px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 12px 20px 40px;
-}
-
-/* 工厂页的并排行：矿脉（展示柜）+ 污染，窄窗口退回上下排 */
-.factory-duo {
-  display: grid;
-  grid-template-columns: minmax(320px, 2fr) 3fr;
-  gap: 12px;
-  align-items: start;
-  margin-bottom: 12px;
-}
-
-.factory-duo .panel {
-  margin-bottom: 0;
-}
-
-@media (max-width: 1100px) {
-  .factory-duo {
-    grid-template-columns: 1fr;
-  }
+  padding: 12px 16px 40px;
 }
 
 h1 {

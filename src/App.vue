@@ -81,12 +81,9 @@ onMounted(() => {
         <!-- 第 1 页：工厂 -->
         <template v-if="page === 1">
           <ResourceBar />
-          <!-- 矿脉与污染都不高，宽屏下并排一行，少滚一屏 -->
-          <div class="factory-duo">
-            <VeinPanel />
-            <PollutionPanel />
-          </div>
+          <VeinPanel />
           <MachinePanel :columns="store.snap.columns" />
+          <PollutionPanel />
         </template>
 
         <!-- 第 2 页：科技、电网、转生 -->
