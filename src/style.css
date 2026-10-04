@@ -1264,8 +1264,8 @@ h2 .small {
 }
 
 .universe.picked {
-  background: rgba(var(--accent-rgb), 0.18);
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.6) inset;
+  background: rgba(var(--accent-rgb), 0.3);
+  box-shadow: 0 0 0 2px var(--accent) inset;
 }
 
 .universe.owned {
@@ -1328,16 +1328,16 @@ h2 .small {
 
 .achievement.done {
   opacity: 1;
-  background: rgba(var(--accent-rgb), 0.1);
-  /* 达成色的一圈极细内描边：跟未达成拉开一点差距，又不至于喧宾夺主 */
-  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.4);
+  /* 完成态用绿色（用户拍板恢复）：深绿底 + 绿内环，和未达成的灰格一眼分开 */
+  background: #1d3329;
+  box-shadow: inset 0 0 0 1px rgba(88, 196, 143, 0.5);
 }
 
 /* 已达成的悬停轻轻抬起：暗示可以凑近看（悬停有达成时间等说明） */
 .achievement.done:hover {
   transform: translateY(-2px) scale(1.02);
   box-shadow:
-    inset 0 0 0 2px rgba(var(--accent-rgb), 0.6),
+    inset 0 0 0 2px rgba(88, 196, 143, 0.75),
     0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
@@ -1350,7 +1350,7 @@ h2 .small {
 }
 
 .achievement.done .mark {
-  color: var(--accent);
+  color: #58c48f;
   font-weight: 700;
 }
 
@@ -2688,6 +2688,32 @@ h2 .small {
 
 .vein-btn:not(:disabled):active {
   border-image-source: var(--skin-panel);
+  transform: none;
+  filter: none;
+}
+
+/*
+  卡片形按钮（平行宇宙 / 挑战 / 加成树节点 / 研究列表项）不是「按钮」是「选项卡」：
+  退掉全局按钮的贴图边框、悬停提亮与按压位移——否则点节点整格抽动，
+  按压时边框换贴图、disabled 的节点还会显示禁用按钮贴图。
+*/
+.universe,
+.rebirth-node,
+.research-item {
+  border-image: none;
+  border-width: 1px;
+}
+
+.universe:not(:disabled):hover,
+.rebirth-node:not(:disabled):hover,
+.research-item:not(:disabled):hover {
+  filter: none;
+}
+
+.universe:not(:disabled):active,
+.rebirth-node:not(:disabled):active,
+.research-item:not(:disabled):active {
+  border-image: none;
   transform: none;
   filter: none;
 }
