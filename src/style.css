@@ -841,8 +841,9 @@ h2 .small {
 
 .vein-label {
   position: relative;
-  font-size: 16px;
-  color: var(--text);
+  /* 重设计前的观感：小一号的旧灰 + 宽字距（用户拍板改回） */
+  font-size: 13px;
+  color: #8b97a7;
   letter-spacing: 0.12em;
 }
 
