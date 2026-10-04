@@ -229,7 +229,7 @@ describe('GameCore 实际升级：扣币、买不起、跨电压', () => {
 });
 
 describe('存档版本', () => {
-  it('v23：音效开关进存档（v22：存档间隔，v21：数字显示，v20：履历 + 普朗克锚）', () => {
-    expect(SAVE_VERSION).toBe(23);
+  it('v24：界面主题进存档（v23：音效，v22：存档间隔，v21：数字显示）', () => {
+    expect(SAVE_VERSION).toBe(24);
   });
 });

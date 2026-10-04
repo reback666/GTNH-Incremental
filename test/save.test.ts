@@ -192,3 +192,17 @@ describe('音效开关（v23）', () => {
     expect(messy.soundMuted).toEqual(['sell']);
   });
 });
+
+describe('界面主题（v24）', () => {
+  it('两套皮肤往返；旧档缺字段退回暗钢，乱写的值也退回暗钢', () => {
+    const core = new GameCore();
+    core.setUiTheme('light');
+    expect(serialize(core).uiTheme).toBe('light');
+    expect(deserialize(serialize(core)).uiTheme).toBe('light');
+
+    const fresh = deserialize(emptySave());
+    expect(fresh.uiTheme).toBe('dark');
+    const messy = deserialize({ ...emptySave(), uiTheme: 'no-such-skin' } as unknown as SaveData);
+    expect(messy.uiTheme).toBe('dark');
+  });
+});

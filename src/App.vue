@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useGameStore } from './game/store';
 import ResourceBar from './components/ResourceBar.vue';
 import MachinePanel from './components/MachinePanel.vue';
@@ -10,7 +10,7 @@ import GridPanel from './components/GridPanel.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import RebirthPage from './components/RebirthPage.vue';
 import RiftDialog from './components/RiftDialog.vue';
-import PageNav from './components/PageNav.vue';
+import Sidebar from './components/Sidebar.vue';
 import AchievementPanel from './components/AchievementPanel.vue';
 import LogPanel from './components/LogPanel.vue';
 import FxLayer from './components/FxLayer.vue';
@@ -51,6 +51,15 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
+// 界面主题（设置页切换，随存档走）：亮灰皮肤挂在 body 类上，全站样式跟着换
+watch(
+  () => store.snap.uiTheme,
+  (theme) => {
+    document.body.classList.toggle('skin-light', theme === 'light');
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
   store.boot();
   store.start();
@@ -62,10 +71,13 @@ onMounted(() => {
   <RebirthPage v-if="view === 'rebirth'" @close="view = 'factory'" />
 
   <template v-else>
-    <PageNav :page="page" :pages="pages" @change="goTo" />
+    <!-- 桌面双栏：左侧仪表侧栏（铭牌 / 页签 / 电能 / 研究）+ 右侧内容区 -->
+    <div class="app-shell">
+      <Sidebar :page="page" :pages="pages" @change="goTo" />
 
-    <Transition name="page" mode="out-in">
-      <div :key="page" class="page-body">
+      <main class="page-body">
+        <Transition name="page" mode="out-in">
+          <div :key="page">
         <!-- 第 1 页：工厂 -->
         <template v-if="page === 1">
           <ResourceBar />
@@ -134,7 +146,7 @@ onMounted(() => {
               <span class="count">{{ store.snap.autosaveSeconds }} 秒</span>
             </div>
             <p class="muted" style="margin: 0 0 8px">
-              自动每 {{ store.snap.autosaveSeconds }} 秒存一次，关页面时也会存。累计矿石
+              自动每 {{ store.snap.autosaveSeconds }} 秒存一次。累计矿石
               {{ store.snap.totalOre }}，累计产币 {{ store.snap.totalCoins }}。
             </p>
             <div class="row">
@@ -144,8 +156,10 @@ onMounted(() => {
           </section>
           <LogPanel />
         </template>
-      </div>
-    </Transition>
+          </div>
+        </Transition>
+      </main>
+    </div>
   </template>
 
   <RiftDialog @accepted="view = 'rebirth'" />

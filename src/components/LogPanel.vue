@@ -117,11 +117,6 @@ function fileStamp(): string {
       日志
       <span class="muted small">v{{ VERSION }} · 构建 {{ BUILD }}</span>
     </h2>
-    <p class="muted small" style="margin: 0 0 8px">
-      遇到说不清楚的问题（数值不对、界面卡住、进度丢失）时，点「复制日志」把内容发给作者。
-      日志只存在这台设备上，不会自动发送给任何人。
-    </p>
-
     <p v-if="store.simulationPaused" class="log-alert">
       模拟已暂停：连续出错，游戏不会继续推进。请复制日志发给作者，然后刷新页面重来。
     </p>

@@ -56,6 +56,7 @@ import {
   type MachineKind,
   type PayWith,
   type TickReport,
+  type UiTheme,
 } from './core';
 import {
   MACHINE_MODELS,
@@ -445,6 +446,8 @@ export interface Snapshot {
   devMode: boolean;
   // 数字显示模式（设置页）：界面上的大数字用自动 / 科学计数法 / 完整数字哪种画法
   displayMode: DisplayMode;
+  // 界面主题（设置页）：暗钢 / 原版亮灰两套皮肤
+  uiTheme: UiTheme;
   // 音效设置（设置页）：总开关与被单独关掉的音效 id
   soundEnabled: boolean;
   soundMuted: SoundId[];
@@ -789,6 +792,12 @@ export const useGameStore = defineStore('game', {
       this.refresh();
       this.save();
     },
+    // 界面主题：纯外观偏好（GT GUI 重设计的两套皮肤），存档跟走、转生不清
+    setUiTheme(theme: UiTheme): void {
+      getCore().setUiTheme(theme);
+      this.refresh();
+      this.save();
+    },
     // 音效：总开关与每种音效的单独开关（纯听感设置，随存档走）
     setSoundEnabled(enabled: boolean): void {
       getCore().setSoundEnabled(enabled);
@@ -1115,6 +1124,7 @@ function buildSnapshot(core: GameCore): Snapshot {
     stats: statRows(core),
     devMode: core.devMode,
     displayMode: core.displayMode,
+    uiTheme: core.uiTheme,
     soundEnabled: core.soundEnabled,
     soundMuted: [...core.soundMuted],
     nextTier,

@@ -52,7 +52,8 @@ export const SIM_STEP_MS = 1000;
 // v21：加了数字显示模式（设置页的界面偏好：自动 / 科学计数法 / 完整数字）
 // v22：加了自动存档间隔（存档框里的滑条，秒）
 // v23：加了音效开关（设置页：总开关 + 每种音效单独关）
-export const SAVE_VERSION = 23;
+// v24：加了界面主题（设置页：暗钢 / 原版亮灰，GT GUI 重设计的两套皮肤）
+export const SAVE_VERSION = 24;
 
 // 自动存档间隔（秒）：存档框滑条的范围，默认沿用写死的 10 秒
 export const AUTOSAVE_SECONDS_DEFAULT = 10;

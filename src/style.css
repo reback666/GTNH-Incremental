@@ -1,14 +1,100 @@
+/* 数字与等级代号用的等宽字体（拉丁子集，约 43KB，构建时内联）。
+   中文继续走系统字体，只有数字/单位/电压代号落到 JetBrains Mono 上 */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('./assets/fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('./assets/fonts/jetbrains-mono-latin-700-normal.woff2') format('woff2');
+}
+
+/*
+  GT 机器 GUI 深度复刻的 token 层（2026-10-04 拍板）。
+  · 面板/按钮/插槽的立体感来自 GT 原版贴图（--skin-*，scripts/build-gui-skins.py 生成），
+    贴图负责「像」，交互态与颜色由 CSS 叠。
+  · 交互色是中性钢灰（--accent），与 GT 无关的旧青色已退役；红黄警示保留。
+  · 14 级电压色（--vt1..--vt13，MAX 是彩虹）取自 scripts/gtnh_tiers.py，
+    与机器图标染色同源，全局等级标识用。
+  · 亮灰原版皮肤（.skin-light）换掉 --skin-* 与文字色即可，样张阶段两版对比。
+*/
 :root {
-  --bg: #12161c;
-  --panel: #1b2129;
-  --panel-2: #232b35;
-  --line: #2f3946;
-  --text: #d7dee8;
-  --muted: #8b97a7;
-  --accent: #58c4a3;
+  --bg: #0d1015;
+  --panel: #1e222a;
+  --panel-2: #262b34;
+  --line: #3a414d;
+  --text: #f0f5fb;
+  /* 次要文字只比正文暗半档：灰底上的字不能发灰（用户两轮反馈） */
+  --muted: #c6d1de;
+  --accent: #aebdce;
+  --accent-rgb: 174, 189, 206;
   --warn: #e0a33e;
   --danger: #d9524f;
+
+  /* GT GUI 骨架贴图（暗钢皮肤默认值） */
+  --skin-panel: url('./assets/gui/panel-dark.png');
+  --skin-btn: url('./assets/gui/btn-dark.png');
+  --skin-btn-pressed: url('./assets/gui/btn-dark-pressed.png');
+  --skin-btn-disabled: url('./assets/gui/btn-dark-disabled.png');
+  --skin-slot: url('./assets/gui/slot-dark.png');
+  --btn-face: #23262e;
+  --btn-text: #e8edf4;
+
+  /* 页面环境与轨道（内凹条）用的底色，亮肤会整组换掉 */
+  --bg-glow: #1a2029;
+  --track: #14181e;
+
+  /* 数字/电压代号字体 */
+  --font-num: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  /* 14 级电压色（1=ULV … 13=UXV；14=MAX 用 --vt14 彩虹渐变） */
+  --vt1: #ff5555;
+  --vt2: #778899;
+  --vt3: #ff8c00;
+  --vt4: #ffd700;
+  --vt5: #696969;
+  --vt6: #4169e1;
+  --vt7: #ff00ff;
+  --vt8: #00ced1;
+  --vt9: #008000;
+  --vt10: #8b0000;
+  --vt11: #8b008b;
+  --vt12: #0000cd;
+  --vt13: #aa0000;
+  --vt14: linear-gradient(90deg, #ff5555, #ffaa00, #ffff55, #55ff55, #55ffff, #5555ff, #aa00aa, #ff55ff);
+  /* 文字用的亮彩虹：原版彩虹尾部的蓝/深品红在暗底上太暗（MAX 的 X 曾经看不见） */
+  --vt14-text: linear-gradient(90deg, #ff8080, #ffc069, #ffff80, #80ff80, #80ffff, #8fb8ff, #e070e0, #ff90ff);
+
   color-scheme: dark;
+}
+
+/* 亮灰原版皮肤：换骨架贴图与文字色，其余 token 全部沿用 */
+.skin-light {
+  --panel: #c6c6c6;
+  --panel-2: #b0b0b0;
+  --line: #8f8f9d;
+  --text: #1e1e22;
+  --muted: #4c4c56;
+  --accent: #3d5a80;
+  --accent-rgb: 61, 90, 128;
+  --btn-face: #8b8b8b;
+  --btn-text: #16161a;
+  --skin-panel: url('./assets/gui/panel-light.png');
+  --skin-btn: url('./assets/gui/btn.png');
+  --skin-btn-pressed: url('./assets/gui/btn-pressed.png');
+  --skin-btn-disabled: url('./assets/gui/btn-disabled.png');
+  --skin-slot: url('./assets/gui/slot-item.png');
+  --bg: #90909a;
+  --bg-glow: #a2a2ac;
+  --track: #81818b;
+  color-scheme: light;
 }
 
 * {
@@ -24,13 +110,13 @@ body {
     方格 28px 一格、透明度 2.5%，扫一眼几乎察觉不到，但画面不再是一张死平的纯色。
   */
   background:
-    radial-gradient(120% 60% at 50% 0%, #1a2029 0%, rgba(26, 32, 41, 0) 60%),
-    repeating-linear-gradient(0deg, rgba(88, 196, 163, 0.025) 0 1px, transparent 1px 28px),
-    repeating-linear-gradient(90deg, rgba(88, 196, 163, 0.025) 0 1px, transparent 1px 28px),
+    radial-gradient(120% 60% at 50% 0%, var(--bg-glow) 0%, rgba(26, 32, 41, 0) 60%),
+    repeating-linear-gradient(0deg, rgba(var(--accent-rgb), 0.025) 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(90deg, rgba(var(--accent-rgb), 0.025) 0 1px, transparent 1px 28px),
     var(--bg);
   background-attachment: fixed;
   color: var(--text);
-  font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font: 16px/1.55 system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -55,9 +141,9 @@ body {
 }
 
 #app {
-  max-width: 760px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 12px 12px 40px;
+  padding: 12px 16px 40px;
 }
 
 h1 {
@@ -70,7 +156,7 @@ h2 {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 14px;
+  font-size: 16px;
   margin: 0 0 8px;
   color: var(--muted);
   font-weight: 600;
@@ -87,29 +173,35 @@ h2::before {
   opacity: 0.75;
 }
 
+/* GT 机器 GUI 的面板：立体感全在贴图里（3px 高光边 + 平底），方角是 GT 的规矩 */
 .panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  border-style: solid;
+  border-width: 3px;
+  border-image: var(--skin-panel) 3 fill / 3px stretch;
+  border-radius: 0;
   padding: 12px;
   margin-bottom: 12px;
-  /* 上缘一线极淡的高光 + 落影：面板之间有了前后层次 */
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.03),
-    0 2px 8px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
 
+/*
+  GT 按钮：立体感来自贴图（顶左亮 1px、底右暗 1px），不用 fill——
+  内部底色走 background，这样语义态（出售/停机/主按钮）还能用背景色染色。
+  悬停提亮、按下换压态贴图，与 MC 按钮同一套手感。
+*/
 button {
   font: inherit;
   min-height: 44px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--panel-2);
-  color: var(--text);
+  border-radius: 0;
+  border-style: solid;
+  border-width: 2px;
+  border-image: var(--skin-btn) 2 / 2px stretch;
+  background: var(--btn-face);
+  color: var(--btn-text);
   padding: 0 12px;
   cursor: pointer;
   transition:
-    border-color 0.16s ease,
+    filter 0.14s ease,
     background 0.16s ease,
     color 0.16s ease,
     transform 0.08s ease,
@@ -123,28 +215,40 @@ button:focus-visible {
 }
 
 button:not(:disabled):hover {
-  border-color: #4a5a6c;
-  background: #2a3441;
+  filter: brightness(1.16);
 }
 
 button:not(:disabled):active {
+  border-image-source: var(--skin-btn-pressed);
   transform: translateY(1px);
+  filter: brightness(0.94);
 }
 
 button:disabled {
-  opacity: 0.4;
+  border-image-source: var(--skin-btn-disabled);
+  color: var(--muted);
   cursor: not-allowed;
 }
 
+/* 语义态不再能改 border-color（被贴图接管），改用底色染色 + 文字色 */
 button.primary {
-  border-color: var(--accent);
   color: var(--accent);
-  background: rgba(88, 196, 163, 0.08);
+  background: rgba(var(--accent-rgb), 0.16);
 }
 
 button.primary:not(:disabled):hover {
-  background: rgba(88, 196, 163, 0.16);
-  box-shadow: 0 0 12px rgba(88, 196, 163, 0.18);
+  background: rgba(var(--accent-rgb), 0.26);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.22);
+}
+
+/* 折叠开关一类的「透明按钮」：退掉贴图，回到普通细边框 */
+.rebirth-toggle,
+.panel-toggle,
+.research-toggle {
+  border-image: none;
+  border-width: 1px;
+  border-color: transparent;
+  background: transparent;
 }
 
 button.big {
@@ -168,6 +272,7 @@ button.big {
   }
 }
 
+/* GT 插槽格：凹槽感来自原版 18×18 插槽贴图（1px 深边 + 灰底），切片拉伸 */
 .power-box {
   display: flex;
   flex-direction: column;
@@ -176,12 +281,13 @@ button.big {
   min-height: 52px;
   padding: 8px 10px;
   text-align: left;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 9px;
+  border: 1px solid;
+  border-image: var(--skin-slot) 1 fill / 1px stretch;
+  border-radius: 0;
+  background: none;
   transition:
-    border-color 0.2s ease,
-    background 0.2s ease;
+    filter 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .power-box:not(.static) {
@@ -189,12 +295,11 @@ button.big {
 }
 
 .power-box:not(.static):hover {
-  border-color: #4a5a6c;
+  filter: brightness(1.18);
 }
 
 .power-box.active {
-  border-color: var(--accent);
-  background: #1d2a2c;
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.55) inset;
 }
 
 .power-box.static {
@@ -202,11 +307,11 @@ button.big {
 }
 
 .power-box.danger {
-  border-color: var(--danger);
+  box-shadow: 0 0 0 2px rgba(217, 82, 79, 0.6) inset;
 }
 
 .power-label {
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--muted);
 }
 
@@ -236,7 +341,7 @@ button.big {
 
 .power-pad {
   padding: 8px 10px;
-  background: #141920;
+  background: var(--track);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
@@ -244,7 +349,7 @@ button.big {
 .detail-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .detail-table th,
@@ -289,10 +394,10 @@ button.big {
   gap: 8px;
   margin: 8px 0 2px;
   padding: 8px 10px;
-  border: 1px solid rgba(88, 196, 163, 0.4);
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
   border-radius: 8px;
-  background: rgba(88, 196, 163, 0.09);
-  font-size: 12.5px;
+  background: rgba(var(--accent-rgb), 0.09);
+  font-size: 13.5px;
 }
 
 .offline-icon {
@@ -322,10 +427,10 @@ button.big {
   用 grid-template-rows 的 0fr↔1fr 过渡，展开高度自动、不会跳。
 */
 .chips {
-  /* 等宽网格：所有 chip 同一行里一样宽，上下行的列能对齐
-     （原来是按内容自适应宽度 + 流式换行，名字长短不一导致每行都错位） */
+  /* 等宽网格：一行固定 6 个（用户拍板）——auto-fill 在宽屏下会摆出 7~8 列，
+     「宇宙中子素」这类长材料名显示不全 */
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: start;
   gap: 6px;
 }
@@ -334,7 +439,8 @@ button.big {
    等宽网格排版，14 个标签上下行的列对齐（原来流式换行每行都错位） */
 .tags {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  /* 112px 起步：「ULV 已解锁」在 14px 字号下刚好放得下，86px 会截断 */
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
   gap: 6px;
 }
 
@@ -342,11 +448,11 @@ button.big {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 999px;
+  border: 1px solid;
+  border-image: var(--skin-slot) 1 fill / 1px stretch;
+  border-radius: 0;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
@@ -358,42 +464,46 @@ button.big {
   margin-left: 4px;
 }
 
+/* 资源 chip：同 slot 贴图的插槽格，悬停提亮（border 被贴图接管，不再描色） */
 .chip {
   min-width: 0;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  padding: 5px 10px;
-  font-size: 12px;
+  border: 1px solid;
+  border-image: var(--skin-slot) 1 fill / 1px stretch;
+  border-radius: 0;
+  padding: 5px 8px;
+  font-size: 14px;
   cursor: default;
-  transition:
-    border-color 0.22s ease,
-    background 0.22s ease;
+  transition: filter 0.22s ease;
 }
 
 .chip:hover,
 .chip:focus {
-  border-color: var(--accent);
-  background: #1d2a2c;
+  filter: brightness(1.18);
   outline: none;
 }
 
+/*
+  chip 头两行：名字一行、数值一行（用户拍板不折行）——
+  「宇宙中子素币」6 个字单独占一行放得下，数值在下面右对齐。
+*/
 .chip-head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  white-space: nowrap;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1px;
 }
 
 .chip-name {
+  display: block;
   min-width: 0;
   overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--muted);
 }
 
 .chip-head b {
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
@@ -468,7 +578,7 @@ h2 .small {
 .row button {
   min-height: 36px;
   padding: 0 10px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* 运行 / 停机台数的小字（耗电明细与机器面板机型行共用） */
@@ -557,10 +667,35 @@ h2 .small {
 }
 
 .small {
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* ── 数字涨跌动画 ────────────────────────────────────────── */
+/* 数字、台数、单价、电压代号、时间戳统一落等宽字体：增量游戏的数字是门面，
+   等宽排列让逐帧变化的数值不抖动（font-variant-numeric 由各自规则保留） */
+.num,
+.power-value,
+.count,
+.price,
+.tab-count,
+.chip-head b,
+.chip-line b,
+.stat dd,
+.tier-name,
+.tier-bar .count,
+.tier-bar .price,
+.oc-level,
+.run-split,
+.log-time,
+.badge,
+.tip-row b,
+.tip-mod-value,
+.detail-table .num-cell,
+.research-head b,
+.pollution-head b {
+  font-family: var(--font-num);
+}
+
 @keyframes num-rise {
   0% {
     transform: translateY(4px) scale(1.08);
@@ -587,24 +722,24 @@ h2 .small {
 }
 
 /* ── 矿脉与挖矿特效 ──────────────────────────────────────── */
+/* 矿脉展示柜：竖排——贴图居中、名字在贴图正下方（2026-10-04 用户拍板改回） */
 .vein-btn {
   position: relative;
   width: 100%;
-  min-height: 188px;
+  min-height: 168px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
   /* 留出原版光晕外扩的空间（光晕本身比图标大 2.25 倍） */
-  padding: 34px 0 18px;
+  padding: 30px 24px 20px;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 65%, #232b35 0%, #171c23 70%);
-  border-color: #3a4553;
-}
-
-.vein-btn:active {
-  transform: translateY(1px);
+  background: radial-gradient(circle at 50% 65%, var(--bg-glow) 0%, var(--bg) 70%);
+  border-style: solid;
+  border-width: 3px;
+  border-image: var(--skin-panel) 3 / 3px stretch;
+  border-radius: 0;
 }
 
 .vein-sprite {
@@ -703,8 +838,9 @@ h2 .small {
 
 .vein-label {
   position: relative;
+  /* 重设计前的观感：小一号 + 宽字距；颜色比旧灰再亮一档（用户反馈「稍微再显眼」） */
   font-size: 13px;
-  color: var(--muted);
+  color: #a9b6c6;
   letter-spacing: 0.12em;
 }
 
@@ -716,8 +852,8 @@ h2 .small {
 
 /* 标签上的工具图标：和机器标签一样用 32×32 的贴图 */
 .tab-icon {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   image-rendering: pixelated;
 }
 
@@ -726,9 +862,9 @@ h2 .small {
 .pickaxe-vein-icon {
   position: relative;
   display: block;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
 }
 
 .pickaxe-vein-icon .vein-frames {
@@ -755,9 +891,9 @@ h2 .small {
 }
 
 .pickaxe-line-icon {
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
   image-rendering: pixelated;
 }
 
@@ -799,8 +935,8 @@ h2 .small {
 .pickaxe-upgrade {
   min-height: 34px;
   padding: 0 14px;
-  border-color: var(--accent);
   color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.14);
 }
 
 /* 最后一条线的展开体不要多留一段底边距 */
@@ -811,22 +947,23 @@ h2 .small {
 /* 机型行里的超频档位与故障维护 */
 .overclock {
   /* 固定宽：后面运行按钮的缩进按它算（见 .run-state） */
-  flex: 0 0 96px;
+  flex: 0 0 104px;
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
 }
 
 /* 不能超频的机型（发电机 / 净化器 / 研究等）占住同样的位置，
    让运行按钮在所有机型上起点一致 */
 .overclock-slot {
-  flex: 0 0 96px;
+  flex: 0 0 104px;
 }
 
 .overclock .oc-label {
   letter-spacing: 0.08em;
+  white-space: nowrap;
   cursor: help;
   outline: none;
 }
@@ -837,6 +974,10 @@ h2 .small {
 }
 
 .oc-btn {
+  /* +/− 用弹性居中：字符本身在中文字体里有偏移，靠 text-align 压不正 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 20px;
   height: 20px;
   padding: 0;
@@ -855,7 +996,7 @@ h2 .small {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: 14px;
   color: #ffb4a2;
   background: rgba(217, 82, 79, 0.14);
   border: 1px solid rgba(217, 82, 79, 0.35);
@@ -870,64 +1011,159 @@ h2 .small {
 
 /* 设置与风险：污染条与电网选择 */
 /* 转生：永久加成树 */
-/* 右侧页码条：当前页的按钮放大、点亮 */
-.page-nav {
-  position: fixed;
-  right: 14px;
-  top: 50%;
-  z-index: 10;
+
+/* ── 桌面双栏骨架：左侧仪表侧栏 + 右侧内容区 ─────────────── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.page-body {
+  min-width: 0;
+}
+
+/* 侧栏跟着屏幕滚（sticky），换页时电能与研究读数常驻可见 */
+.sidebar {
+  position: sticky;
+  top: 12px;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+}
+
+/* 工厂铭牌：名号 + 电压徽标 + 已玩时长 */
+.side-brand {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+
+.side-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* 电压徽标：按该级电压色描边（MAX 用彩虹渐变字） */
+.volt-badge {
+  padding: 0 8px;
+  border: 1px solid var(--tier-c, var(--accent));
+  color: var(--tier-c, var(--accent));
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 20px;
+  letter-spacing: 0.04em;
+}
+
+/* MAX：彩虹边框 + 亮彩虹渐变字（渐变只染文字本身，别盖住字） */
+.volt-badge.volt-max {
+  border: 1px solid;
+  border-image: var(--vt14) 1;
+  background: var(--vt14-text) no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.side-play {
+  flex-basis: 100%;
+}
+
+/* 页签：替代旧的右侧竖排页码 */
+.side-nav {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 4px;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  transform: translateY(-50%);
+  min-height: 42px;
+  padding: 0 12px;
+  text-align: left;
 }
 
-.page-dot {
-  width: 38px;
-  height: 38px;
-  min-height: 38px;
-  padding: 0;
-  border-radius: 12px;
+.nav-key {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--line);
-  background: rgba(26, 32, 39, 0.86);
   color: var(--muted);
-  font-size: 14px;
-  font-weight: 600;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    color 0.18s ease,
-    background 0.18s ease;
+  font-family: var(--font-num);
+  font-size: 12px;
+  line-height: 1;
 }
 
-.page-dot:hover {
-  border-color: #4a5563;
-  color: var(--text);
-}
-
-.page-dot.active {
-  transform: scale(1.18);
-  border-color: var(--accent);
-  background: rgba(88, 196, 163, 0.18);
-  color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(88, 196, 163, 0.12);
+.nav-name {
+  flex: 1;
 }
 
 /* 这一页有新东西要看（设置页里出现了错误日志） */
-.page-dot {
-  position: relative;
-}
-
-.page-badge {
-  position: absolute;
-  top: 5px;
-  right: 5px;
+.nav-badge {
+  flex: none;
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--danger);
-  box-shadow: 0 0 0 2px rgba(18, 22, 28, 0.9);
+  box-shadow: 0 0 0 2px rgba(13, 16, 21, 0.9);
+}
+
+.nav-btn.active {
+  background: rgba(var(--accent-rgb), 0.16);
+  color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.55) inset;
+}
+
+.nav-btn.active .nav-key {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 侧栏电能四格：两行两列 */
+.side-power-row {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* 侧栏研究进度 */
+.side-research-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.side-research-pct {
+  font-family: var(--font-num);
+}
+
+.side-progress {
+  position: relative;
+  height: 10px;
+  margin-top: 5px;
+  background: var(--track);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.side-progress span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease-out;
+}
+
+.side-research-note {
+  margin: 4px 0 0;
 }
 
 /* 换页过渡：先淡出上一页，再淡入下一页 */
@@ -948,19 +1184,24 @@ h2 .small {
   transform: translateY(-8px);
 }
 
-/* 窄屏放不下右侧竖排，改成底部居中横排 */
-@media (max-width: 880px) {
-  .page-nav {
-    top: auto;
-    right: 50%;
-    bottom: 12px;
-    flex-direction: row;
-    transform: translateX(50%);
+/* 窄窗口退回单列：侧栏变成顶部横排（桌面优先，这里只是保底不破版） */
+@media (max-width: 980px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+  }
+
+  .side-power-row {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
 .rebirth-page {
   max-width: 760px;
+  margin: 0 auto;
 }
 
 .rebirth-page h1 {
@@ -1006,6 +1247,9 @@ h2 .small {
   min-height: 0;
   padding: 8px 10px;
   text-align: left;
+  border: 1px solid;
+  border-image: var(--skin-slot) 1 fill / 1px stretch;
+  border-radius: 0;
 }
 
 .universe b {
@@ -1020,14 +1264,14 @@ h2 .small {
 }
 
 .universe.picked {
-  border-color: var(--accent);
-  background: rgba(88, 196, 163, 0.14);
+  background: rgba(var(--accent-rgb), 0.3);
+  box-shadow: 0 0 0 2px var(--accent) inset;
 }
 
 .universe.owned {
-  opacity: 0.75;
-  border-color: #4a6a5c;
-  background: #22322c;
+  opacity: 0.85;
+  background: rgba(var(--accent-rgb), 0.1);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.45) inset;
 }
 
 .universe.todo {
@@ -1039,17 +1283,17 @@ h2 .small {
 .tag-picked {
   padding: 1px 6px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
 }
 
 .tag-owned {
-  background: rgba(88, 196, 163, 0.2);
+  background: rgba(var(--accent-rgb), 0.2);
   color: var(--accent);
 }
 
 .tag-picked {
-  background: rgba(88, 196, 163, 0.25);
+  background: rgba(var(--accent-rgb), 0.25);
   color: var(--accent);
 }
 
@@ -1072,29 +1316,29 @@ h2 .small {
   gap: 4px;
   aspect-ratio: 1 / 1;
   padding: 8px 9px;
-  border: 1px solid #333c48;
-  border-radius: 10px;
-  background: #1a2027;
+  border: 1px solid;
+  border-image: var(--skin-slot) 1 fill / 1px stretch;
+  border-radius: 0;
   opacity: 0.55;
   overflow: hidden;
   transition:
     transform 0.15s ease,
-    border-color 0.2s ease,
     box-shadow 0.2s ease;
 }
 
 .achievement.done {
   opacity: 1;
-  border-color: #4a6a5c;
-  background: #22322c;
-  /* 达成色的一圈极细内描边：跟未达成拉开一点差距，又不至于喧宾夺主 */
-  box-shadow: inset 0 0 0 1px rgba(88, 196, 163, 0.22);
+  /* 完成态绿色：重设计前的配色整体提亮一档（用户反馈「再亮一点」） */
+  border-image: none;
+  border-color: #527a66;
+  background: #2b4a3b;
+  box-shadow: inset 0 0 0 1px rgba(88, 196, 163, 0.28);
 }
 
 /* 已达成的悬停轻轻抬起：暗示可以凑近看（悬停有达成时间等说明） */
 .achievement.done:hover {
   transform: translateY(-2px) scale(1.02);
-  border-color: var(--accent);
+  border-color: #58c4a3;
   box-shadow:
     inset 0 0 0 1px rgba(88, 196, 163, 0.35),
     0 4px 14px rgba(0, 0, 0, 0.35);
@@ -1109,7 +1353,7 @@ h2 .small {
 }
 
 .achievement.done .mark {
-  color: var(--accent);
+  color: #58c4a3;
   font-weight: 700;
 }
 
@@ -1170,7 +1414,7 @@ h2 .small {
   padding: 10px;
   border: 1px dashed #4a5563;
   border-radius: 8px;
-  background: rgba(88, 196, 163, 0.05);
+  background: rgba(var(--accent-rgb), 0.05);
 }
 
 /* ── 日志（反馈问题时交给作者的材料） ─────────────────────── */
@@ -1180,15 +1424,16 @@ h2 .small {
   padding: 8px;
   max-height: 320px;
   overflow-y: auto;
-  background: #141920;
+  background: var(--track);
   border: 1px solid var(--line);
   border-radius: 8px;
+  font-size: 13px;
 }
 
 .log-item {
   padding: 4px 0;
   border-bottom: 1px solid #222a34;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .log-item:last-child {
@@ -1203,7 +1448,7 @@ h2 .small {
 
 .log-time {
   flex: none;
-  color: #6d7a89;
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1212,7 +1457,7 @@ h2 .small {
   padding: 0 5px;
   border: 1px solid var(--line);
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -1243,7 +1488,7 @@ h2 .small {
 .log-detail summary {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
 }
 
@@ -1252,11 +1497,11 @@ h2 .small {
   padding: 6px 8px;
   max-height: 200px;
   overflow: auto;
-  background: #0f141a;
+  background: var(--track);
   border: 1px solid var(--line);
   border-radius: 6px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   white-space: pre-wrap;
   word-break: break-all;
 }
@@ -1276,7 +1521,7 @@ h2 .small {
   height: 160px;
   margin-top: 8px;
   padding: 8px;
-  background: #141920;
+  background: var(--track);
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--text);
@@ -1333,7 +1578,7 @@ h2 .small {
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: #141a20;
+  background: var(--track);
   cursor: grab;
   scrollbar-width: thin;
   overscroll-behavior: contain;
@@ -1359,7 +1604,7 @@ h2 .small {
 }
 
 .rebirth-links line {
-  stroke: #39434f;
+  stroke: var(--line);
   stroke-width: 2;
 }
 
@@ -1373,8 +1618,8 @@ h2 .small {
   width: 108px;
   padding: 6px 0;
   border: 1px solid var(--accent);
-  border-radius: 8px;
-  background: rgba(88, 196, 163, 0.14);
+  border-radius: 0;
+  background: rgba(var(--accent-rgb), 0.14);
   color: var(--text);
   font-size: 13px;
   text-align: center;
@@ -1389,9 +1634,9 @@ h2 .small {
   width: 108px;
   height: 40px;
   padding: 3px 4px;
-  border: 1px solid #39434f;
-  border-radius: 8px;
-  background: #1a2027;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--track);
   color: var(--muted);
   font-family: inherit;
   text-align: center;
@@ -1406,18 +1651,19 @@ h2 .small {
 .rebirth-node em {
   font-size: 10px;
   font-style: normal;
-  color: #6d7a89;
+  color: var(--muted);
 }
 
 .rebirth-node.buyable {
   border-color: var(--accent);
-  background: rgba(88, 196, 163, 0.12);
+  background: rgba(var(--accent-rgb), 0.12);
   color: var(--text);
   cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.5) inset;
 }
 
 .rebirth-node.buyable:hover {
-  background: rgba(88, 196, 163, 0.22);
+  background: rgba(var(--accent-rgb), 0.22);
 }
 
 .rebirth-node.gated {
@@ -1425,9 +1671,9 @@ h2 .small {
 }
 
 .rebirth-node.owned {
-  border-color: #4a6a5c;
-  background: #22322c;
-  color: #9fd8c4;
+  border-color: rgba(var(--accent-rgb), 0.5);
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--text);
   opacity: 0.95;
 }
 
@@ -1446,15 +1692,15 @@ h2 .small {
   width: 520px;
   max-width: 100%;
   padding: 18px 20px;
-  border: 1px solid #3a5a6e;
-  border-radius: 12px;
-  background: #171d25;
+  border: 3px solid;
+  border-image: var(--skin-panel) 3 fill / 3px stretch;
+  border-radius: 0;
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
 }
 
 .rift-dialog h2 {
   margin: 0 0 10px;
-  color: #8fd0ff;
+  color: var(--accent);
 }
 
 .rift-dialog p {
@@ -1546,7 +1792,7 @@ h2 .small {
   height: 10px;
   margin-top: 6px;
   border-radius: 5px;
-  background: #1b2129;
+  background: var(--track);
   border: 1px solid #333c48;
   overflow: hidden;
 }
@@ -1601,7 +1847,7 @@ h2 .small {
   height: 10px;
   margin-top: 6px;
   border-radius: 5px;
-  background: #1b2129;
+  background: var(--track);
   border: 1px solid #333c48;
   overflow: hidden;
 }
@@ -1653,9 +1899,9 @@ h2 .small {
   justify-content: space-between;
   gap: 12px;
   padding: 8px 10px;
-  border: 1px solid #333c48;
-  border-radius: 8px;
-  background: #1a2027;
+  border: 1px solid;
+  border-image: var(--skin-slot) 1 fill / 1px stretch;
+  border-radius: 0;
 }
 
 .grid-info {
@@ -1667,7 +1913,7 @@ h2 .small {
 
 .grid-mode.active {
   border-color: var(--accent);
-  background: rgba(88, 196, 163, 0.12);
+  background: rgba(var(--accent-rgb), 0.12);
 }
 
 .grid-mode.locked {
@@ -1927,13 +2173,14 @@ h2 .small {
 }
 
 .machine-tab.active {
-  border-color: var(--accent);
-  background: #1d2a2c;
-  box-shadow: 0 0 0 1px rgba(88, 196, 163, 0.25) inset;
+  background: rgba(var(--accent-rgb), 0.2);
+  box-shadow:
+    0 0 0 2px rgba(var(--accent-rgb), 0.6) inset,
+    0 0 10px rgba(var(--accent-rgb), 0.12);
 }
 
 .tab-name {
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .tab-count {
@@ -1987,16 +2234,16 @@ h2 .small {
 
 .stat {
   min-width: 0;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  border: 1px solid;
+  border-image: var(--skin-slot) 1 fill / 1px stretch;
+  border-radius: 0;
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .stat dt {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12.5px;
 }
 
 .stat dd {
@@ -2042,9 +2289,9 @@ h2 .small {
 }
 
 .pay-row button {
-  min-height: 30px;
-  padding: 0 10px;
-  font-size: 12px;
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 14px;
 }
 
 /* 每个等级一条横杠：等级名 → 机器图标横排 → 数量 → 单价 → 建造按钮 */
@@ -2082,23 +2329,22 @@ h2 .small {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  /* 缩进到与第一行机器图标的左缘对齐：46px 行缩进 + 超频块 96px + 60px 余量，
-     再扣掉行内 6px 的间距余量自己不吃（54 = 60 - 6） */
-  margin-left: 54px;
+  /* 缩进到与第一行机器图标的左缘对齐：46px 行缩进 + 超频块 104px + 余量，
+     再扣掉行内间距（超频块加宽 8px 这里同步收 8px） */
+  margin-left: 46px;
 }
 
 .run-btn {
-  min-height: 30px;
-  padding: 0 8px;
-  font-size: 12px;
-  border-radius: 6px;
-  border-color: var(--accent);
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 14px;
   color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.14);
 }
 
 .run-btn.stopped {
-  border-color: var(--line);
   color: var(--muted);
+  background: rgba(128, 138, 152, 0.1);
 }
 
 /* 停机的机型在名字与图标上压低一点，一眼能看出这排没在跑 */
@@ -2107,7 +2353,8 @@ h2 .small {
   opacity: 0.5;
 }
 
-/* 买 / 卖按钮组：两个数量按钮 + 一个「买」「卖」字标签 */
+/* 买 / 卖按钮组：两个数量按钮 + 一个「买」「卖」字标签。
+   两行都推到最右：买（第一行）与卖（第二行）右缘对齐 */
 .trade {
   display: inline-flex;
   align-items: center;
@@ -2115,8 +2362,12 @@ h2 .small {
   flex: 0 0 auto;
 }
 
+.tier-line:not(.second) .trade {
+  margin-left: auto;
+}
+
 .trade .trade-label {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--accent);
   letter-spacing: 0.08em;
 }
@@ -2127,12 +2378,11 @@ h2 .small {
 
 /* 出售：退一半的价，配色压低一点，别和建造按钮抢注意力 */
 .sell-btn {
-  border-color: var(--line);
   color: var(--muted);
 }
 
 .sell-btn:not(:disabled):hover {
-  border-color: var(--danger);
+  background: rgba(217, 82, 79, 0.18);
   color: var(--danger);
 }
 
@@ -2148,12 +2398,13 @@ h2 .small {
   display: flex;
   align-items: center;
   gap: 2px;
-  flex: 1 1 120px;
+  /* 固定宽：机型名长短不一曾经把它挤得每行不一样长（用户拍板固定） */
+  flex: 0 0 280px;
   min-width: 0;
-  min-height: 22px;
+  min-height: 30px;
   overflow: hidden;
   padding: 0 4px;
-  background: #141920;
+  background: var(--track);
   border: 1px solid var(--line);
   border-radius: 6px;
 }
@@ -2165,7 +2416,7 @@ h2 .small {
   min-width: 0;
   display: inline-flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 14px;
   cursor: help;
   outline: none;
 }
@@ -2192,7 +2443,7 @@ h2 .small {
   min-width: 178px;
   max-width: min(320px, 90vw);
   padding: 8px 10px;
-  background: #0f141a;
+  background: var(--track);
   border: 1px solid var(--accent);
   border-radius: 8px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
@@ -2279,8 +2530,8 @@ h2 .small {
   border: 1px solid var(--line);
   border-radius: 4px;
   color: var(--muted);
-  font-size: 10px;
-  line-height: 15px;
+  font-size: 11px;
+  line-height: 16px;
   vertical-align: middle;
 }
 
@@ -2325,10 +2576,10 @@ h2 .small {
 }
 
 .tier-bar button {
-  min-height: 28px;
+  min-height: 30px;
   flex: none;
-  padding: 0 8px;
-  font-size: 12px;
+  padding: 0 10px;
+  font-size: 14px;
 }
 
 .hint {
@@ -2376,6 +2627,98 @@ h2 .small {
 .fx-spark {
   box-shadow: 0 0 6px currentColor;
   animation: firework-fly 1.1s cubic-bezier(0.16, 0.6, 0.4, 1) forwards;
+}
+
+/*
+  等宽数字的光学补偿：JetBrains Mono 每个字符周围留白多，同像素下字面
+  比系统字体小一圈，而增量游戏满屏都是数字——所有走等宽字体的读数
+  统一放大一号。放在文件末尾以盖过前面的同名规则；标题类大字
+  （研究/污染读数）保持原字号不参与。
+*/
+.power-value {
+  font-size: 16px;
+}
+
+.chip-head b,
+.chip-line b,
+.stat dd,
+.row .count,
+.tab-count,
+.tier-name,
+.tier-bar .count,
+.tier-bar .price,
+.oc-level,
+.tip-row b,
+.tip-mod-value {
+  font-size: 14px;
+}
+
+.run-split {
+  font-size: 13px;
+}
+
+.badge {
+  font-size: 12px;
+}
+
+/* 设置页的音效行：长得和其他选项行一样（左标题右箭头），点开折叠列表 */
+.sound-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 0;
+  padding: 6px 0;
+  border-width: 0 0 1px;
+  border-color: var(--line);
+  font-weight: 600;
+  text-align: left;
+}
+
+.sound-toggle:not(:disabled):hover {
+  filter: none;
+  background: transparent;
+  color: var(--text);
+}
+
+/* 矿脉展示柜是「场景」不是按钮：点击只触发挖矿特效，大框本身不跟着亮/按下去
+   （hover 提亮也要禁——否则按下去 active 归位、松开又回亮，一点击闪一下） */
+.vein-btn:not(:disabled):hover {
+  filter: none;
+}
+
+.vein-btn:not(:disabled):active {
+  border-image-source: var(--skin-panel);
+  transform: none;
+  filter: none;
+}
+
+/*
+  卡片形按钮（平行宇宙 / 挑战 / 加成树节点 / 研究列表项）不是「按钮」是「选项卡」：
+  退掉全局按钮的贴图边框、悬停提亮与按压位移——否则点节点整格抽动，
+  按压时边框换贴图、disabled 的节点还会显示禁用按钮贴图。
+*/
+.universe,
+.rebirth-node,
+.research-item {
+  border-image: none;
+  border-width: 1px;
+}
+
+.universe:not(:disabled):hover,
+.rebirth-node:not(:disabled):hover,
+.research-item:not(:disabled):hover {
+  filter: none;
+}
+
+.universe:not(:disabled):active,
+.rebirth-node:not(:disabled):active,
+.research-item:not(:disabled):active {
+  border-image: none;
+  transform: none;
+  filter: none;
 }
 
 /* 系统开了「减少动态效果」时，砍掉装饰性动画，只留必要的状态变化 */@media (prefers-reduced-motion: reduce) {

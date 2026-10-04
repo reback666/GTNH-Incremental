@@ -2,6 +2,30 @@
 
 界面里的机器图标和矿脉贴图都不是手画的，全部从 GTNH 的贴图合成，脚本可重跑。
 
+## GUI 皮肤（面板 / 插槽 / 按钮 / 页签 / 进度条）
+
+UI 重设计（2026-10-04 拍板「GT 机器 GUI 深度复刻 + 贴图+CSS 混合」）后，界面骨架
+也从 GT 自己的 GUI 贴图来，`src/assets/gui/` 下：
+
+| 产物 | 来源（jar 内路径 `assets/gregtech/textures/gui/`） | 用途 |
+|---|---|---|
+| `panel-light.png` | `background/singleblock_default.png`（176×166） | 亮灰主题的面板底（border-image 切片） |
+| `panel-steel.png` | `background/steel.png` | 蓝钢灰面板底 |
+| `panel-dark.png` | steel.png 压暗派生 | 暗色主题面板底：底色压到 0.36、高光只压到 0.72，保住凸起语法 |
+| `panel-popup.png` | `background/popup.png`（195×136） | 对话框底（裂缝弹窗等） |
+| `text-field.png` | `background/text_field.png`（142×28） | 黑芯凹槽输入框 |
+| `slot-item.png` / `slot-dark.png` | `slot/item_standard.png` / `slot/dark_gray.png`（18×18） | 插槽式资源格 |
+| `btn.png` / `btn-pressed.png` / `btn-disabled.png` | `button/standard*.png`（18×18） | 按钮三态底 |
+| `tab-cover*.png` | `tab/cover_normal` / `cover_highlight` / `cover_disabled` | 页签（cover 是 GT 机器 GUI 的盖板页签） |
+| `tab-title.png` | `tab/title_dark.png` | 面板标题条 |
+| `arrow-empty.png` | `progressbar/arrow.png` 上帧（20×18） | 箭头进度条空底 |
+| `arrow-fill-t1..14.png` | 同上下帧按电压色染色 | 进度填充：14 级电压色（与 `gtnh_tiers.py` 同源），MAX 横向彩虹；染色方式与镐子爆破线同族（亮度转灰阶乘色、暗部 0.3 保底） |
+| `glow-blue.png` / `glow-rainbow.png` | TecTech `background/blue_glow.png` / `rainbow_glow.png` | 辉光点缀（转生页 / MAX 级） |
+
+生成脚本：`python scripts/build-gui-skins.py`，预览图 `docs/gui-skins.png`。
+这些是**骨架贴图**：交互态（悬停微光、电压色叠加）和布局仍由 CSS 管。
+
+
 ## 素材来源
 
 用户本机 Gradle 缓存里的 GTNH GregTech 开发包：

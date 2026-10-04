@@ -158,6 +158,9 @@ function onPanDown(event: PointerEvent) {
   dragging.value = true;
   panMoved = 0;
   panLast = { x: event.clientX, y: event.clientY };
+  // 点在节点上时不捕获指针：捕获会把 pointerup 重定向到视口，
+  // click 事件就落在视口上，节点的 @click 永远收不到（加成会买不出去）
+  if ((event.target as HTMLElement | null)?.closest('.rebirth-node')) return;
   viewport.value?.setPointerCapture(event.pointerId);
 }
 
