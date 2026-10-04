@@ -1328,16 +1328,19 @@ h2 .small {
 
 .achievement.done {
   opacity: 1;
-  /* 完成态用绿色（用户拍板恢复）：深绿底 + 绿内环，和未达成的灰格一眼分开 */
-  background: #1d3329;
-  box-shadow: inset 0 0 0 1px rgba(88, 196, 143, 0.5);
+  /* 完成态恢复重设计前的配色：绿灰底 + 绿边 + 旧青内环（用户拍板「就用没改 UI 之前那个绿色」） */
+  border-image: none;
+  border-color: #4a6a5c;
+  background: #22322c;
+  box-shadow: inset 0 0 0 1px rgba(88, 196, 163, 0.22);
 }
 
 /* 已达成的悬停轻轻抬起：暗示可以凑近看（悬停有达成时间等说明） */
 .achievement.done:hover {
   transform: translateY(-2px) scale(1.02);
+  border-color: #58c4a3;
   box-shadow:
-    inset 0 0 0 2px rgba(88, 196, 143, 0.75),
+    inset 0 0 0 1px rgba(88, 196, 163, 0.35),
     0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
@@ -1350,7 +1353,7 @@ h2 .small {
 }
 
 .achievement.done .mark {
-  color: #58c48f;
+  color: #58c4a3;
   font-weight: 700;
 }
 
