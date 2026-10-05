@@ -577,11 +577,8 @@ h2 .small {
   font-variant-numeric: tabular-nums;
 }
 
-.row button {
-  min-height: 36px;
-  padding: 0 10px;
-  font-size: 14px;
-}
+/* 行内按钮不再压小：直接用全局默认（44px/16px），与计数方法、界面主题的下拉按钮同款 */
+
 
 /* 运行 / 停机台数的小字（耗电明细与机器面板机型行共用） */
 .run-split {
@@ -1584,8 +1581,6 @@ h2 .small {
 
 .dev-tools .resource-row button {
   flex: none;
-  padding: 0 4px;
-  font-size: 13px;
 }
 
 
