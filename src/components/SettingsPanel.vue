@@ -340,7 +340,7 @@ function cleanAmount(text: string): string | null {
         </button>
       </div>
 
-      <dl class="stats">
+      <dl class="stats stats-6">
         <div class="stat">
           <dt>当前等级</dt>
           <dd>{{ VOLTAGE_TIERS[snap.maxTier - 1] }}</dd>

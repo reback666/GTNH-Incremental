@@ -1542,8 +1542,9 @@ h2 .small {
 .dev-tools select,
 .dev-tools input {
   font: inherit;
-  min-height: 44px;
-  padding: 0 12px;
+  font-size: 14px;
+  min-height: 36px;
+  padding: 0 10px;
   border: 2px solid;
   border-image: var(--skin-btn) 2 / 2px stretch;
   border-radius: 0;
@@ -2238,18 +2239,23 @@ h2 .small {
 }
 
 .stats {
-  /* 等宽网格：一行固定 8 个（用户拍板），上下行列对齐 */
+  /* 等宽网格：一行固定 7 个（用户拍板），上下行列对齐 */
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
   margin: 10px 0 8px;
 }
 
-/* 窄窗口放不下 8 列时退回 4 列 */
+/* 窄窗口放不下 7 列时退回 4 列 */
 @media (max-width: 900px) {
   .stats {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+}
+
+/* 开发者模式底部的内部状态读数：一行 6 个，格子更宽字不折行 */
+.stats.stats-6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .stat {
