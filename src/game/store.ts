@@ -1579,12 +1579,9 @@ function modifierRows(core: GameCore, kind: MachineKind | 'pickaxe'): ModifierRo
     );
     const step = dec(String(report.stepSeconds));
     const capacity = step.gt(0) ? report.euCapacity.div(step) : rated;
-    const actual = step.gt(0) ? report.euGenerated.div(step) : ZERO;
-    // 拿不出额定出力 = 缺燃料；拿得出却发得少 = 发电机按需发电，不是故障
+    // 拿不出额定发电率 = 缺燃料；拿得出却发得少 = 发电机按需发电，不是故障
     if (rated.gt(0) && capacity.lt(rated)) {
-      add('出力', pct(capacity.div(rated)), '矿石不够烧', 'bad');
-    } else if (capacity.gt(0) && actual.lt(capacity)) {
-      add('出力', pct(actual.div(capacity)), '按需发电（富余出力没开）', 'flat');
+      add('发电率', pct(capacity.div(rated)), '矿石不够烧', 'bad');
     }
   }
   if (kind === 'purifier') {
@@ -1592,7 +1589,7 @@ function modifierRows(core: GameCore, kind: MachineKind | 'pickaxe'): ModifierRo
       add('提示', '污染机制已关闭', '设置', 'flat');
     } else {
       const purify = core.purifyPerSecond();
-      add('净化量', `${formatNumber(purify.times(100))}%/秒`, '等级 × 台数', 'good');
+      add('净化量', `${formatNumber(purify.times(100))}%/秒`, '', 'good');
       if (abyss) add('副作用', '不抵消深渊腐蚀', '污染在这里是燃料', 'flat');
     }
   }
@@ -1740,7 +1737,7 @@ function researchStats(core: GameCore): ResearchStats {
 
   let note: string;
   if (target === null && pending.length === 0) {
-    note = '所有机型都研究完了。';
+    note = '';
   } else if (target === null) {
     note = '还没选研究项目：从下面的列表里挑一台机器，算力才会往它上面投。';
   } else {
@@ -2116,7 +2113,7 @@ function singleStats(model: MachineModel, level = 0): { label: string; value: st
   if (model.category === 'generator') {
     const efficiency = model.fuelEfficiency ?? generatorFuelEfficiency(model.tier).toString();
     const output = {
-      label: '出力',
+      label: '发电率',
       value: `${formatNumber(generatorOutputEU(model.tier, model.outputFactor))} EU/t`,
     };
     // 魔法发电机不烧矿，直接吃灵气发电

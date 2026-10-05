@@ -143,7 +143,6 @@ function togglePower(key: PowerKey) {
           {{ snap.research.eta }}
         </p>
       </template>
-      <p v-else class="muted small">没有进行中的研究</p>
     </template>
   </aside>
 </template>

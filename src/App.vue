@@ -52,7 +52,6 @@ function exportSave(): void {
   a.download = `GTNH增量存档-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  saveMessage.value = '已导出为 JSON 文件（在浏览器下载目录里）';
 }
 
 async function onImportFile(event: Event): Promise<void> {

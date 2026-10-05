@@ -28,6 +28,8 @@ const PICKAXE_TAB = 'pickaxe';
 
 // 镐子标签上的角标：只在「有机会、又买得起」时提示
 const pickaxeLines = computed(() => store.snap.pickaxe.lines);
+// 研究标签页的两个子视图：机器 = 买卖研究机器，研究 = 当前研究与待研究列表
+const researchView = ref<'machine' | 'study'>('machine');
 // 有机会、又买得起 —— 只有这时候才写「可升级」并高亮；
 // 其余情况（有机会但币不够、机会已经用完）角标不显示任何文字
 const pickaxeCanUpgrade = computed(() => pickaxeLines.value.some((line) => line.canUpgrade));
@@ -268,6 +270,24 @@ function canBuy(model: MachineModelRow): boolean {
             </div>
           </dl>
 
+          <template v-if="column.kind === 'research'">
+            <div class="row">
+              <button
+                :class="{ primary: researchView === 'machine' }"
+                @click="researchView = 'machine'"
+              >
+                机器
+              </button>
+              <button
+                :class="{ primary: researchView === 'study' }"
+                @click="researchView = 'study'"
+              >
+                研究
+              </button>
+            </div>
+          </template>
+
+          <template v-if="column.kind !== 'research' || researchView === 'machine'">
           <div class="row pay-row">
             <span class="muted small">支付</span>
             <button :class="{ primary: payWith === 'coin' }" @click="payWith = 'coin'">GT 币</button>
@@ -409,13 +429,15 @@ function canBuy(model: MachineModelRow): boolean {
             </div>
           </div>
 
+          </template>
+
           <!-- 研究：当前研究置顶，下面列出所有还没研究出来的机型（可点选） -->
-          <template v-if="column.kind === 'research'">
+          <template v-if="column.kind === 'research' && researchView === 'study'">
             <h3 class="research-sub">当前研究</h3>
             <div class="research">
               <div class="research-head">
                 <span>
-                  {{ store.snap.research.hasTarget ? store.snap.research.targetName : '空着' }}
+                  {{ store.snap.research.hasTarget ? store.snap.research.targetName : '没有进行中的研究' }}
                   <span v-if="store.snap.research.hasTarget" class="badge">
                     {{ store.snap.research.targetTierName }}
                   </span>
@@ -425,7 +447,7 @@ function canBuy(model: MachineModelRow): boolean {
               <div class="research-bar">
                 <span :style="{ width: store.snap.research.percent + '%' }" />
               </div>
-              <p class="muted small" style="margin: 6px 0 0">
+              <p v-if="store.snap.research.note" class="muted small" style="margin: 6px 0 0">
                 {{ store.snap.research.note }}
                 <template v-if="store.snap.research.eta !== '—'">
                   按当前算力还要 {{ store.snap.research.eta }}。
