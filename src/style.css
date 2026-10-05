@@ -573,6 +573,8 @@ h2 .small {
 .row .count {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+  /* 固定最小宽：「10 秒」↔「9 秒」宽度差不再把前面的滑条挤得左右跳 */
+  min-width: 3.5em;
 }
 
 .row button {
@@ -591,8 +593,8 @@ h2 .small {
 
 /* ── 滑条（存档框的自动存档间隔等） ─────────────────────── */
 .time-slider {
-  /* 长度减半（用户拍板）：不再吃满剩余行宽 */
-  flex: 0 1 50%;
+  /* 固定宽度：flex 比例在行溢出时会被压缩（秒数从两位变一位那一下就会跳） */
+  flex: 0 0 240px;
   min-width: 0;
   min-height: 0;
   padding: 0;
