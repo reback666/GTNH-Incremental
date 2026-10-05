@@ -554,12 +554,14 @@ h2 .small {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 48px;
   padding: 6px 0;
-  border-top: 1px solid var(--line);
+  /* 分隔线用内嵌 shadow 画：border 会占进高度，带线的行就比首行高 1px */
+  box-shadow: inset 0 1px 0 var(--line);
 }
 
 .row:first-of-type {
-  border-top: 0;
+  box-shadow: none;
 }
 
 .row .name {
@@ -618,6 +620,19 @@ h2 .small {
   border: 0;
   background: transparent;
   cursor: default;
+}
+
+/* mode-picker 的 div 包内联按钮会多出基线缝隙（行高差 1px），改 flex 消掉 */
+.row .mode-picker {
+  display: flex;
+}
+
+/* 设置页行内的下拉按钮与菜单项：与 .row button 同一标准（36px/14px），别再比别的按钮高一头 */
+.row .mode-picker > button,
+.mode-menu button {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 14px;
 }
 
 /* 这块垫层是盖满全屏的透明按钮，必须豁免通用按钮的悬停/按下变色——
