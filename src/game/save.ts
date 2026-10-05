@@ -360,7 +360,7 @@ function booleanOr(value: unknown, fallback: boolean): boolean {
 // 数字显示模式只认三个合法值，乱写的退回自动（K / M 后缀那套）
 const DISPLAY_MODES = new Set<string>(['auto', 'scientific', 'full']);
 
-function cleanDisplayMode(value: unknown): DisplayMode {
+export function cleanDisplayMode(value: unknown): DisplayMode {
   return typeof value === 'string' && DISPLAY_MODES.has(value) ? (value as DisplayMode) : 'auto';
 }
 

@@ -66,10 +66,10 @@ import {
   type MachineModel,
 } from './models';
 import { getCore, resetCore, setCore } from './engine';
-import { playSound, type SoundId } from './audio';
+import { playSound, SOUNDS, type SoundId } from './audio';
 import { emitFx } from './fx';
 import * as C from './constants';
-import { cleanUiTheme, clearStorage, loadFromStorage, saveToStorage, readSavedTheme, writeSavedTheme, secondsSinceLastSave } from './save';
+import { cleanDisplayMode, cleanUiTheme, clearStorage, loadFromStorage, saveToStorage, readSavedTheme, writeSavedTheme, secondsSinceLastSave } from './save';
 import { appVersion, buildStamp, stateSnapshot } from './diagnostics';
 import { errorText, logEntries, logEvent, onLogChange, setLogGameSeconds } from './log';
 
@@ -1010,6 +1010,21 @@ export const useGameStore = defineStore('game', {
         if (typeof obj.devMode === 'boolean' && obj.devMode !== getCore().devMode) {
           this.setDevMode(obj.devMode);
         }
+        // 计数方法与音效原来只随存档走，重开一局会被清掉——这里从独立键还原
+        if (typeof obj.displayMode === 'string') {
+          this.setDisplayMode(cleanDisplayMode(obj.displayMode));
+        }
+        if (typeof obj.soundEnabled === 'boolean' && obj.soundEnabled !== getCore().soundEnabled) {
+          this.setSoundEnabled(obj.soundEnabled);
+        }
+        if (Array.isArray(obj.soundMuted)) {
+          const valid = new Set(SOUNDS.map((item) => item.id));
+          for (const id of obj.soundMuted) {
+            if (valid.has(id) && !getCore().soundMuted.includes(id)) {
+              this.setSoundMuted(id, true);
+            }
+          }
+        }
       } catch {
         // 坏数据就当没有
       }
@@ -1026,6 +1041,9 @@ export const useGameStore = defineStore('game', {
         soundListCollapsed: this.soundListCollapsed,
         offlineBannerDismissed: this.offlineBannerDismissed,
         devMode: getCore().devMode,
+        displayMode: getCore().displayMode,
+        soundEnabled: getCore().soundEnabled,
+        soundMuted: [...getCore().soundMuted],
       };
       const json = JSON.stringify(obj);
       if (json === lastUiStateJson) return;
