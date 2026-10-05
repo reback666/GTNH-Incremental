@@ -69,7 +69,7 @@ import { getCore, resetCore, setCore } from './engine';
 import { playSound, SOUNDS, type SoundId } from './audio';
 import { emitFx } from './fx';
 import * as C from './constants';
-import { cleanDisplayMode, cleanUiTheme, clearStorage, loadFromStorage, saveToStorage, readSavedTheme, writeSavedTheme, secondsSinceLastSave } from './save';
+import { cleanDisplayMode, cleanUiTheme, clearStorage, loadFromStorage, parseImportedSave, saveToStorage, secondsSinceLastSave, serialize, writeSaveTime, readSavedTheme, writeSavedTheme } from './save';
 import { appVersion, buildStamp, stateSnapshot } from './diagnostics';
 import { errorText, logEntries, logEvent, onLogChange, setLogGameSeconds } from './log';
 
@@ -967,6 +967,32 @@ export const useGameStore = defineStore('game', {
     restartAutosave(): void {
       if (autosaveTimer !== null) clearInterval(autosaveTimer);
       autosaveTimer = setInterval(() => this.save(), getCore().autosaveSeconds * 1000);
+    },
+    // 导出当前存档为格式化 JSON（供下载）
+    exportSave(): string {
+      return JSON.stringify(serialize(getCore()), null, 2);
+    },
+    /*
+      导入存档文本：解析与清洗全部成功才整体生效（绝不部分应用）；
+      成功后时间戳记为现在——导入的存档不知道上次玩是什么时候，不给离线补算。
+    */
+    importSave(text: string): { ok: boolean; message: string } {
+      try {
+        const core = parseImportedSave(text);
+        setCore(core);
+        writeSaveTime();
+        this.applySavedTheme();
+        this.loadUiState();
+        this.phase.maxTier = getCore().maxTier;
+        this.syncLogErrors();
+        this.refresh();
+        logEvent('info', 'save.import', '导入存档成功，已按新存档继续');
+        return { ok: true, message: '导入成功，已按新存档继续' };
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        logEvent('error', 'save.import', '导入存档失败，当前存档没有被动过', reason);
+        return { ok: false, message: `导入失败：${reason}` };
+      }
     },
     reset() {
       logEvent('info', 'save.reset', '重开一局（本地存档已清除）');

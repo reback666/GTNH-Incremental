@@ -37,6 +37,36 @@ function goTo(target: number) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// ── 存档导入导出 ──────────────────────────────────────────
+const importInput = ref<HTMLInputElement | null>(null);
+const saveMessage = ref('');
+
+function exportSave(): void {
+  const json = store.exportSave();
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  a.href = url;
+  a.download = `GTNH增量存档-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  saveMessage.value = '已导出为 JSON 文件（在浏览器下载目录里）';
+}
+
+async function onImportFile(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  // 覆盖当前进度是不可逆操作，解析前后都要用户确认
+  if (!window.confirm('导入会覆盖当前存档（现有进度将丢失），确定吗？')) return;
+  const text = await file.text();
+  const result = store.importSave(text);
+  saveMessage.value = result.message;
+}
+
 // 键盘 1/2/3 直接换页：输入框里打字时不触发
 function onKeydown(event: KeyboardEvent) {
   if (event.isComposing || view.value !== 'factory') return;
@@ -146,6 +176,19 @@ onMounted(() => {
               />
               <span class="count">{{ store.snap.autosaveSeconds }} 秒</span>
             </div>
+            <div class="row">
+              <div class="name muted">迁移存档</div>
+              <button @click="exportSave">导出存档</button>
+              <button @click="importInput?.click()">导入存档</button>
+              <input
+                ref="importInput"
+                type="file"
+                accept=".json,application/json"
+                style="display: none"
+                @change="onImportFile"
+              />
+            </div>
+            <p v-if="saveMessage" class="muted small" style="margin: 0 0 8px">{{ saveMessage }}</p>
             <div class="row">
               <div class="name muted">重开一局（会清掉存档）</div>
               <button @click="store.reset()">重置</button>

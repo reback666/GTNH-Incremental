@@ -647,6 +647,19 @@ export function loadFromStorage(): GameCore | null {
   }
 }
 
+/*
+  导入的存档走与本地读取同一套校验：JSON 可解析、版本号在支持范围内，
+  然后经过 deserialize 的逐字段清洗（坏值收敛、旧版本迁移）。失败直接抛错，
+  由调用方（store.importSave）记日志并给用户提示，绝不部分生效。
+*/
+export function parseImportedSave(text: string): GameCore {
+  const data = JSON.parse(text) as SaveData;
+  if (!Number.isInteger(data.version) || data.version < 1 || data.version > SAVE_VERSION) {
+    throw new Error(`存档版本 ${String(data.version)} 无法识别（当前程序支持 1～${SAVE_VERSION}）`);
+  }
+  return deserialize(data);
+}
+
 // 界面主题存在独立键里：跨存档、跨重开一局都保留
 export function readSavedTheme(): unknown {
   try {
@@ -670,7 +683,7 @@ export function clearStorage(): void {
   localStorage.removeItem(SAVE_TIME_KEY);
 }
 
-function writeSaveTime(): void {
+export function writeSaveTime(): void {
   try {
     localStorage.setItem(SAVE_TIME_KEY, String(Date.now()));
   } catch {
