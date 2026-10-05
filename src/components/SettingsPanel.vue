@@ -148,6 +148,12 @@ function cleanAmount(text: string): string | null {
       >
         原版亮灰
       </button>
+      <button
+        :class="{ primary: snap.uiTheme === 'classic' }"
+        @click="store.setUiTheme('classic')"
+      >
+        经典深色
+      </button>
     </div>
     <!-- ── 音效（计划书第二十一章 #10）：点开列表，可单独开关 + 一键全开全关 ── -->
     <button

@@ -51,11 +51,12 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
-// 界面主题（设置页切换，随存档走）：亮灰皮肤挂在 body 类上，全站样式跟着换
+// 界面主题（设置页切换，随存档走）：皮肤类挂在 body 上，全站样式跟着换
 watch(
   () => store.snap.uiTheme,
   (theme) => {
     document.body.classList.toggle('skin-light', theme === 'light');
+    document.body.classList.toggle('theme-classic', theme === 'classic');
   },
   { immediate: true },
 );

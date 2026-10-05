@@ -121,8 +121,8 @@ export const RIFT_CABLES = '1';
 // 两种方式都保留，矿石价 = 币价 ÷ COINS_PER_ORE。
 export type PayWith = 'coin' | 'ore';
 
-// 界面主题（设置页切换，存档 v24）：dark 是暗钢皮肤，light 是 GT/MC 原版亮灰
-export type UiTheme = 'dark' | 'light';
+// 界面主题（设置页切换，存档 v24）：dark 暗钢 / light 原版亮灰 / classic 经典深色（重设计前的观感）
+export type UiTheme = 'dark' | 'light' | 'classic';
 
 // 开发者模式里「指定资源增减」的目标：
 //   ores / coins / both 是每一级都给一份

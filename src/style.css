@@ -2673,7 +2673,9 @@ h2 .small {
   padding: 6px 0;
   border-width: 0 0 1px;
   border-color: var(--line);
-  font-weight: 600;
+  /* 字体与相邻选项行一致：16px 常规字重（折叠行模板自带的 14px/600 会显得像另一种字体） */
+  font-size: 16px;
+  font-weight: 400;
   text-align: left;
 }
 
@@ -2719,6 +2721,164 @@ h2 .small {
   border-image: none;
   transform: none;
   filter: none;
+}
+
+/*
+  经典深色皮肤（.theme-classic）：完整复刻 UI 重设计前（0.5.2 时代）的观感——
+  青色主色、圆角平面面板、无贴图、系统字体的数字。只覆盖颜色与材质，
+  布局结构（侧栏 / 页签 / 展示柜）与字号沿用现在的可读性设定。
+  所有覆盖都挂在 body.theme-classic 下压过贴图规则。
+*/
+body.theme-classic {
+  --bg: #12161c;
+  --panel: #1b2129;
+  --panel-2: #232b35;
+  --line: #2f3946;
+  --text: #d7dee8;
+  --muted: #8b97a7;
+  --accent: #58c4a3;
+  --accent-rgb: 88, 196, 163;
+  --btn-face: #232b35;
+  --btn-text: #d7dee8;
+  --bg-glow: #1a2029;
+  --track: #141920;
+  /* 经典时代没有等宽字体，数字跟正文同族 */
+  --font-num: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+
+body.theme-classic .panel {
+  border-image: none;
+  border-width: 1px;
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 2px 8px rgba(0, 0, 0, 0.22);
+}
+
+body.theme-classic button {
+  border-image: none;
+  border-width: 1px;
+  border-radius: 8px;
+  background: var(--btn-face);
+}
+
+body.theme-classic button:not(:disabled):hover {
+  filter: none;
+  border-color: #4a5a6c;
+  background: #2a3441;
+}
+
+body.theme-classic button:not(:disabled):active {
+  border-image: none;
+  transform: translateY(1px);
+  filter: none;
+}
+
+body.theme-classic button:disabled {
+  border-image: none;
+  opacity: 0.4;
+}
+
+body.theme-classic button.primary {
+  background: rgba(var(--accent-rgb), 0.08);
+}
+
+body.theme-classic button.primary:not(:disabled):hover {
+  background: rgba(var(--accent-rgb), 0.16);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.18);
+}
+
+/* 插槽格全部退回圆角平面 */
+body.theme-classic .chip,
+body.theme-classic .power-box,
+body.theme-classic .stat,
+body.theme-classic .tag,
+body.theme-classic .grid-mode,
+body.theme-classic .universe {
+  border-image: none;
+  background: var(--panel-2);
+  border-radius: 9px;
+}
+
+body.theme-classic .tag {
+  border-radius: 999px;
+}
+
+body.theme-classic .stat {
+  border-radius: 6px;
+}
+
+body.theme-classic .machine-tab {
+  border-image: none;
+  border-radius: 10px;
+}
+
+body.theme-classic .achievement {
+  border-image: none;
+  border-radius: 10px;
+  background: #1a2027;
+}
+
+/* 经典时代的绿系状态色 */
+body.theme-classic .universe.owned {
+  border-color: #4a6a5c;
+  background: #22322c;
+  box-shadow: none;
+}
+
+body.theme-classic .achievement.done {
+  border-color: #4a6a5c;
+  background: #22322c;
+  box-shadow: inset 0 0 0 1px rgba(88, 196, 163, 0.22);
+}
+
+body.theme-classic .rebirth-node.owned {
+  border-color: #4a6a5c;
+  background: #22322c;
+  color: #9fd8c4;
+}
+
+body.theme-classic .rebirth-node {
+  border-radius: 8px;
+  background: #1a2027;
+}
+
+body.theme-classic .rebirth-root {
+  border-radius: 8px;
+}
+
+body.theme-classic .research-item {
+  border-radius: 8px;
+}
+
+/* 矿脉展示柜：经典时代的径向底 + 圆角 */
+body.theme-classic .vein-btn {
+  border-image: none;
+  border-radius: 10px;
+  background: radial-gradient(circle at 50% 65%, #232b35 0%, #171c23 70%);
+}
+
+/* 裂缝弹窗：经典时代的蓝边深底 */
+body.theme-classic .rift-dialog {
+  border-image: none;
+  border-width: 1px;
+  border-radius: 12px;
+  border-color: #3a5a6e;
+  background: #171d25;
+}
+
+body.theme-classic .rift-dialog h2 {
+  color: #8fd0ff;
+}
+
+/* 电压徽标：经典时代没有徽标，用青色描边融入当时的观感 */
+body.theme-classic .volt-badge.volt-max {
+  border-image: none;
+  border-color: var(--accent);
+  background: none;
+  color: var(--accent);
+  -webkit-text-fill-color: var(--accent);
 }
 
 /* 系统开了「减少动态效果」时，砍掉装饰性动画，只留必要的状态变化 */@media (prefers-reduced-motion: reduce) {

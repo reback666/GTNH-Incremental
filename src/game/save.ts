@@ -363,9 +363,9 @@ function cleanDisplayMode(value: unknown): DisplayMode {
   return typeof value === 'string' && DISPLAY_MODES.has(value) ? (value as DisplayMode) : 'auto';
 }
 
-// 界面主题只认两套皮肤，乱写的退回暗钢（默认皮肤）
+// 界面主题只认三套皮肤，乱写的退回暗钢（默认皮肤）
 function cleanUiTheme(value: unknown): UiTheme {
-  return value === 'light' ? 'light' : 'dark';
+  return value === 'light' || value === 'classic' ? (value as UiTheme) : 'dark';
 }
 
 // 被单独关掉的音效只认音效表里有的 id，重复与乱写直接丢

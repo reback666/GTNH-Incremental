@@ -200,6 +200,9 @@ describe('界面主题（v24）', () => {
     expect(serialize(core).uiTheme).toBe('light');
     expect(deserialize(serialize(core)).uiTheme).toBe('light');
 
+    core.setUiTheme('classic');
+    expect(deserialize(serialize(core)).uiTheme).toBe('classic');
+
     const fresh = deserialize(emptySave());
     expect(fresh.uiTheme).toBe('dark');
     const messy = deserialize({ ...emptySave(), uiTheme: 'no-such-skin' } as unknown as SaveData);
