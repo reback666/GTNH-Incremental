@@ -123,7 +123,7 @@ function cleanAmount(text: string): string | null {
       </button>
     </div>
     <!-- ── 计数方法（计划书第二十一章 #9） ───────────────────── -->
-    <div class="row mt">
+    <div class="row">
       <div class="name">计数方法</div>
       <div class="mode-picker">
         <button type="button" @click="modeMenuOpen = !modeMenuOpen">{{ modeName }} ▾</button>
@@ -272,7 +272,7 @@ function cleanAmount(text: string): string | null {
     </template>
 
     <!-- ── 开发者模式 ─────────────────────────────────────────── -->
-    <div class="row mt">
+    <div class="row">
       <div class="name">开发者模式</div>
       <button :class="{ primary: devMode }" @click="store.setDevMode(!devMode)">
         {{ devMode ? '已开启' : '已关闭' }}
