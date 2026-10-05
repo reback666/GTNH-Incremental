@@ -5,10 +5,10 @@ import { batteryCapacityEU, settleStorage } from '../src/numeric/storage';
 // 计划书第七章：存电装置把富余电力存成存量，缺口先吃存量，吃完才降载。
 describe('存电装置', () => {
   it('容量跟着电压走：每级 ×4', () => {
-    expect(batteryCapacityEU(1).toString()).toBe('1000');
-    expect(batteryCapacityEU(2).toString()).toBe('4000');
-    expect(batteryCapacityEU(4).toString()).toBe('64000');
-    expect(batteryCapacityEU(14).toString()).toBe('67108864000');
+    expect(batteryCapacityEU(1).toString()).toBe('16000');
+    expect(batteryCapacityEU(2).toString()).toBe('64000');
+    expect(batteryCapacityEU(4).toString()).toBe('1024000');
+    expect(batteryCapacityEU(14).toString()).toBe('1073741824000');
   });
 
   it('富余电力充进电池，充满就不再收', () => {

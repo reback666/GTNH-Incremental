@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { deserialize, serialize, type SaveData } from '../src/game/save';
+import { deserialize, parseImportedSave, serialize, type SaveData } from '../src/game/save';
+import { SAVE_VERSION } from '../src/game/constants';
 import { GameCore } from '../src/game/core';
 import { dec } from '../src/numeric/decimal';
 import { useGameStore } from '../src/game/store';
@@ -190,6 +191,20 @@ describe('音效开关（v23）', () => {
       soundMuted: ['no-such-sound', 42, 'sell'],
     } as unknown as SaveData);
     expect(messy.soundMuted).toEqual(['sell']);
+  });
+});
+
+describe('导入存档（parseImportedSave）', () => {
+  it('导出的 JSON 能原样导入；版本比程序新时拒绝', () => {
+    const core = new GameCore();
+    core.setUiTheme('light');
+    const imported = parseImportedSave(JSON.stringify(serialize(core)));
+    expect(imported.uiTheme).toBe('light');
+
+    expect(() =>
+      parseImportedSave(JSON.stringify({ ...emptySave(), version: SAVE_VERSION + 1 })),
+    ).toThrow();
+    expect(() => parseImportedSave('不是 JSON')).toThrow();
   });
 });
 
