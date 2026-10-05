@@ -101,9 +101,8 @@ function cleanAmount(text: string): string | null {
 
     <div class="row">
       <div class="name">污染机制</div>
-      <button :class="{ primary: risk.enabled }" @click="store.setPollutionEnabled(true)">开启</button>
-      <button :class="{ primary: !risk.enabled }" @click="store.setPollutionEnabled(false)">
-        关闭
+      <button :class="{ primary: risk.enabled }" @click="store.setPollutionEnabled(!risk.enabled)">
+        {{ risk.enabled ? '已开启' : '已关闭' }}
       </button>
     </div>
     <!-- ── 计数方法（计划书第二十一章 #9） ───────────────────── -->
@@ -163,8 +162,15 @@ function cleanAmount(text: string): string | null {
       :aria-expanded="!store.soundListCollapsed"
       @click="store.toggleSoundList()"
     >
-      <span>音效 <span class="muted small">{{ snap.soundEnabled ? '已开启' : '已关闭' }} · 已单独关闭 {{ snap.soundMuted.length }} / {{ SOUNDS.length }} 种</span></span>
-      <span>{{ store.soundListCollapsed ? '▾' : '▴' }}</span>
+      <span>音效</span>
+      <span class="muted small">
+        {{
+          snap.soundEnabled
+            ? `已开启 ${SOUNDS.length - snap.soundMuted.length}/${SOUNDS.length} 种`
+            : '已关闭'
+        }}
+        {{ store.soundListCollapsed ? '▾' : '▴' }}
+      </span>
     </button>
     <template v-if="!store.soundListCollapsed">
       <div class="row">
@@ -250,8 +256,9 @@ function cleanAmount(text: string): string | null {
     <!-- ── 开发者模式 ─────────────────────────────────────────── -->
     <div class="row mt">
       <div class="name">开发者模式</div>
-      <button :class="{ primary: devMode }" @click="store.setDevMode(true)">开启</button>
-      <button :class="{ primary: !devMode }" @click="store.setDevMode(false)">关闭</button>
+      <button :class="{ primary: devMode }" @click="store.setDevMode(!devMode)">
+        {{ devMode ? '已开启' : '已关闭' }}
+      </button>
     </div>
 
     <div v-if="devMode" class="dev-tools">

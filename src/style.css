@@ -2678,9 +2678,10 @@ h2 .small {
   padding: 6px 0;
   border-width: 0 0 1px;
   border-color: var(--line);
-  /* 字体与相邻选项行一致：16px 常规字重（折叠行模板自带的 14px/600 会显得像另一种字体） */
+  /* 字体与相邻选项行一致：16px 常规字重；常态白字（折叠行自带的灰是给次要折叠行用的） */
   font-size: 16px;
   font-weight: 400;
+  color: var(--text);
   text-align: left;
 }
 
