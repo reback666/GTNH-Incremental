@@ -2690,30 +2690,6 @@ h2 .small {
   font-size: 12px;
 }
 
-/* 设置页的音效行：长得和其他选项行一样（左标题右箭头），点开折叠列表 */
-.sound-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  min-height: 48px;
-  margin-top: 0;
-  padding: 6px 0;
-  border-width: 0;
-  /* 字体与相邻选项行一致：16px 常规字重；常态白字（折叠行自带的灰是给次要折叠行用的） */
-  font-size: 16px;
-  font-weight: 400;
-  color: var(--text);
-  text-align: left;
-}
-
-.sound-toggle:not(:disabled):hover {
-  filter: none;
-  background: transparent;
-  color: var(--text);
-}
-
 /* 矿脉展示柜是「场景」不是按钮：点击只触发挖矿特效，大框本身不跟着亮/按下去
    （hover 提亮也要禁——否则按下去 active 归位、松开又回亮，一点击闪一下） */
 .vein-btn:not(:disabled):hover {

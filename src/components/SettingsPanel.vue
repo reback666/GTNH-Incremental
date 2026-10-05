@@ -175,22 +175,21 @@ function cleanAmount(text: string): string | null {
       </div>
     </div>
     <!-- ── 音效（计划书第二十一章 #10）：点开列表，可单独开关 + 一键全开全关 ── -->
-    <button
-      type="button"
-      class="panel-toggle sound-toggle"
-      :aria-expanded="!store.soundListCollapsed"
-      @click="store.toggleSoundList()"
-    >
-      <span>音效</span>
-      <span class="muted small">
+    <div class="row">
+      <div class="name">音效</div>
+      <button
+        type="button"
+        :aria-expanded="!store.soundListCollapsed"
+        @click="store.toggleSoundList()"
+      >
         {{
           snap.soundEnabled
             ? `已开启 ${SOUNDS.length - snap.soundMuted.length}/${SOUNDS.length} 种`
             : '已关闭'
         }}
         {{ store.soundListCollapsed ? '▾' : '▴' }}
-      </span>
-    </button>
+      </button>
+    </div>
     <template v-if="!store.soundListCollapsed">
       <div class="row">
         <div class="name">全部音效</div>
