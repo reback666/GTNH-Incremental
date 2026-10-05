@@ -1570,7 +1570,7 @@ h2 .small {
 
 .dev-tools .dev-amount {
   flex: none;
-  width: 44px;
+  width: 88px;
   min-width: 0;
   padding: 0 6px;
   text-align: right;
@@ -2239,9 +2239,9 @@ h2 .small {
 }
 
 .stats {
-  /* 等宽网格：一行固定 7 个（用户拍板），上下行列对齐 */
+  /* 等宽网格：一行固定 6 个（用户拍板），上下行列对齐 */
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 6px;
   margin: 10px 0 8px;
 }
@@ -2253,9 +2253,9 @@ h2 .small {
   }
 }
 
-/* 开发者模式底部的内部状态读数：一行 6 个，格子更宽字不折行 */
+/* 开发者模式底部的内部状态读数：一行 7 个，格子更宽字不折行 */
 .stats.stats-6 {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .stat {
