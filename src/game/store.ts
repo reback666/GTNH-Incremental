@@ -525,6 +525,9 @@ const COLUMN_META: Record<MachineKind, { title: string; hint: string }> = {
   },
 };
 
+// 设置页界面状态落盘的去重缓存：状态没变就不写 localStorage
+let lastUiStateJson = '';
+
 export const useGameStore = defineStore('game', {
   state: () => ({
     snapshot: null as Snapshot | null,
@@ -604,6 +607,9 @@ export const useGameStore = defineStore('game', {
       // 日志变了就刷新错误条数：设置页按钮上的小红点靠它
       onLogChange(() => this.syncLogErrors());
       this.syncLogErrors();
+      this.loadUiState();
+      // 状态有变就落盘（persistUiState 内部做 JSON 去重，每拍空转不写 localStorage）
+      this.$subscribe(() => this.persistUiState());
       this.refresh();
       void this.catchUp(away);
     },
@@ -966,14 +972,69 @@ export const useGameStore = defineStore('game', {
       logEvent('info', 'save.reset', '重开一局（本地存档已清除）');
       clearStorage();
       resetCore();
-      // 主题是纯界面偏好（存在独立键里），重开一局不清
+      // 主题与设置页的界面状态都是纯界面偏好（各自存在独立键里），重开一局不清
       this.applySavedTheme();
+      this.loadUiState();
       this.refresh();
     },
     // 把独立键里的主题偏好套到当前核心上（boot 与重开一局时各调一次）
     applySavedTheme() {
       const theme = cleanUiTheme(readSavedTheme());
       getCore().setUiTheme(theme);
+    },
+    /*
+      设置页的界面状态（折叠开关、离线横幅关闭态、开发者模式）持久化到独立键：
+      折叠状态原来只在内存里，刷新就丢；开发者模式在存档里，重开一局会被清掉。
+      $subscribe 每拍都会触发，靠 JSON 比对去重，状态没变就不写。
+    */
+    loadUiState() {
+      try {
+        const raw = localStorage.getItem(C.UI_KEY);
+        if (!raw) return;
+        const obj = JSON.parse(raw) as Record<string, unknown>;
+        const fields = [
+          'achievementsCollapsed',
+          'researchListCollapsed',
+          'universesCollapsed',
+          'challengesCollapsed',
+          'treeCollapsed',
+          'historyCollapsed',
+          'gridPanelCollapsed',
+          'soundListCollapsed',
+          'offlineBannerDismissed',
+        ] as const;
+        const self = this as unknown as Record<string, unknown>;
+        for (const field of fields) {
+          if (typeof obj[field] === 'boolean') self[field] = obj[field];
+        }
+        if (typeof obj.devMode === 'boolean' && obj.devMode !== getCore().devMode) {
+          this.setDevMode(obj.devMode);
+        }
+      } catch {
+        // 坏数据就当没有
+      }
+    },
+    persistUiState() {
+      const obj = {
+        achievementsCollapsed: this.achievementsCollapsed,
+        researchListCollapsed: this.researchListCollapsed,
+        universesCollapsed: this.universesCollapsed,
+        challengesCollapsed: this.challengesCollapsed,
+        treeCollapsed: this.treeCollapsed,
+        historyCollapsed: this.historyCollapsed,
+        gridPanelCollapsed: this.gridPanelCollapsed,
+        soundListCollapsed: this.soundListCollapsed,
+        offlineBannerDismissed: this.offlineBannerDismissed,
+        devMode: getCore().devMode,
+      };
+      const json = JSON.stringify(obj);
+      if (json === lastUiStateJson) return;
+      lastUiStateJson = json;
+      try {
+        localStorage.setItem(C.UI_KEY, json);
+      } catch {
+        // 写不进去就只在当前局生效
+      }
     },
     start() {
       if (this.running) return;

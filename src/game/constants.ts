@@ -65,6 +65,8 @@ export const SAVE_KEY = 'gtnh-incremental-save';
 export const SAVE_TIME_KEY = 'gtnh-incremental-save-time';
 // 界面主题单独存一个键：纯界面偏好，重开一局（清存档）不该把主题也重置掉
 export const THEME_KEY = 'gtnh-incremental-theme';
+// 设置页的界面状态（折叠开关、离线横幅关闭态、开发者模式）也单独存：同上，重开不清
+export const UI_KEY = 'gtnh-incremental-ui';
 
 // 终局装置「普朗克锚」（大纲 C2 轻方案）：花 300 条线缆买一次（永久），
 // 之后 MAX 路线转生的线缆结算 ×1.5（裂缝不受影响）
