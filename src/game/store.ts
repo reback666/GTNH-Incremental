@@ -69,7 +69,7 @@ import { getCore, resetCore, setCore } from './engine';
 import { playSound, type SoundId } from './audio';
 import { emitFx } from './fx';
 import * as C from './constants';
-import { clearStorage, loadFromStorage, saveToStorage, secondsSinceLastSave } from './save';
+import { cleanUiTheme, clearStorage, loadFromStorage, saveToStorage, readSavedTheme, writeSavedTheme, secondsSinceLastSave } from './save';
 import { appVersion, buildStamp, stateSnapshot } from './diagnostics';
 import { errorText, logEntries, logEvent, onLogChange, setLogGameSeconds } from './log';
 
@@ -598,6 +598,7 @@ export const useGameStore = defineStore('game', {
       // 先读时间戳再补算：补算之后马上会写一次档，时间戳会被刷新
       const away = loaded ? secondsSinceLastSave() : 0;
       if (loaded) setCore(loaded);
+      this.applySavedTheme();
       logEvent('info', 'app.boot', `启动游戏（版本 v${appVersion()}，构建 ${buildStamp()}）`);
       this.phase.maxTier = getCore().maxTier;
       // 日志变了就刷新错误条数：设置页按钮上的小红点靠它
@@ -792,9 +793,10 @@ export const useGameStore = defineStore('game', {
       this.refresh();
       this.save();
     },
-    // 界面主题：纯外观偏好（GT GUI 重设计的两套皮肤），存档跟走、转生不清
+    // 界面主题：纯外观偏好，除存档外在独立键再存一份——重开一局（清存档）不清
     setUiTheme(theme: UiTheme): void {
       getCore().setUiTheme(theme);
+      writeSavedTheme(theme);
       this.refresh();
       this.save();
     },
@@ -964,7 +966,14 @@ export const useGameStore = defineStore('game', {
       logEvent('info', 'save.reset', '重开一局（本地存档已清除）');
       clearStorage();
       resetCore();
+      // 主题是纯界面偏好（存在独立键里），重开一局不清
+      this.applySavedTheme();
       this.refresh();
+    },
+    // 把独立键里的主题偏好套到当前核心上（boot 与重开一局时各调一次）
+    applySavedTheme() {
+      const theme = cleanUiTheme(readSavedTheme());
+      getCore().setUiTheme(theme);
     },
     start() {
       if (this.running) return;

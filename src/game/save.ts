@@ -20,6 +20,7 @@ import {
   SAVE_KEY,
   SAVE_TIME_KEY,
   SAVE_VERSION,
+  THEME_KEY,
 } from './constants';
 import { errorText, logEvent } from './log';
 
@@ -364,7 +365,7 @@ function cleanDisplayMode(value: unknown): DisplayMode {
 }
 
 // 界面主题只认三套皮肤，乱写的退回暗钢（默认皮肤）
-function cleanUiTheme(value: unknown): UiTheme {
+export function cleanUiTheme(value: unknown): UiTheme {
   return value === 'light' || value === 'classic' ? (value as UiTheme) : 'dark';
 }
 
@@ -643,6 +644,23 @@ export function loadFromStorage(): GameCore | null {
     );
     console.warn('存档读取失败，已忽略：', error);
     return null;
+  }
+}
+
+// 界面主题存在独立键里：跨存档、跨重开一局都保留
+export function readSavedTheme(): unknown {
+  try {
+    return localStorage.getItem(THEME_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function writeSavedTheme(theme: UiTheme): void {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    // 写不进去就只在当前局生效
   }
 }
 

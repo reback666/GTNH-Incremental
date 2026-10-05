@@ -63,6 +63,8 @@ export const SAVE_KEY = 'gtnh-incremental-save';
 // 上次写档的墙上时间单独存一个键：存档本体保持纯状态（还能逐字节比较），
 // 离线收益按这个时间戳算（见 save.ts 的 secondsSinceLastSave）
 export const SAVE_TIME_KEY = 'gtnh-incremental-save-time';
+// 界面主题单独存一个键：纯界面偏好，重开一局（清存档）不该把主题也重置掉
+export const THEME_KEY = 'gtnh-incremental-theme';
 
 // 终局装置「普朗克锚」（大纲 C2 轻方案）：花 300 条线缆买一次（永久），
 // 之后 MAX 路线转生的线缆结算 ×1.5（裂缝不受影响）
