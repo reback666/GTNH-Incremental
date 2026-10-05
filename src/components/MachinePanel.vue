@@ -23,7 +23,8 @@ const store = useGameStore();
 
 // 最上方是一排大类标签，点谁就展开谁，其余挤压收起。
 // 最后一个是「镐子」：它不是机器类别，展开的是手动挖矿的三条升级线。
-const active = ref<MachineKind | 'pickaxe'>('miner');
+// null = 全部收起（再点一次已打开的页签就收起）
+const active = ref<MachineKind | 'pickaxe' | null>('miner');
 const PICKAXE_TAB = 'pickaxe';
 
 // 镐子标签上的角标：只在「有机会、又买得起」时提示
@@ -181,7 +182,7 @@ const activeColumn = computed(() => props.columns.find((item) => item.kind === a
 watch(
   () => props.columns.map((column) => column.kind).join(','),
   () => {
-    if (active.value === PICKAXE_TAB) return;
+    if (active.value === null || active.value === PICKAXE_TAB) return;
     if (!props.columns.some((column) => column.kind === active.value) && props.columns[0]) {
       active.value = props.columns[0].kind;
     }
@@ -221,7 +222,7 @@ function canBuy(model: MachineModelRow): boolean {
         type="button"
         class="machine-tab"
         :class="{ active: active === PICKAXE_TAB }"
-        @click="active = PICKAXE_TAB"
+        @click="active = active === PICKAXE_TAB ? null : PICKAXE_TAB"
         @mouseenter="showColumnTip($event, '镐子', store.snap.pickaxe.modifiers)"
         @mouseleave="hideTip"
         @focus="showColumnTip($event, '镐子', store.snap.pickaxe.modifiers)"
@@ -246,7 +247,7 @@ function canBuy(model: MachineModelRow): boolean {
         type="button"
         class="machine-tab"
         :class="{ active: active === column.kind }"
-        @click="active = column.kind"
+        @click="active = active === column.kind ? null : column.kind"
         @mouseenter="showColumnTip($event, column.title, column.modifiers)"
         @mouseleave="hideTip"
         @focus="showColumnTip($event, column.title, column.modifiers)"

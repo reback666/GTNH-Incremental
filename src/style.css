@@ -2700,8 +2700,7 @@ h2 .small {
   min-height: 48px;
   margin-top: 0;
   padding: 6px 0;
-  border-width: 0 0 1px;
-  border-color: var(--line);
+  border-width: 0;
   /* 字体与相邻选项行一致：16px 常规字重；常态白字（折叠行自带的灰是给次要折叠行用的） */
   font-size: 16px;
   font-weight: 400;
