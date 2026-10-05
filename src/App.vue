@@ -140,16 +140,12 @@ onMounted(() => {
                 step="1"
                 :value="store.snap.autosaveSeconds"
                 aria-label="自动存档间隔（秒）"
-                @change="
+                @input="
                   store.setAutosaveSeconds(Number(($event.target as HTMLInputElement).value))
                 "
               />
               <span class="count">{{ store.snap.autosaveSeconds }} 秒</span>
             </div>
-            <p class="muted" style="margin: 0 0 8px">
-              自动每 {{ store.snap.autosaveSeconds }} 秒存一次。累计矿石
-              {{ store.snap.totalOre }}，累计产币 {{ store.snap.totalCoins }}。
-            </p>
             <div class="row">
               <div class="name muted">重开一局（会清掉存档）</div>
               <button @click="store.reset()">重置</button>
