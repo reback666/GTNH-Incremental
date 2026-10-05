@@ -67,6 +67,22 @@ function allSoundsOn() {
   }
 }
 
+const THEME_ORDER = [
+  { id: 'dark', name: '暗钢造型' },
+  { id: 'light', name: '原版亮灰' },
+  { id: 'classic', name: '经典深色' },
+] as const;
+
+const themeName = computed(
+  () => THEME_ORDER.find((t) => t.id === snap.value.uiTheme)?.name ?? '暗钢造型',
+);
+
+function cycleTheme(): void {
+  const index = THEME_ORDER.findIndex((t) => t.id === snap.value.uiTheme);
+  const next = THEME_ORDER[(index + 1) % THEME_ORDER.length];
+  store.setUiTheme(next.id);
+}
+
 function adjustResource(sign: 1 | -1): void {
   const amount = cleanAmount(resAmount.value);
   if (amount === null) {
@@ -136,24 +152,8 @@ function cleanAmount(text: string): string | null {
     <!-- ── 界面主题（GT GUI 重设计）：暗钢 / 原版亮灰两套皮肤 ── -->
     <div class="row">
       <div class="name">界面主题</div>
-      <button
-        :class="{ primary: snap.uiTheme === 'dark' }"
-        @click="store.setUiTheme('dark')"
-      >
-        暗钢造型
-      </button>
-      <button
-        :class="{ primary: snap.uiTheme === 'light' }"
-        @click="store.setUiTheme('light')"
-      >
-        原版亮灰
-      </button>
-      <button
-        :class="{ primary: snap.uiTheme === 'classic' }"
-        @click="store.setUiTheme('classic')"
-      >
-        经典深色
-      </button>
+      <!-- 单键循环：暗钢 → 原版亮灰 → 经典深色 → 暗钢 -->
+      <button @click="cycleTheme">{{ themeName }}</button>
     </div>
     <!-- ── 音效（计划书第二十一章 #10）：点开列表，可单独开关 + 一键全开全关 ── -->
     <button

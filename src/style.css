@@ -2230,11 +2230,18 @@ h2 .small {
 }
 
 .stats {
-  /* 等宽网格：统计小格上下行列对齐（原来按内容宽度流式换行，参差不齐） */
+  /* 等宽网格：一行固定 8 个（用户拍板），上下行列对齐 */
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 6px;
   margin: 10px 0 8px;
+}
+
+/* 窄窗口放不下 8 列时退回 4 列 */
+@media (max-width: 900px) {
+  .stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .stat {
