@@ -618,14 +618,19 @@ h2 .small {
 
 /* 这块垫层是盖满全屏的透明按钮，必须豁免通用按钮的悬停/按下变色——
    否则菜单一开整个屏幕就被染成悬停灰（0.5.1 实际翻过车） */
+.mode-picker .mode-backdrop,
 .mode-picker .mode-backdrop:hover,
+.mode-picker .mode-backdrop:focus,
 .mode-picker .mode-backdrop:focus-visible,
 .mode-picker .mode-backdrop:active {
   background: transparent;
-  border-color: transparent;
+  border: 0;
+  border-image: none;
   outline: none;
   transform: none;
+  filter: none;
   box-shadow: none;
+  cursor: default;
 }
 
 .mode-picker .mode-menu {

@@ -111,12 +111,13 @@ function cleanAmount(text: string): string | null {
       <div class="name">计数方法</div>
       <div class="mode-picker">
         <button type="button" @click="modeMenuOpen = !modeMenuOpen">{{ modeName }} ▾</button>
-        <!-- 透明垫层：菜单开着时点菜单外面就收起 -->
-        <button
+        <!-- 透明垫层：菜单开着时点菜单外面就收起。
+             用 div 不用 button——垫层盖满全屏，任何按钮样式（悬停变色/按压位移/贴图）
+             串进来都会把整个屏幕染色（0.5.1 翻过车，重设计改按钮底色后又险些复发） -->
+        <div
           v-if="modeMenuOpen"
-          type="button"
           class="mode-backdrop"
-          aria-label="关闭菜单"
+          aria-hidden="true"
           @click="modeMenuOpen = false"
         />
         <div v-if="modeMenuOpen" class="mode-menu">
