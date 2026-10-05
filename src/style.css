@@ -2749,6 +2749,7 @@ body.theme-classic {
 body.theme-classic .panel {
   border-image: none;
   border-width: 1px;
+  border-color: var(--line);
   border-radius: 10px;
   background: var(--panel);
   box-shadow:
@@ -2759,6 +2760,7 @@ body.theme-classic .panel {
 body.theme-classic button {
   border-image: none;
   border-width: 1px;
+  border-color: var(--line);
   border-radius: 8px;
   background: var(--btn-face);
 }
@@ -2797,6 +2799,7 @@ body.theme-classic .tag,
 body.theme-classic .grid-mode,
 body.theme-classic .universe {
   border-image: none;
+  border-color: var(--line);
   background: var(--panel-2);
   border-radius: 9px;
 }
@@ -2811,11 +2814,13 @@ body.theme-classic .stat {
 
 body.theme-classic .machine-tab {
   border-image: none;
+  border-color: var(--line);
   border-radius: 10px;
 }
 
 body.theme-classic .achievement {
   border-image: none;
+  border-color: var(--line);
   border-radius: 10px;
   background: #1a2027;
 }
@@ -2855,6 +2860,7 @@ body.theme-classic .research-item {
 /* 矿脉展示柜：经典时代的径向底 + 圆角 */
 body.theme-classic .vein-btn {
   border-image: none;
+  border-color: #3a4553;
   border-radius: 10px;
   background: radial-gradient(circle at 50% 65%, #232b35 0%, #171c23 70%);
 }
