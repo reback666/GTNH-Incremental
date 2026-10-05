@@ -44,7 +44,6 @@
   --skin-btn-pressed: url('./assets/gui/btn-dark-pressed.png');
   --skin-btn-disabled: url('./assets/gui/btn-dark-disabled.png');
   --skin-slot: url('./assets/gui/slot-dark.png');
-  --skin-field: url('./assets/gui/text-field.png');
   --btn-face: #23262e;
   --btn-text: #e8edf4;
 
@@ -92,7 +91,6 @@
   --skin-btn-pressed: url('./assets/gui/btn-pressed.png');
   --skin-btn-disabled: url('./assets/gui/btn-disabled.png');
   --skin-slot: url('./assets/gui/slot-item.png');
-  --skin-field: url('./assets/gui/text-field.png');
   --bg: #90909a;
   --bg-glow: #a2a2ac;
   --track: #81818b;
@@ -577,7 +575,11 @@ h2 .small {
   font-variant-numeric: tabular-nums;
 }
 
-/* 行内按钮不再压小：直接用全局默认（44px/16px），与计数方法、界面主题的下拉按钮同款 */
+.row button {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 14px;
+}
 
 
 /* 运行 / 停机台数的小字（耗电明细与机器面板机型行共用） */
@@ -1541,24 +1543,18 @@ h2 .small {
 .dev-tools input {
   font: inherit;
   min-height: 44px;
-  padding: 0 10px;
+  padding: 0 12px;
   border: 2px solid;
-  border-image: var(--skin-field) 2 fill / 2px stretch;
+  border-image: var(--skin-btn) 2 / 2px stretch;
   border-radius: 0;
-  background: none;
-  color: var(--text);
+  background: var(--btn-face);
+  color: var(--btn-text);
 }
 
 /* 弹出的选项列表：跟随当前主题（原生渲染默认不吃页面变量） */
 .dev-tools select option {
-  background: var(--panel-2);
-  color: var(--text);
-}
-
-/* 亮肤下黑芯文本框配浅色字（MC 同款：文本框永远黑芯白字） */
-.skin-light .dev-tools select,
-.skin-light .dev-tools input {
-  color: #e8e8e8;
+  background: var(--btn-face);
+  color: var(--btn-text);
 }
 
 .dev-tools .resource-row {
@@ -1581,6 +1577,8 @@ h2 .small {
 
 .dev-tools .resource-row button {
   flex: none;
+  padding: 0 4px;
+  font-size: 13px;
 }
 
 
@@ -2879,6 +2877,7 @@ body.theme-classic .dev-tools input {
   border-color: var(--line);
   border-radius: 8px;
   background: var(--panel-2);
+  color: var(--text);
 }
 
 body.theme-classic .rebirth-root {
