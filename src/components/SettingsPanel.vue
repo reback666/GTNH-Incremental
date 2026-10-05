@@ -73,14 +73,15 @@ const THEME_ORDER = [
   { id: 'classic', name: '经典深色' },
 ] as const;
 
+const themeMenuOpen = ref(false);
+
 const themeName = computed(
   () => THEME_ORDER.find((t) => t.id === snap.value.uiTheme)?.name ?? '暗钢造型',
 );
 
-function cycleTheme(): void {
-  const index = THEME_ORDER.findIndex((t) => t.id === snap.value.uiTheme);
-  const next = THEME_ORDER[(index + 1) % THEME_ORDER.length];
-  store.setUiTheme(next.id);
+function pickTheme(id: 'dark' | 'light' | 'classic'): void {
+  store.setUiTheme(id);
+  themeMenuOpen.value = false;
 }
 
 function adjustResource(sign: 1 | -1): void {
@@ -152,8 +153,26 @@ function cleanAmount(text: string): string | null {
     <!-- ── 界面主题（GT GUI 重设计）：暗钢 / 原版亮灰两套皮肤 ── -->
     <div class="row">
       <div class="name">界面主题</div>
-      <!-- 单键循环：暗钢 → 原版亮灰 → 经典深色 → 暗钢 -->
-      <button @click="cycleTheme">{{ themeName }}</button>
+      <div class="mode-picker">
+        <button type="button" @click="themeMenuOpen = !themeMenuOpen">{{ themeName }} ▾</button>
+        <div
+          v-if="themeMenuOpen"
+          class="mode-backdrop"
+          aria-hidden="true"
+          @click="themeMenuOpen = false"
+        />
+        <div v-if="themeMenuOpen" class="mode-menu">
+          <button
+            v-for="t in THEME_ORDER"
+            :key="t.id"
+            type="button"
+            :class="{ primary: snap.uiTheme === t.id }"
+            @click="pickTheme(t.id)"
+          >
+            {{ t.name }}
+          </button>
+        </div>
+      </div>
     </div>
     <!-- ── 音效（计划书第二十一章 #10）：点开列表，可单独开关 + 一键全开全关 ── -->
     <button
