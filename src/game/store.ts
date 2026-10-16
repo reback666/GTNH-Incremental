@@ -67,7 +67,7 @@ import {
 } from './models';
 import { getCore, resetCore, setCore } from './engine';
 import { playSound, SOUNDS, type SoundId } from './audio';
-import { emitFx } from './fx';
+import { emitFx, eventOrigin } from './fx';
 import * as C from './constants';
 import { cleanDisplayMode, cleanUiTheme, clearStorage, loadFromStorage, parseImportedSave, saveToStorage, secondsSinceLastSave, serialize, writeSaveTime, readSavedTheme, writeSavedTheme } from './save';
 import { appVersion, buildStamp, stateSnapshot } from './diagnostics';
@@ -668,19 +668,34 @@ export const useGameStore = defineStore('game', {
       setLogGameSeconds(core.playSeconds);
       this.snapshot = buildSnapshot(core);
     },
-    manualMine() {
-      getCore().manualMine();
+    manualMine(event?: Event) {
+      const core = getCore();
+      core.manualMine();
       sound('mine');
       this.refresh();
+      const veinTier = core.pickaxeVeinTier();
+      emitFx('mine', {
+        origin: eventOrigin(event),
+        amount: this.snap.pickaxe.outputPerClick,
+        veinTier,
+      });
     },
-    upgradePickaxe(line: PickaxeLine) {
+    upgradePickaxe(line: PickaxeLine, event?: Event) {
       const core = getCore();
+      const levelBefore = core[lineField(line)];
       if (!core.upgradePickaxe(line)) return;
       sound('buy');
       this.refresh();
       this.save();
+      const lineData = this.snap.pickaxe.lines.find((item) => item.id === line);
+      emitFx('pickaxe-upgrade', {
+        line,
+        name: lineData?.name ?? line,
+        level: levelBefore + 1,
+        origin: eventOrigin(event),
+      });
     },
-    buy(modelId: string, count: number, payWith: PayWith = 'coin'): number {
+    buy(modelId: string, count: number, payWith: PayWith = 'coin', event?: Event): number {
       const core = getCore();
       const model = findModel(modelId);
       if (!model) {
@@ -689,19 +704,35 @@ export const useGameStore = defineStore('game', {
         return 0;
       }
       const bought = core.buy(model, count, payWith);
-      if (bought > 0) sound('buy');
+      if (bought > 0) {
+        sound('buy');
+        emitFx('build', {
+          modelId,
+          name: model.name,
+          count: bought,
+          tier: model.tier,
+          origin: eventOrigin(event),
+        });
+      }
       this.refresh();
       this.save();
       return bought;
     },
     // 出售：退回该机型结算等级的资源（买的时候用什么付，卖的时候就退什么）
-    sell(modelId: string, count: number, payWith: PayWith = 'coin'): number {
+    sell(modelId: string, count: number, payWith: PayWith = 'coin', event?: Event): number {
       const core = getCore();
       const model = findModel(modelId);
       if (!model) return 0;
       const sold = core.sell(model, count, payWith);
       if (sold > 0) {
         sound('sell');
+        emitFx('sell', {
+          modelId,
+          name: model.name,
+          count: sold,
+          tier: model.tier,
+          origin: eventOrigin(event),
+        });
         this.refresh();
         this.save();
       }
@@ -724,8 +755,18 @@ export const useGameStore = defineStore('game', {
       return ok;
     },
     // 手动维护：把该机型坏掉的机器全部修好
-    repair(modelId: string): number {
-      const fixed = getCore().repair(modelId);
+    repair(modelId: string, event?: Event): number {
+      const core = getCore();
+      const model = findModel(modelId);
+      const fixed = core.repair(modelId);
+      if (fixed > 0 && model) {
+        emitFx('repair', {
+          modelId,
+          name: model.name,
+          count: fixed,
+          origin: eventOrigin(event),
+        });
+      }
       this.refresh();
       this.save();
       return fixed;
@@ -1104,9 +1145,10 @@ export const useGameStore = defineStore('game', {
       const phase = this.phase;
       if (core.maxTier !== phase.maxTier) {
         phase.maxTier = core.maxTier;
-        logEvent('info', 'voltage.unlock', `电压上限变为 ${VOLTAGE_TIERS[core.maxTier - 1]}`);
+        const tierName = VOLTAGE_TIERS[core.maxTier - 1] ?? '未知';
+        logEvent('info', 'voltage.unlock', `电压上限变为 ${tierName}`);
         sound('unlock');
-        emitFx('voltage-unlock');
+        emitFx('voltage-unlock', { tier: core.maxTier, name: tierName });
       }
       if (report.researchUnlocked !== null) {
         const done = MACHINE_MODELS.find((item) => item.id === report.researchUnlocked);
@@ -1116,6 +1158,10 @@ export const useGameStore = defineStore('game', {
           `研究完成：${done?.name ?? report.researchUnlocked} 可以建造了`,
         );
         sound('achievement');
+        emitFx('research-done', {
+          modelId: report.researchUnlocked,
+          name: done?.name ?? report.researchUnlocked,
+        });
       }
       if (report.achievementsGained > 0) sound('achievement');
       const band = core.pollutionEnabled ? pollutionBand(core.pollution) : 'clean';
@@ -1171,6 +1217,12 @@ function findModel(id: string): MachineModel | undefined {
   return COLUMN_ORDER
     .flatMap((category) => modelsOf(category as MachineKind))
     .find((model) => model.id === id);
+}
+
+function lineField(line: PickaxeLine): 'pickaxeVajra' | 'pickaxeCollect' | 'pickaxeBlast' {
+  if (line === 'vajra') return 'pickaxeVajra';
+  if (line === 'collect') return 'pickaxeCollect';
+  return 'pickaxeBlast';
 }
 
 // 让出一帧再继续补算：浏览器里跟着刷新走，非浏览器环境（测试）退化成 setTimeout

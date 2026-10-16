@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.6.3",
   "type": "module",
-  "description": "GTNH 增量游戏数值层（纯逻辑模块，无 UI）",
+  "description": "GTNH 主题离线增量游戏：Vue 界面 + Three.js 三维工业基地，支持离线收益",
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
@@ -15,10 +15,12 @@
   "dependencies": {
     "decimal.js": "^10.4.3",
     "pinia": "^4.0.3",
+    "three": "0.186.1",
     "vue": "^3.5.43"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
+    "@types/three": "0.186.0",
     "@vitejs/plugin-vue": "^6.0.9",
     "tsx": "^4.23.15",
     "typescript": "^5.6.3",

@@ -11,39 +11,43 @@ import {
   veinTierInfo,
 } from '../game/veins';
 
+// 紧凑开采 dock：矿脉贴图（Modernity 帧条带）+ 固定的裂纹 / 回弹 / 数字。
+// 粒子统一交给 FxLayer 的 ParticleOverlay，这里不再生成逐粒子 DOM，连点多少次 DOM 都不变。
 const store = useGameStore();
-const info = computed(() => veinTierInfo(store.snap.currentVein.tier));
-const veinUrl = computed(() => veinIconUrl(store.snap.currentVein.tier));
+const info = computed(() => veinTierInfo(store.snap.pickaxe.veinTier));
+const veinUrl = computed(() => veinIconUrl(store.snap.pickaxe.veinTier));
 
-// 贴图是竖排的帧条带，用 steps() 逐帧切换，和 Minecraft 的动画贴图一个机制
 const spriteStyle = computed(() => ({
   '--frames': String(info.value?.frames ?? 1),
   '--loop': `${info.value ? veinLoopMs(info.value) : 1000}ms`,
   backgroundImage: veinUrl.value ? `url(${veinUrl.value})` : 'none',
 }));
-
 const haloStyle = computed(() => ({ '--icon': `url(${fxIconUrl('halo')})` }));
 const fuzzyStyle = computed(() => ({
   '--icon': `url(${fxIconUrl('haloFuzzy')})`,
   '--frames': String(fxIconFrames('haloFuzzy')),
   '--loop': `${fxIconLoopMs('haloFuzzy')}ms`,
 }));
-// 石头碎裂：原版 10 级破坏贴图，一次点击播完整段
 const crackStyle = computed(() => ({
   '--icon': `url(${fxIconUrl('destroy')})`,
   '--frames': String(fxIconFrames('destroy')),
   '--loop': `${fxIconLoopMs('destroy')}ms`,
 }));
 
+// 无尽矿脉的原版脉动（InfinityRenderer.renderPulse）；reduced-motion 时不跑
 const echoEl = ref<HTMLElement | null>(null);
 let pulseFrame = 0;
+const motionQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+const reduced = ref(motionQuery?.matches ?? false);
+const onMotionChange = (event: MediaQueryListEvent) => {
+  reduced.value = event.matches;
+};
+motionQuery?.addEventListener('change', onMotionChange);
 
 function gaussian(): number {
   const u = Math.random() || Number.EPSILON;
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
 }
-
-// 原版 InfinityRenderer.renderPulse：缩放 = 高斯随机 × 0.15 + 0.95，偏移取 (1 - 缩放) / 2
 function pulse() {
   const el = echoEl.value;
   if (el) {
@@ -53,176 +57,87 @@ function pulse() {
   }
   pulseFrame = requestAnimationFrame(pulse);
 }
-
 watch(
-  () => info.value?.fx,
-  (fx) => {
+  [() => info.value?.fx, reduced],
+  ([fx, isReduced]) => {
     if (pulseFrame) cancelAnimationFrame(pulseFrame);
     pulseFrame = 0;
-    if (fx === 'halo') pulseFrame = requestAnimationFrame(pulse);
+    if (echoEl.value) echoEl.value.style.transform = '';
+    if (fx === 'halo' && !isReduced) pulseFrame = requestAnimationFrame(pulse);
   },
   { immediate: true },
 );
 
-onBeforeUnmount(() => {
-  if (pulseFrame) cancelAnimationFrame(pulseFrame);
-});
-
-interface Burst {
-  id: number;
-  x: number;
-  y: number;
-}
-
-// 飞溅的矿石碎屑
-interface Chip extends Burst {
-  dx: number;
-  dy: number;
-  rot: number;
-  size: number;
-  color: string;
-}
-
-// 石头碎屑：跟矿脉石头同色系的灰，混一片矿脉的青色
-const CHIP_COLORS = ['#7b7b7b', '#6a6a6a', '#8f8f8f', '#5c5c5c', '#9a9a9a', '#2f8f83'];
-
-const sparks = ref<Burst[]>([]);
-const ripples = ref<Burst[]>([]);
-// 镐子落点：中心亮点 + 一圈短星芒
-const hits = ref<Burst[]>([]);
-// 矿脉中间裂开的石头缝：每次点击换一个 key，动画就从头播一遍
-const crackSeq = ref(0);
-const chips = ref<Chip[]>([]);
-const shaking = ref(false);
-let seq = 0;
+// 固定 DOM 的打击反馈：改 class / 文本重播动画，不增删节点
+const hitting = ref(false);
+const combo = ref(0);
+let hitTimer = 0;
+let comboTimer = 0;
 
 function mine(event: MouseEvent) {
-  store.manualMine();
-  const target = event.currentTarget as HTMLElement;
-  const rect = target.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
-  const point: Burst = { id: seq++, x, y };
-
-  sparks.value.push(point);
-  ripples.value.push(point);
-  hits.value.push(point);
-  crackSeq.value += 1;
-
-  // 石头碎屑：八片朝四周飞散
-  const fresh: Chip[] = Array.from({ length: 8 }, (_, index) => {
-    const angle = (Math.PI * 2 * index) / 8 + Math.random() * 0.5;
-    const distance = 18 + Math.random() * 26;
-    return {
-      id: seq++,
-      x,
-      y,
-      dx: Math.cos(angle) * distance,
-      dy: Math.sin(angle) * distance - 6,
-      rot: (Math.random() - 0.5) * 420,
-      size: 2 + Math.round(Math.random() * 3),
-      color: CHIP_COLORS[index % CHIP_COLORS.length] as string,
-    };
-  });
-  chips.value.push(...fresh);
-  const chipIds = new Set(fresh.map((chip) => chip.id));
-
-  setTimeout(() => {
-    sparks.value = sparks.value.filter((s) => s.id !== point.id);
-  }, 650);
-  setTimeout(() => {
-    ripples.value = ripples.value.filter((s) => s.id !== point.id);
-  }, 500);
-  setTimeout(() => {
-    hits.value = hits.value.filter((s) => s.id !== point.id);
-  }, 180);
-  setTimeout(() => {
-    chips.value = chips.value.filter((chip) => !chipIds.has(chip.id));
-  }, 500);
-
-  // 重新触发轻微的下沉回弹：先摘掉类再挂上
-  shaking.value = false;
-  requestAnimationFrame(() => {
-    shaking.value = true;
-    setTimeout(() => {
-      shaking.value = false;
-    }, 220);
-  });
+  store.manualMine(event);
+  combo.value += 1;
+  window.clearTimeout(comboTimer);
+  comboTimer = window.setTimeout(() => {
+    combo.value = 0;
+  }, 900);
+  if (reduced.value) return;
+  const button = event.currentTarget as HTMLElement | null;
+  // 先摘类、强制回流、再挂类，让同一节点的动画从头再播（直接操作 class，避开 Vue 批处理）
+  button?.classList.remove('hitting');
+  void button?.offsetWidth;
+  button?.classList.add('hitting');
+  hitting.value = true;
+  window.clearTimeout(hitTimer);
+  hitTimer = window.setTimeout(() => {
+    hitting.value = false;
+  }, 450);
 }
+
+onBeforeUnmount(() => {
+  if (pulseFrame) cancelAnimationFrame(pulseFrame);
+  window.clearTimeout(hitTimer);
+  window.clearTimeout(comboTimer);
+  motionQuery?.removeEventListener('change', onMotionChange);
+});
 </script>
 
 <template>
-  <section class="panel">
-    <h2>矿脉 · 手动开采</h2>
-    <p class="muted small">开局一矿脉，资源全靠挖！</p>
-
-    <button class="vein-btn" type="button" @click="mine">
-      <span class="vein-sprite" :class="{ shake: shaking }">
+  <section class="mine-dock" aria-label="手动开采">
+    <button
+      class="vein-btn"
+      :class="{ hitting }"
+      type="button"
+      :title="`开采${store.snap.pickaxe.veinName}矿脉：每次 +${store.snap.pickaxe.outputPerClick}（M 键）`"
+      :aria-label="`开采${store.snap.pickaxe.veinName}矿脉，每次 ${store.snap.pickaxe.outputPerClick}`"
+      aria-keyshortcuts="M"
+      data-action="mine"
+      @click="mine"
+    >
+      <span class="vein-sprite">
         <span class="vein-stage">
-          <span
-            v-if="info?.fx === 'fuzzy'"
-            class="vein-halo vein-halo-fuzzy"
-            :style="fuzzyStyle"
-          >
+          <span v-if="info?.fx === 'fuzzy'" class="vein-halo vein-halo-fuzzy" :style="fuzzyStyle">
             <span class="vein-halo-strip" />
           </span>
           <span v-if="info?.fx === 'halo'" class="vein-halo vein-halo-square" :style="haloStyle" />
           <span class="vein-clip">
             <span v-if="veinUrl" class="vein-frames" :style="spriteStyle" />
-            <SpriteIcon v-else kind="vein" :size="112" />
+            <SpriteIcon v-else kind="vein" :size="96" />
           </span>
           <span v-if="info?.fx === 'halo'" ref="echoEl" class="vein-echo">
             <span class="vein-clip">
               <span class="vein-frames" :style="spriteStyle" />
             </span>
           </span>
-          <span v-if="crackSeq" :key="crackSeq" class="crack" :style="crackStyle">
+          <span class="crack" :style="crackStyle" aria-hidden="true">
             <span class="crack-strip" />
           </span>
         </span>
       </span>
-      <span class="vein-label">
-        {{ store.snap.currentVein.name }}矿脉
-      </span>
-
-      <span
-        v-for="chip in chips"
-        :key="'c' + chip.id"
-        class="debris"
-        :style="{
-          left: chip.x + 'px',
-          top: chip.y + 'px',
-          width: chip.size + 'px',
-          height: chip.size + 'px',
-          background: chip.color,
-          '--dx': chip.dx + 'px',
-          '--dy': chip.dy + 'px',
-          '--rot': chip.rot + 'deg',
-        }"
-      />
-      <span
-        v-for="spark in sparks"
-        :key="'s' + spark.id"
-        class="spark"
-        :style="{ left: spark.x + 'px', top: spark.y + 'px' }"
-        >+{{ store.snap.pickaxe.outputPerClick }}</span
-      >
-      <span
-        v-for="ripple in ripples"
-        :key="'r' + ripple.id"
-        class="ripple"
-        :style="{ left: ripple.x + 'px', top: ripple.y + 'px' }"
-      />
-      <span
-        v-for="hit in hits"
-        :key="'h' + hit.id"
-        class="hit"
-        :style="{ left: hit.x + 'px', top: hit.y + 'px' }"
-      >
-        <span v-for="ray in 4" :key="ray" class="hit-ray" :style="{ '--angle': ray * 90 - 45 + 'deg' }" />
-        <span class="hit-core" />
+      <span class="vein-label">{{ store.snap.pickaxe.veinName }}矿脉</span>
+      <span class="mine-gain" aria-hidden="true">
+        +{{ store.snap.pickaxe.outputPerClick }}<template v-if="combo > 1"> ×{{ combo }}</template>
       </span>
     </button>
-
   </section>
 </template>

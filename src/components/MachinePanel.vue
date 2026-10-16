@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import {
   useGameStore,
   type MachineColumn,
@@ -18,13 +18,17 @@ import { formatNumber } from '../numeric/format';
 import MachineIcon from './MachineIcon.vue';
 import { pickaxeIconUrl, pickaxeIconIsStrip, pickaxeStripMeta } from '../game/pickaxe-icons';
 
-const props = defineProps<{ columns: MachineColumn[] }>();
+const props = withDefaults(
+  defineProps<{ columns: MachineColumn[]; selectedModelId?: string | null }>(),
+  { selectedModelId: null },
+);
+// 面板里点已拥有机型的名字 → 通知父级，让 3D 基地同步选中
+const emit = defineEmits<{ select: [modelId: string | null] }>();
 const store = useGameStore();
 
 // 最上方是一排大类标签，点谁就展开谁，其余挤压收起。
 // 最后一个是「镐子」：它不是机器类别，展开的是手动挖矿的三条升级线。
-// null = 全部收起（再点一次已打开的页签就收起）
-const active = ref<MachineKind | 'pickaxe' | null>('miner');
+const active = ref<MachineKind | 'pickaxe'>('miner');
 const PICKAXE_TAB = 'pickaxe';
 
 // 镐子标签上的角标：只在「有机会、又买得起」时提示
@@ -182,7 +186,7 @@ const activeColumn = computed(() => props.columns.find((item) => item.kind === a
 watch(
   () => props.columns.map((column) => column.kind).join(','),
   () => {
-    if (active.value === null || active.value === PICKAXE_TAB) return;
+    if (active.value === PICKAXE_TAB) return;
     if (!props.columns.some((column) => column.kind === active.value) && props.columns[0]) {
       active.value = props.columns[0].kind;
     }
@@ -209,6 +213,36 @@ function cells(count: number): number[] {
   return Array.from({ length: count }, (_, index) => index);
 }
 
+// 场景选中某机型：切到它所在类别，滚动到它那一行并高亮
+const listEl = ref<HTMLElement | null>(null);
+watch(
+  () => props.selectedModelId,
+  async (modelId) => {
+    if (!modelId) return;
+    const column = props.columns.find((col) => col.tiers.some((g) => g.models.some((m) => m.id === modelId)));
+    if (!column) return;
+    active.value = column.kind;
+    if (column.kind === 'research') researchView.value = 'machine';
+    await nextTick();
+    const row = listEl.value?.querySelector<HTMLElement>(`[data-model-id="${CSS.escape(modelId)}"]`);
+    row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  },
+  { immediate: true },
+);
+
+function selectModel(model: MachineModelRow) {
+  if (model.count > 0) emit('select', props.selectedModelId === model.id ? null : model.id);
+}
+
+// MAX：买到钱不够为止（core.buy 内部逐台扣款，买不起就停）；上限防止资源溢出时卡顿
+const MAX_BATCH = 10000;
+function buyMax(model: MachineModelRow, event: Event) {
+  store.buy(model.id, MAX_BATCH, payWith.value, event);
+}
+function sellMax(model: MachineModelRow, event: Event) {
+  if (model.count > 0) store.sell(model.id, model.count, payWith.value, event);
+}
+
 function canBuy(model: MachineModelRow): boolean {
   // 还没研究出来、或者缺对应平行宇宙的机型不能建造，灰掉按钮
   return model.unlocked && (payWith.value === 'ore' ? model.oreAffordable : model.affordable);
@@ -216,23 +250,21 @@ function canBuy(model: MachineModelRow): boolean {
 </script>
 
 <template>
-  <section>
-    <div class="machine-tabs">
+  <section class="machine-console">
+    <div class="machine-tabs" role="tablist" aria-label="机器类别">
       <button
         type="button"
+        role="tab"
         class="machine-tab"
+        :aria-selected="active === PICKAXE_TAB"
         :class="{ active: active === PICKAXE_TAB }"
-        @click="active = active === PICKAXE_TAB ? null : PICKAXE_TAB"
+        @click="active = PICKAXE_TAB"
         @mouseenter="showColumnTip($event, '镐子', store.snap.pickaxe.modifiers)"
         @mouseleave="hideTip"
         @focus="showColumnTip($event, '镐子', store.snap.pickaxe.modifiers)"
         @blur="hideTip"
       >
-        <span
-          v-if="pickaxeTabIcon && pickaxeTabAnimated"
-          class="tab-icon pickaxe-vein-icon"
-          :style="pickaxeTabStripStyle"
-        >
+        <span v-if="pickaxeTabIcon && pickaxeTabAnimated" class="tab-icon pickaxe-vein-icon" :style="pickaxeTabStripStyle">
           <span class="vein-clip">
             <span class="vein-frames" :style="{ backgroundImage: `url(${pickaxeTabIcon})` }" />
           </span>
@@ -245,73 +277,65 @@ function canBuy(model: MachineModelRow): boolean {
         v-for="column in columns"
         :key="column.kind"
         type="button"
+        role="tab"
         class="machine-tab"
+        :aria-selected="active === column.kind"
         :class="{ active: active === column.kind }"
-        @click="active = active === column.kind ? null : column.kind"
+        :data-kind="column.kind"
+        @click="active = column.kind"
         @mouseenter="showColumnTip($event, column.title, column.modifiers)"
         @mouseleave="hideTip"
         @focus="showColumnTip($event, column.title, column.modifiers)"
         @blur="hideTip"
       >
-        <MachineIcon :model-id="tabIconId(column.kind)" :kind="column.kind" :size="38" />
+        <MachineIcon :model-id="tabIconId(column.kind)" :kind="column.kind" :size="28" />
         <span class="tab-name">{{ column.title }}</span>
-        <span class="tab-count">已建 {{ column.count }} 台</span>
+        <span class="tab-count">{{ column.count }} 台</span>
       </button>
     </div>
 
-    <div v-for="column in columns" :key="column.kind" class="machine-body" :class="{ collapsed: active !== column.kind }">
-      <div class="inner">
-        <div class="pad">
-          <p class="muted small hint">{{ column.hint }}</p>
+    <div v-if="activeColumn" ref="listEl" class="machine-body" role="tabpanel" :aria-label="activeColumn.title">
+      <div class="pad">
+        <p class="muted small hint">{{ activeColumn.hint }}</p>
 
-          <dl class="stats">
-            <div v-for="stat in column.stats" :key="stat.label" class="stat">
-              <dt>{{ stat.label }}</dt>
-              <dd>{{ stat.value }}</dd>
-            </div>
-          </dl>
+        <dl class="stats">
+          <div v-for="stat in activeColumn.stats" :key="stat.label" class="stat">
+            <dt>{{ stat.label }}</dt>
+            <dd>{{ stat.value }}</dd>
+          </div>
+        </dl>
 
-          <template v-if="column.kind === 'research'">
-            <div class="row">
-              <button
-                :class="{ primary: researchView === 'machine' }"
-                @click="researchView = 'machine'"
-              >
-                机器
-              </button>
-              <button
-                :class="{ primary: researchView === 'study' }"
-                @click="researchView = 'study'"
-              >
-                研究
-              </button>
-            </div>
-          </template>
+        <div v-if="activeColumn.kind === 'research'" class="row" role="group" aria-label="研究视图">
+          <button :class="{ primary: researchView === 'machine' }" :aria-pressed="researchView === 'machine'" @click="researchView = 'machine'">机器</button>
+          <button :class="{ primary: researchView === 'study' }" :aria-pressed="researchView === 'study'" @click="researchView = 'study'">研究</button>
+        </div>
 
-          <template v-if="column.kind !== 'research' || researchView === 'machine'">
-          <div class="row pay-row">
+        <template v-if="activeColumn.kind !== 'research' || researchView === 'machine'">
+          <div class="row pay-row" role="group" aria-label="支付方式">
             <span class="muted small">支付</span>
-            <button :class="{ primary: payWith === 'coin' }" @click="payWith = 'coin'">GT 币</button>
-            <button :class="{ primary: payWith === 'ore' }" @click="payWith = 'ore'">同级矿石</button>
+            <button :class="{ primary: payWith === 'coin' }" :aria-pressed="payWith === 'coin'" @click="payWith = 'coin'">GT 币</button>
+            <button :class="{ primary: payWith === 'ore' }" :aria-pressed="payWith === 'ore'" @click="payWith = 'ore'">同级矿石</button>
           </div>
 
-          <div v-if="activeColumn && activeColumn.count === 0" class="muted small" style="padding-top: 6px">
+          <div v-if="activeColumn.count === 0" class="muted small" style="padding-top: 6px">
             还没有建造任何{{ activeColumn.title }}。
           </div>
 
-          <!-- 一行一个机型：等级 → 机型名 → 机器图标横排 → 数量 → 单价 → 建造按钮 -->
           <div
             v-for="bar in bars"
             :key="bar.model.id"
             class="tier-bar"
-            :class="{ stopped: bar.model.stopped }"
+            :class="{ stopped: bar.model.stopped, selected: bar.model.id === selectedModelId }"
+            :data-model-id="bar.model.id"
           >
             <div class="tier-line">
               <span class="tier-name">{{ bar.group.voltage }}</span>
-
-              <span
+              <button
+                type="button"
                 class="model-name"
-                tabindex="0"
+                :aria-pressed="bar.model.id === selectedModelId"
+                :title="bar.model.count > 0 ? '在基地中选中这一机型' : '还没有建造这一机型'"
+                @click="selectModel(bar.model)"
                 @mouseenter="showTip($event, bar.model)"
                 @mouseleave="hideTip"
                 @focus="showTip($event, bar.model)"
@@ -320,73 +344,54 @@ function canBuy(model: MachineModelRow): boolean {
                 <span class="model-label">{{ bar.model.name }}</span>
                 <span v-if="bar.model.block === 'multiblock'" class="badge mb" title="多方块：产出与效率更高，成本系数也更高">多方块</span>
                 <span v-if="!bar.model.researched" class="badge warn" title="要先在研究里解锁这一级机型">需研究</span>
-                <span
-                  v-if="bar.model.visPowered"
-                  class="badge magic"
-                  title="魔法机器：不耗电，改为灵气消耗；产出是同价电力机型的 2.5 倍"
-                  >魔法</span
-                >
-              </span>
-
-              <div class="tier-icons">
-                <MachineIcon
-                  v-for="index in cells(bar.model.icons)"
-                  :key="index"
-                  :model-id="bar.model.id"
-                  :kind="column.kind"
-                  :size="26"
-                  class="icon-pop"
-                />
-                <span v-if="bar.model.overflow > 0" class="icon-overflow">+{{ bar.model.overflow }}</span>
-              </div>
-
+                <span v-if="bar.model.visPowered" class="badge magic" title="魔法机器：不耗电，改为灵气消耗；产出是同价电力机型的 2.5 倍">魔法</span>
+              </button>
               <span class="count">×{{ bar.model.count }}</span>
               <span class="price">
                 <template v-if="payWith === 'coin'">{{ bar.model.price }} {{ bar.group.unit }}</template>
                 <template v-else>{{ bar.model.orePrice }} {{ bar.group.oreLabel }}</template>
               </span>
+            </div>
 
-              <span class="trade">
-                <button :disabled="!canBuy(bar.model)" @click="store.buy(bar.model.id, 1, payWith)">1x</button>
-                <button :disabled="!canBuy(bar.model)" @click="store.buy(bar.model.id, 10, payWith)">10x</button>
+            <div class="tier-icons">
+              <MachineIcon
+                v-for="index in cells(bar.model.icons)"
+                :key="index"
+                :model-id="bar.model.id"
+                :kind="activeColumn.kind"
+                :size="22"
+                class="icon-pop"
+              />
+              <span v-if="bar.model.overflow > 0" class="icon-overflow">+{{ bar.model.overflow }}</span>
+            </div>
+
+            <div class="tier-line trade-line">
+              <span class="trade" role="group" :aria-label="`建造 ${bar.model.name}`">
                 <span class="trade-label">买</span>
+                <button :disabled="!canBuy(bar.model)" :title="`建造 1 台 ${bar.model.name}`" data-action="buy-1" @click="store.buy(bar.model.id, 1, payWith, $event)">1</button>
+                <button :disabled="!canBuy(bar.model)" :title="`建造 10 台 ${bar.model.name}`" @click="store.buy(bar.model.id, 10, payWith, $event)">10</button>
+                <button :disabled="!canBuy(bar.model)" :title="`用当前资源建造尽可能多的 ${bar.model.name}`" @click="buyMax(bar.model, $event)">MAX</button>
+              </span>
+              <span class="trade" role="group" :aria-label="`卖出 ${bar.model.name}`">
+                <span class="trade-label">卖</span>
+                <button class="sell-btn" :disabled="bar.model.count === 0" :title="`卖回一台拿回 ${refundLabel(bar.model)}；卖出后重新买回来的价钱也会跟着降`" @click="store.sell(bar.model.id, 1, payWith, $event)">1</button>
+                <button class="sell-btn" :disabled="bar.model.count === 0" title="一次卖 10 台" @click="store.sell(bar.model.id, 10, payWith, $event)">10</button>
+                <button class="sell-btn" :disabled="bar.model.count === 0" title="把这一机型全部卖掉" @click="sellMax(bar.model, $event)">MAX</button>
               </span>
             </div>
 
-            <div class="tier-line second">
-              <span v-if="!bar.model.overclockable" class="overclock-slot" aria-hidden="true" />
+            <div v-if="bar.model.overclockable || (bar.model.stoppable && bar.model.count > 0) || bar.model.faulty > 0" class="tier-line second">
               <span v-if="bar.model.overclockable" class="overclock">
-              <span
-                class="oc-label"
-                tabindex="0"
-                @mouseenter="showOverclockTip($event, bar.model)"
-                @mouseleave="hideTip"
-                @focus="showOverclockTip($event, bar.model)"
-                @blur="hideTip"
-                >超频</span
-              >
-              <button
-                class="oc-btn"
-                :disabled="bar.model.overclock === 0"
-                :title="'降低超频档位（当前 ' + bar.model.overclock + ' 档）'"
-                @click="store.setOverclock(bar.model.id, bar.model.overclock - 1)"
-              >
-                −
-              </button>
-              <b class="oc-level">{{ bar.model.overclock }}</b>
-              <button
-                class="oc-btn"
-                :disabled="bar.model.overclock >= MAX_OC"
-                :title="'提高超频档位：速度 +60%、耗电翻倍，故障率也翻倍'"
-                @click="store.setOverclock(bar.model.id, bar.model.overclock + 1)"
-              >
-                +
-              </button>
+                <span class="oc-label" tabindex="0" @mouseenter="showOverclockTip($event, bar.model)" @mouseleave="hideTip" @focus="showOverclockTip($event, bar.model)" @blur="hideTip">超频</span>
+                <button class="oc-btn" :disabled="bar.model.overclock === 0" :aria-label="`降低 ${bar.model.name} 超频`" :title="'降低超频档位（当前 ' + bar.model.overclock + ' 档）'" @click="store.setOverclock(bar.model.id, bar.model.overclock - 1)">−</button>
+                <b class="oc-level">{{ bar.model.overclock }}</b>
+                <button class="oc-btn" :disabled="bar.model.overclock >= MAX_OC" :aria-label="`提高 ${bar.model.name} 超频`" title="提高超频档位：速度 +60%、耗电翻倍，故障率也翻倍" @click="store.setOverclock(bar.model.id, bar.model.overclock + 1)">+</button>
               </span>
               <span v-if="bar.model.stoppable && bar.model.count > 0" class="run-state">
                 <button
                   class="run-btn"
                   :class="{ stopped: bar.model.stopped || bar.model.running === 0 }"
+                  :aria-pressed="bar.model.stopped"
                   :title="
                     bar.model.stopped
                       ? '这一机型全部停机：不产、不耗、不污染。点一下恢复运行'
@@ -398,105 +403,66 @@ function canBuy(model: MachineModelRow): boolean {
                 >
                   {{ bar.model.stopped || bar.model.running === 0 ? '已停机' : '运行中' }}
                 </button>
-                <span class="muted small run-split">
-                  运行 {{ bar.model.running }} · 停机 {{ bar.model.idle }}
-                </span>
+                <span class="muted small run-split">运行 {{ bar.model.running }} · 停机 {{ bar.model.idle }}</span>
               </span>
               <span v-if="bar.model.faulty > 0" class="fault">
                 故障 {{ bar.model.faulty }} 台
-                <button title="修理这台机型的所有故障机器" @click="store.repair(bar.model.id)">
-                  维护
-                </button>
-              </span>
-              <span class="trade">
-                <button
-                  class="sell-btn"
-                  :disabled="bar.model.count === 0"
-                  :title="`卖回一台拿回 ${refundLabel(bar.model)}；卖出后重新买回来的价钱也会跟着降`"
-                  @click="store.sell(bar.model.id, 1, payWith)"
-                >
-                  1x
-                </button>
-                <button
-                  class="sell-btn"
-                  :disabled="bar.model.count === 0"
-                  title="一次卖 10 台"
-                  @click="store.sell(bar.model.id, 10, payWith)"
-                >
-                  10x
-                </button>
-                <span class="trade-label">卖</span>
+                <button :title="`修理 ${bar.model.name} 的所有故障机器`" @click="store.repair(bar.model.id, $event)">维护</button>
               </span>
             </div>
           </div>
+        </template>
 
-          </template>
-
-          <!-- 研究：当前研究置顶，下面列出所有还没研究出来的机型（可点选） -->
-          <template v-if="column.kind === 'research' && researchView === 'study'">
-            <h3 class="research-sub">当前研究</h3>
-            <div class="research">
-              <div class="research-head">
-                <span>
-                  {{ store.snap.research.hasTarget ? store.snap.research.targetName : '没有进行中的研究' }}
-                  <span v-if="store.snap.research.hasTarget" class="badge">
-                    {{ store.snap.research.targetTierName }}
-                  </span>
-                </span>
-                <b>{{ store.snap.research.progress }} / {{ store.snap.research.required }}</b>
-              </div>
-              <div class="research-bar">
-                <span :style="{ width: store.snap.research.percent + '%' }" />
-              </div>
-              <p v-if="store.snap.research.note" class="muted small" style="margin: 6px 0 0">
-                {{ store.snap.research.note }}
-                <template v-if="store.snap.research.eta !== '—'">
-                  按当前算力还要 {{ store.snap.research.eta }}。
-                </template>
-              </p>
+        <template v-if="activeColumn.kind === 'research' && researchView === 'study'">
+          <h3 class="research-sub">当前研究</h3>
+          <div class="research">
+            <div class="research-head">
+              <span>
+                {{ store.snap.research.hasTarget ? store.snap.research.targetName : '没有进行中的研究' }}
+                <span v-if="store.snap.research.hasTarget" class="badge">{{ store.snap.research.targetTierName }}</span>
+              </span>
+              <b>{{ store.snap.research.progress }} / {{ store.snap.research.required }}</b>
             </div>
+            <div class="research-bar"><span :style="{ width: store.snap.research.percent + '%' }" /></div>
+            <p v-if="store.snap.research.note" class="muted small" style="margin: 6px 0 0">
+              {{ store.snap.research.note }}
+              <template v-if="store.snap.research.eta !== '—'">按当前算力还要 {{ store.snap.research.eta }}。</template>
+            </p>
+          </div>
 
-            <template v-if="store.snap.research.pending.length">
+          <template v-if="store.snap.research.pending.length">
+            <button type="button" class="research-toggle" :aria-expanded="!store.researchListCollapsed" @click="store.toggleResearchList()">
+              <span>{{ store.researchListCollapsed ? '▸' : '▾' }} 需要研究的机器</span>
+              <span class="muted small">{{ store.snap.research.pending.length }} 台</span>
+            </button>
+            <div v-if="!store.researchListCollapsed" class="research-list">
               <button
+                v-for="row in store.snap.research.pending"
+                :key="row.id"
                 type="button"
-                class="research-toggle"
-                :aria-expanded="!store.researchListCollapsed"
-                @click="store.toggleResearchList()"
+                class="research-item"
+                :title="`把研究目标设为 ${row.name}`"
+                @click="store.setResearchTarget(row.id)"
               >
-                <span>{{ store.researchListCollapsed ? '▸' : '▾' }} 需要研究的机器</span>
-                <span class="muted small">{{ store.snap.research.pending.length }} 台</span>
+                <span class="research-item-head">
+                  <b>
+                    {{ row.name }}
+                    <span class="badge">{{ row.tierName }}</span>
+                    <span v-if="!row.voltageReady" class="badge warn">电压未到</span>
+                  </b>
+                  <span class="muted small">需要 {{ row.required }} 算力</span>
+                </span>
+                <span v-if="row.percent > 0" class="research-bar"><span :style="{ width: row.percent + '%' }" /></span>
+                <span v-if="row.percent > 0" class="muted small">已攒 {{ row.progress }}</span>
               </button>
-              <div v-if="!store.researchListCollapsed" class="research-list">
-                <button
-                  v-for="row in store.snap.research.pending"
-                  :key="row.id"
-                  type="button"
-                  class="research-item"
-                  @click="store.setResearchTarget(row.id)"
-                >
-                  <span class="research-item-head">
-                    <b>
-                      {{ row.name }}
-                      <span class="badge">{{ row.tierName }}</span>
-                      <span v-if="!row.voltageReady" class="badge warn">电压未到</span>
-                    </b>
-                    <span class="muted small">需要 {{ row.required }} 算力</span>
-                  </span>
-                  <span v-if="row.percent > 0" class="research-bar">
-                    <span :style="{ width: row.percent + '%' }" />
-                  </span>
-                  <span v-if="row.percent > 0" class="muted small">已攒 {{ row.progress }}</span>
-                </button>
-              </div>
-            </template>
+            </div>
           </template>
-        </div>
+        </template>
       </div>
     </div>
 
     <!-- 镐子：手动挖矿的三条升级线 -->
-    <div class="machine-body" :class="{ collapsed: active !== PICKAXE_TAB }">
-      <div class="inner">
+    <div v-if="active === PICKAXE_TAB" class="machine-body" role="tabpanel" aria-label="镐子">
         <div class="pad">
           <p class="muted small hint">
             手动挖矿的三条升级线，机会随电压等级发放。
@@ -549,14 +515,13 @@ function canBuy(model: MachineModelRow): boolean {
                 type="button"
                 :disabled="!line.canUpgrade"
                 :title="upgradeTitle(line)"
-                @click="store.upgradePickaxe(line.id)"
+                @click="store.upgradePickaxe(line.id, $event)"
               >
                 {{ line.locked ? '未开放' : line.level >= line.cap ? '已满级' : '升级' }}
               </button>
             </div>
           </div>
         </div>
-      </div>
     </div>
   </section>
 
