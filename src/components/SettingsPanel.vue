@@ -67,6 +67,23 @@ function allSoundsOn() {
   }
 }
 
+const THEME_ORDER = [
+  { id: 'dark', name: '暗钢造型' },
+  { id: 'light', name: '原版亮灰' },
+  { id: 'classic', name: '经典深色' },
+] as const;
+
+const themeMenuOpen = ref(false);
+
+const themeName = computed(
+  () => THEME_ORDER.find((t) => t.id === snap.value.uiTheme)?.name ?? '暗钢造型',
+);
+
+function pickTheme(id: 'dark' | 'light' | 'classic'): void {
+  store.setUiTheme(id);
+  themeMenuOpen.value = false;
+}
+
 function adjustResource(sign: 1 | -1): void {
   const amount = cleanAmount(resAmount.value);
   if (amount === null) {
@@ -101,22 +118,22 @@ function cleanAmount(text: string): string | null {
 
     <div class="row">
       <div class="name">污染机制</div>
-      <button :class="{ primary: risk.enabled }" @click="store.setPollutionEnabled(true)">开启</button>
-      <button :class="{ primary: !risk.enabled }" @click="store.setPollutionEnabled(false)">
-        关闭
+      <button :class="{ primary: risk.enabled }" @click="store.setPollutionEnabled(!risk.enabled)">
+        {{ risk.enabled ? '已开启' : '已关闭' }}
       </button>
     </div>
     <!-- ── 计数方法（计划书第二十一章 #9） ───────────────────── -->
-    <div class="row mt">
+    <div class="row">
       <div class="name">计数方法</div>
       <div class="mode-picker">
         <button type="button" @click="modeMenuOpen = !modeMenuOpen">{{ modeName }} ▾</button>
-        <!-- 透明垫层：菜单开着时点菜单外面就收起 -->
-        <button
+        <!-- 透明垫层：菜单开着时点菜单外面就收起。
+             用 div 不用 button——垫层盖满全屏，任何按钮样式（悬停变色/按压位移/贴图）
+             串进来都会把整个屏幕染色（0.5.1 翻过车，重设计改按钮底色后又险些复发） -->
+        <div
           v-if="modeMenuOpen"
-          type="button"
           class="mode-backdrop"
-          aria-label="关闭菜单"
+          aria-hidden="true"
           @click="modeMenuOpen = false"
         />
         <div v-if="modeMenuOpen" class="mode-menu">
@@ -136,29 +153,43 @@ function cleanAmount(text: string): string | null {
     <!-- ── 界面主题（GT GUI 重设计）：暗钢 / 原版亮灰两套皮肤 ── -->
     <div class="row">
       <div class="name">界面主题</div>
-      <button
-        :class="{ primary: snap.uiTheme === 'dark' }"
-        @click="store.setUiTheme('dark')"
-      >
-        暗钢造型
-      </button>
-      <button
-        :class="{ primary: snap.uiTheme === 'light' }"
-        @click="store.setUiTheme('light')"
-      >
-        原版亮灰
-      </button>
+      <div class="mode-picker">
+        <button type="button" @click="themeMenuOpen = !themeMenuOpen">{{ themeName }} ▾</button>
+        <div
+          v-if="themeMenuOpen"
+          class="mode-backdrop"
+          aria-hidden="true"
+          @click="themeMenuOpen = false"
+        />
+        <div v-if="themeMenuOpen" class="mode-menu">
+          <button
+            v-for="t in THEME_ORDER"
+            :key="t.id"
+            type="button"
+            :class="{ primary: snap.uiTheme === t.id }"
+            @click="pickTheme(t.id)"
+          >
+            {{ t.name }}
+          </button>
+        </div>
+      </div>
     </div>
     <!-- ── 音效（计划书第二十一章 #10）：点开列表，可单独开关 + 一键全开全关 ── -->
-    <button
-      type="button"
-      class="panel-toggle sound-toggle"
-      :aria-expanded="!store.soundListCollapsed"
-      @click="store.toggleSoundList()"
-    >
-      <span>音效 <span class="muted small">{{ snap.soundEnabled ? '已开启' : '已关闭' }} · 已单独关闭 {{ snap.soundMuted.length }} / {{ SOUNDS.length }} 种</span></span>
-      <span>{{ store.soundListCollapsed ? '▾' : '▴' }}</span>
-    </button>
+    <div class="row">
+      <div class="name">音效</div>
+      <button
+        type="button"
+        :aria-expanded="!store.soundListCollapsed"
+        @click="store.toggleSoundList()"
+      >
+        {{
+          snap.soundEnabled
+            ? `已开启 ${SOUNDS.length - snap.soundMuted.length}/${SOUNDS.length} 种`
+            : '已关闭'
+        }}
+        {{ store.soundListCollapsed ? '▾' : '▴' }}
+      </button>
+    </div>
     <template v-if="!store.soundListCollapsed">
       <div class="row">
         <div class="name">全部音效</div>
@@ -241,10 +272,11 @@ function cleanAmount(text: string): string | null {
     </template>
 
     <!-- ── 开发者模式 ─────────────────────────────────────────── -->
-    <div class="row mt">
+    <div class="row">
       <div class="name">开发者模式</div>
-      <button :class="{ primary: devMode }" @click="store.setDevMode(true)">开启</button>
-      <button :class="{ primary: !devMode }" @click="store.setDevMode(false)">关闭</button>
+      <button :class="{ primary: devMode }" @click="store.setDevMode(!devMode)">
+        {{ devMode ? '已开启' : '已关闭' }}
+      </button>
     </div>
 
     <div v-if="devMode" class="dev-tools">
@@ -307,7 +339,7 @@ function cleanAmount(text: string): string | null {
         </button>
       </div>
 
-      <dl class="stats">
+      <dl class="stats stats-6">
         <div class="stat">
           <dt>当前等级</dt>
           <dd>{{ VOLTAGE_TIERS[snap.maxTier - 1] }}</dd>

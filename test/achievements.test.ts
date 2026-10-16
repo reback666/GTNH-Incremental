@@ -75,8 +75,8 @@ describe('成就', () => {
 
   it('存电过半、污染冒烟又治污、到达 MAX 都能达成', () => {
     const core = new GameCore();
-    core.counts['b-3'] = 1; // 容量 16000
-    core.storedEU = dec('8000');
+    core.counts['b-3'] = 1; // 容量 256000
+    core.storedEU = dec('128000');
     core.pollution = dec('55');
     core.maxTier = 14;
     core.peakTier = 14;

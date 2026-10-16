@@ -66,10 +66,10 @@ import {
   type MachineModel,
 } from './models';
 import { getCore, resetCore, setCore } from './engine';
-import { playSound, type SoundId } from './audio';
+import { playSound, SOUNDS, type SoundId } from './audio';
 import { emitFx } from './fx';
 import * as C from './constants';
-import { clearStorage, loadFromStorage, saveToStorage, secondsSinceLastSave } from './save';
+import { cleanDisplayMode, cleanUiTheme, clearStorage, loadFromStorage, parseImportedSave, saveToStorage, secondsSinceLastSave, serialize, writeSaveTime, readSavedTheme, writeSavedTheme } from './save';
 import { appVersion, buildStamp, stateSnapshot } from './diagnostics';
 import { errorText, logEntries, logEvent, onLogChange, setLogGameSeconds } from './log';
 
@@ -525,6 +525,9 @@ const COLUMN_META: Record<MachineKind, { title: string; hint: string }> = {
   },
 };
 
+// 设置页界面状态落盘的去重缓存：状态没变就不写 localStorage
+let lastUiStateJson = '';
+
 export const useGameStore = defineStore('game', {
   state: () => ({
     snapshot: null as Snapshot | null,
@@ -598,11 +601,15 @@ export const useGameStore = defineStore('game', {
       // 先读时间戳再补算：补算之后马上会写一次档，时间戳会被刷新
       const away = loaded ? secondsSinceLastSave() : 0;
       if (loaded) setCore(loaded);
+      this.applySavedTheme();
       logEvent('info', 'app.boot', `启动游戏（版本 v${appVersion()}，构建 ${buildStamp()}）`);
       this.phase.maxTier = getCore().maxTier;
       // 日志变了就刷新错误条数：设置页按钮上的小红点靠它
       onLogChange(() => this.syncLogErrors());
       this.syncLogErrors();
+      this.loadUiState();
+      // 状态有变就落盘（persistUiState 内部做 JSON 去重，每拍空转不写 localStorage）
+      this.$subscribe(() => this.persistUiState());
       this.refresh();
       void this.catchUp(away);
     },
@@ -792,9 +799,10 @@ export const useGameStore = defineStore('game', {
       this.refresh();
       this.save();
     },
-    // 界面主题：纯外观偏好（GT GUI 重设计的两套皮肤），存档跟走、转生不清
+    // 界面主题：纯外观偏好，除存档外在独立键再存一份——重开一局（清存档）不清
     setUiTheme(theme: UiTheme): void {
       getCore().setUiTheme(theme);
+      writeSavedTheme(theme);
       this.refresh();
       this.save();
     },
@@ -960,11 +968,117 @@ export const useGameStore = defineStore('game', {
       if (autosaveTimer !== null) clearInterval(autosaveTimer);
       autosaveTimer = setInterval(() => this.save(), getCore().autosaveSeconds * 1000);
     },
+    // 导出当前存档为格式化 JSON（供下载）
+    exportSave(): string {
+      return JSON.stringify(serialize(getCore()), null, 2);
+    },
+    /*
+      导入存档文本：解析与清洗全部成功才整体生效（绝不部分应用）；
+      成功后时间戳记为现在——导入的存档不知道上次玩是什么时候，不给离线补算。
+    */
+    importSave(text: string): { ok: boolean; message: string } {
+      try {
+        const core = parseImportedSave(text);
+        setCore(core);
+        writeSaveTime();
+        this.applySavedTheme();
+        this.loadUiState();
+        this.phase.maxTier = getCore().maxTier;
+        this.syncLogErrors();
+        this.refresh();
+        logEvent('info', 'save.import', '导入存档成功，已按新存档继续');
+        return { ok: true, message: '导入成功，已按新存档继续' };
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        logEvent('error', 'save.import', '导入存档失败，当前存档没有被动过', reason);
+        return { ok: false, message: `导入失败：${reason}` };
+      }
+    },
     reset() {
       logEvent('info', 'save.reset', '重开一局（本地存档已清除）');
       clearStorage();
       resetCore();
+      // 主题与设置页的界面状态都是纯界面偏好（各自存在独立键里），重开一局不清
+      this.applySavedTheme();
+      this.loadUiState();
       this.refresh();
+    },
+    // 把独立键里的主题偏好套到当前核心上（boot 与重开一局时各调一次）
+    applySavedTheme() {
+      const theme = cleanUiTheme(readSavedTheme());
+      getCore().setUiTheme(theme);
+    },
+    /*
+      设置页的界面状态（折叠开关、离线横幅关闭态、开发者模式）持久化到独立键：
+      折叠状态原来只在内存里，刷新就丢；开发者模式在存档里，重开一局会被清掉。
+      $subscribe 每拍都会触发，靠 JSON 比对去重，状态没变就不写。
+    */
+    loadUiState() {
+      try {
+        const raw = localStorage.getItem(C.UI_KEY);
+        if (!raw) return;
+        const obj = JSON.parse(raw) as Record<string, unknown>;
+        const fields = [
+          'achievementsCollapsed',
+          'researchListCollapsed',
+          'universesCollapsed',
+          'challengesCollapsed',
+          'treeCollapsed',
+          'historyCollapsed',
+          'gridPanelCollapsed',
+          'soundListCollapsed',
+          'offlineBannerDismissed',
+        ] as const;
+        const self = this as unknown as Record<string, unknown>;
+        for (const field of fields) {
+          if (typeof obj[field] === 'boolean') self[field] = obj[field];
+        }
+        if (typeof obj.devMode === 'boolean' && obj.devMode !== getCore().devMode) {
+          this.setDevMode(obj.devMode);
+        }
+        // 计数方法与音效原来只随存档走，重开一局会被清掉——这里从独立键还原
+        if (typeof obj.displayMode === 'string') {
+          this.setDisplayMode(cleanDisplayMode(obj.displayMode));
+        }
+        if (typeof obj.soundEnabled === 'boolean' && obj.soundEnabled !== getCore().soundEnabled) {
+          this.setSoundEnabled(obj.soundEnabled);
+        }
+        if (Array.isArray(obj.soundMuted)) {
+          const valid = new Set(SOUNDS.map((item) => item.id));
+          for (const id of obj.soundMuted) {
+            if (valid.has(id) && !getCore().soundMuted.includes(id)) {
+              this.setSoundMuted(id, true);
+            }
+          }
+        }
+      } catch {
+        // 坏数据就当没有
+      }
+    },
+    persistUiState() {
+      const obj = {
+        achievementsCollapsed: this.achievementsCollapsed,
+        researchListCollapsed: this.researchListCollapsed,
+        universesCollapsed: this.universesCollapsed,
+        challengesCollapsed: this.challengesCollapsed,
+        treeCollapsed: this.treeCollapsed,
+        historyCollapsed: this.historyCollapsed,
+        gridPanelCollapsed: this.gridPanelCollapsed,
+        soundListCollapsed: this.soundListCollapsed,
+        offlineBannerDismissed: this.offlineBannerDismissed,
+        devMode: getCore().devMode,
+        displayMode: getCore().displayMode,
+        soundEnabled: getCore().soundEnabled,
+        soundMuted: [...getCore().soundMuted],
+      };
+      const json = JSON.stringify(obj);
+      if (json === lastUiStateJson) return;
+      lastUiStateJson = json;
+      try {
+        localStorage.setItem(C.UI_KEY, json);
+      } catch {
+        // 写不进去就只在当前局生效
+      }
     },
     start() {
       if (this.running) return;
@@ -1465,12 +1579,9 @@ function modifierRows(core: GameCore, kind: MachineKind | 'pickaxe'): ModifierRo
     );
     const step = dec(String(report.stepSeconds));
     const capacity = step.gt(0) ? report.euCapacity.div(step) : rated;
-    const actual = step.gt(0) ? report.euGenerated.div(step) : ZERO;
-    // 拿不出额定出力 = 缺燃料；拿得出却发得少 = 发电机按需发电，不是故障
+    // 拿不出额定发电率 = 缺燃料；拿得出却发得少 = 发电机按需发电，不是故障
     if (rated.gt(0) && capacity.lt(rated)) {
-      add('出力', pct(capacity.div(rated)), '矿石不够烧', 'bad');
-    } else if (capacity.gt(0) && actual.lt(capacity)) {
-      add('出力', pct(actual.div(capacity)), '按需发电（富余出力没开）', 'flat');
+      add('发电率', pct(capacity.div(rated)), '矿石不够烧', 'bad');
     }
   }
   if (kind === 'purifier') {
@@ -1478,7 +1589,7 @@ function modifierRows(core: GameCore, kind: MachineKind | 'pickaxe'): ModifierRo
       add('提示', '污染机制已关闭', '设置', 'flat');
     } else {
       const purify = core.purifyPerSecond();
-      add('净化量', `${formatNumber(purify.times(100))}%/秒`, '等级 × 台数', 'good');
+      add('净化量', `${formatNumber(purify.times(100))}%/秒`, '', 'good');
       if (abyss) add('副作用', '不抵消深渊腐蚀', '污染在这里是燃料', 'flat');
     }
   }
@@ -1626,7 +1737,7 @@ function researchStats(core: GameCore): ResearchStats {
 
   let note: string;
   if (target === null && pending.length === 0) {
-    note = '所有机型都研究完了。';
+    note = '';
   } else if (target === null) {
     note = '还没选研究项目：从下面的列表里挑一台机器，算力才会往它上面投。';
   } else {
@@ -2002,7 +2113,7 @@ function singleStats(model: MachineModel, level = 0): { label: string; value: st
   if (model.category === 'generator') {
     const efficiency = model.fuelEfficiency ?? generatorFuelEfficiency(model.tier).toString();
     const output = {
-      label: '出力',
+      label: '发电率',
       value: `${formatNumber(generatorOutputEU(model.tier, model.outputFactor))} EU/t`,
     };
     // 魔法发电机不烧矿，直接吃灵气发电

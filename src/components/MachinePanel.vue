@@ -23,11 +23,14 @@ const store = useGameStore();
 
 // 最上方是一排大类标签，点谁就展开谁，其余挤压收起。
 // 最后一个是「镐子」：它不是机器类别，展开的是手动挖矿的三条升级线。
-const active = ref<MachineKind | 'pickaxe'>('miner');
+// null = 全部收起（再点一次已打开的页签就收起）
+const active = ref<MachineKind | 'pickaxe' | null>('miner');
 const PICKAXE_TAB = 'pickaxe';
 
 // 镐子标签上的角标：只在「有机会、又买得起」时提示
 const pickaxeLines = computed(() => store.snap.pickaxe.lines);
+// 研究标签页的两个子视图：机器 = 买卖研究机器，研究 = 当前研究与待研究列表
+const researchView = ref<'machine' | 'study'>('machine');
 // 有机会、又买得起 —— 只有这时候才写「可升级」并高亮；
 // 其余情况（有机会但币不够、机会已经用完）角标不显示任何文字
 const pickaxeCanUpgrade = computed(() => pickaxeLines.value.some((line) => line.canUpgrade));
@@ -179,7 +182,7 @@ const activeColumn = computed(() => props.columns.find((item) => item.kind === a
 watch(
   () => props.columns.map((column) => column.kind).join(','),
   () => {
-    if (active.value === PICKAXE_TAB) return;
+    if (active.value === null || active.value === PICKAXE_TAB) return;
     if (!props.columns.some((column) => column.kind === active.value) && props.columns[0]) {
       active.value = props.columns[0].kind;
     }
@@ -219,7 +222,7 @@ function canBuy(model: MachineModelRow): boolean {
         type="button"
         class="machine-tab"
         :class="{ active: active === PICKAXE_TAB }"
-        @click="active = PICKAXE_TAB"
+        @click="active = active === PICKAXE_TAB ? null : PICKAXE_TAB"
         @mouseenter="showColumnTip($event, '镐子', store.snap.pickaxe.modifiers)"
         @mouseleave="hideTip"
         @focus="showColumnTip($event, '镐子', store.snap.pickaxe.modifiers)"
@@ -244,7 +247,7 @@ function canBuy(model: MachineModelRow): boolean {
         type="button"
         class="machine-tab"
         :class="{ active: active === column.kind }"
-        @click="active = column.kind"
+        @click="active = active === column.kind ? null : column.kind"
         @mouseenter="showColumnTip($event, column.title, column.modifiers)"
         @mouseleave="hideTip"
         @focus="showColumnTip($event, column.title, column.modifiers)"
@@ -268,6 +271,24 @@ function canBuy(model: MachineModelRow): boolean {
             </div>
           </dl>
 
+          <template v-if="column.kind === 'research'">
+            <div class="row">
+              <button
+                :class="{ primary: researchView === 'machine' }"
+                @click="researchView = 'machine'"
+              >
+                机器
+              </button>
+              <button
+                :class="{ primary: researchView === 'study' }"
+                @click="researchView = 'study'"
+              >
+                研究
+              </button>
+            </div>
+          </template>
+
+          <template v-if="column.kind !== 'research' || researchView === 'machine'">
           <div class="row pay-row">
             <span class="muted small">支付</span>
             <button :class="{ primary: payWith === 'coin' }" @click="payWith = 'coin'">GT 币</button>
@@ -409,13 +430,15 @@ function canBuy(model: MachineModelRow): boolean {
             </div>
           </div>
 
+          </template>
+
           <!-- 研究：当前研究置顶，下面列出所有还没研究出来的机型（可点选） -->
-          <template v-if="column.kind === 'research'">
+          <template v-if="column.kind === 'research' && researchView === 'study'">
             <h3 class="research-sub">当前研究</h3>
             <div class="research">
               <div class="research-head">
                 <span>
-                  {{ store.snap.research.hasTarget ? store.snap.research.targetName : '空着' }}
+                  {{ store.snap.research.hasTarget ? store.snap.research.targetName : '没有进行中的研究' }}
                   <span v-if="store.snap.research.hasTarget" class="badge">
                     {{ store.snap.research.targetTierName }}
                   </span>
@@ -425,7 +448,7 @@ function canBuy(model: MachineModelRow): boolean {
               <div class="research-bar">
                 <span :style="{ width: store.snap.research.percent + '%' }" />
               </div>
-              <p class="muted small" style="margin: 6px 0 0">
+              <p v-if="store.snap.research.note" class="muted small" style="margin: 6px 0 0">
                 {{ store.snap.research.note }}
                 <template v-if="store.snap.research.eta !== '—'">
                   按当前算力还要 {{ store.snap.research.eta }}。

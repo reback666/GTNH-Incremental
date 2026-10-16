@@ -37,6 +37,35 @@ function goTo(target: number) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// ── 存档导入导出 ──────────────────────────────────────────
+const importInput = ref<HTMLInputElement | null>(null);
+const saveMessage = ref('');
+
+function exportSave(): void {
+  const json = store.exportSave();
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  a.href = url;
+  a.download = `GTNH增量存档-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function onImportFile(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  // 覆盖当前进度是不可逆操作，解析前后都要用户确认
+  if (!window.confirm('导入会覆盖当前存档（现有进度将丢失），确定吗？')) return;
+  const text = await file.text();
+  const result = store.importSave(text);
+  saveMessage.value = result.message;
+}
+
 // 键盘 1/2/3 直接换页：输入框里打字时不触发
 function onKeydown(event: KeyboardEvent) {
   if (event.isComposing || view.value !== 'factory') return;
@@ -51,11 +80,12 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
-// 界面主题（设置页切换，随存档走）：亮灰皮肤挂在 body 类上，全站样式跟着换
+// 界面主题（设置页切换，随存档走）：皮肤类挂在 body 上，全站样式跟着换
 watch(
   () => store.snap.uiTheme,
   (theme) => {
     document.body.classList.toggle('skin-light', theme === 'light');
+    document.body.classList.toggle('theme-classic', theme === 'classic');
   },
   { immediate: true },
 );
@@ -139,16 +169,25 @@ onMounted(() => {
                 step="1"
                 :value="store.snap.autosaveSeconds"
                 aria-label="自动存档间隔（秒）"
-                @change="
+                @input="
                   store.setAutosaveSeconds(Number(($event.target as HTMLInputElement).value))
                 "
               />
               <span class="count">{{ store.snap.autosaveSeconds }} 秒</span>
             </div>
-            <p class="muted" style="margin: 0 0 8px">
-              自动每 {{ store.snap.autosaveSeconds }} 秒存一次。累计矿石
-              {{ store.snap.totalOre }}，累计产币 {{ store.snap.totalCoins }}。
-            </p>
+            <div class="row">
+              <div class="name muted">迁移存档</div>
+              <button @click="exportSave">导出存档</button>
+              <button @click="importInput?.click()">导入存档</button>
+              <input
+                ref="importInput"
+                type="file"
+                accept=".json,application/json"
+                style="display: none"
+                @change="onImportFile"
+              />
+            </div>
+            <p v-if="saveMessage" class="muted small" style="margin: 0 0 8px">{{ saveMessage }}</p>
             <div class="row">
               <div class="name muted">重开一局（会清掉存档）</div>
               <button @click="store.reset()">重置</button>

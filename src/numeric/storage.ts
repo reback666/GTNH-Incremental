@@ -5,9 +5,9 @@
 import { Decimal, ZERO, dec } from './decimal';
 import { assertTier } from './voltage';
 
-// 一台 ULV 电池的容量：1000 EU。
-// ULV 发电机的额定输出是 8 EU/t，装满约等于它跑 125 秒。
-export const ULV_BATTERY_CAPACITY = '1000';
+// 一台 ULV 电池的容量：16000 EU（2026-10-05 用户拍板 ×16，原来 1000）。
+// ULV 发电机的额定输出是 8 EU/t，装满约等于它跑 2000 秒。
+export const ULV_BATTERY_CAPACITY = '16000';
 export const BATTERY_CAPACITY_FACTOR = '4';
 
 export function batteryCapacityEU(tier: number): Decimal {

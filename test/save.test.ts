@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { deserialize, serialize, type SaveData } from '../src/game/save';
+import { deserialize, parseImportedSave, serialize, type SaveData } from '../src/game/save';
+import { SAVE_VERSION } from '../src/game/constants';
 import { GameCore } from '../src/game/core';
 import { dec } from '../src/numeric/decimal';
 import { useGameStore } from '../src/game/store';
@@ -193,12 +194,29 @@ describe('音效开关（v23）', () => {
   });
 });
 
+describe('导入存档（parseImportedSave）', () => {
+  it('导出的 JSON 能原样导入；版本比程序新时拒绝', () => {
+    const core = new GameCore();
+    core.setUiTheme('light');
+    const imported = parseImportedSave(JSON.stringify(serialize(core)));
+    expect(imported.uiTheme).toBe('light');
+
+    expect(() =>
+      parseImportedSave(JSON.stringify({ ...emptySave(), version: SAVE_VERSION + 1 })),
+    ).toThrow();
+    expect(() => parseImportedSave('不是 JSON')).toThrow();
+  });
+});
+
 describe('界面主题（v24）', () => {
   it('两套皮肤往返；旧档缺字段退回暗钢，乱写的值也退回暗钢', () => {
     const core = new GameCore();
     core.setUiTheme('light');
     expect(serialize(core).uiTheme).toBe('light');
     expect(deserialize(serialize(core)).uiTheme).toBe('light');
+
+    core.setUiTheme('classic');
+    expect(deserialize(serialize(core)).uiTheme).toBe('classic');
 
     const fresh = deserialize(emptySave());
     expect(fresh.uiTheme).toBe('dark');

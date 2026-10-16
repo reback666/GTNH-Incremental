@@ -554,12 +554,14 @@ h2 .small {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 48px;
   padding: 6px 0;
-  border-top: 1px solid var(--line);
+  /* 分隔线用内嵌 shadow 画：border 会占进高度，带线的行就比首行高 1px */
+  box-shadow: inset 0 1px 0 var(--line);
 }
 
 .row:first-of-type {
-  border-top: 0;
+  box-shadow: none;
 }
 
 .row .name {
@@ -573,6 +575,8 @@ h2 .small {
 .row .count {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+  /* 固定最小宽：「10 秒」↔「9 秒」宽度差不再把前面的滑条挤得左右跳 */
+  min-width: 3.5em;
 }
 
 .row button {
@@ -580,6 +584,7 @@ h2 .small {
   padding: 0 10px;
   font-size: 14px;
 }
+
 
 /* 运行 / 停机台数的小字（耗电明细与机器面板机型行共用） */
 .run-split {
@@ -590,7 +595,8 @@ h2 .small {
 
 /* ── 滑条（存档框的自动存档间隔等） ─────────────────────── */
 .time-slider {
-  flex: 1;
+  /* 固定宽度：flex 比例在行溢出时会被压缩（秒数从两位变一位那一下就会跳） */
+  flex: 0 0 240px;
   min-width: 0;
   min-height: 0;
   padding: 0;
@@ -616,16 +622,34 @@ h2 .small {
   cursor: default;
 }
 
+/* mode-picker 的 div 包内联按钮会多出基线缝隙（行高差 1px），改 flex 消掉 */
+.row .mode-picker {
+  display: flex;
+}
+
+/* 设置页行内的下拉按钮与菜单项：与 .row button 同一标准（36px/14px），别再比别的按钮高一头 */
+.row .mode-picker > button,
+.mode-menu button {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 14px;
+}
+
 /* 这块垫层是盖满全屏的透明按钮，必须豁免通用按钮的悬停/按下变色——
    否则菜单一开整个屏幕就被染成悬停灰（0.5.1 实际翻过车） */
+.mode-picker .mode-backdrop,
 .mode-picker .mode-backdrop:hover,
+.mode-picker .mode-backdrop:focus,
 .mode-picker .mode-backdrop:focus-visible,
 .mode-picker .mode-backdrop:active {
   background: transparent;
-  border-color: transparent;
+  border: 0;
+  border-image: none;
   outline: none;
   transform: none;
+  filter: none;
   box-shadow: none;
+  cursor: default;
 }
 
 .mode-picker .mode-menu {
@@ -1536,12 +1560,20 @@ h2 .small {
 .dev-tools select,
 .dev-tools input {
   font: inherit;
-  min-height: 44px;
+  font-size: 14px;
+  min-height: 36px;
   padding: 0 10px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--panel-2);
-  color: var(--text);
+  border: 2px solid;
+  border-image: var(--skin-btn) 2 / 2px stretch;
+  border-radius: 0;
+  background: var(--btn-face);
+  color: var(--btn-text);
+}
+
+/* 弹出的选项列表：跟随当前主题（原生渲染默认不吃页面变量） */
+.dev-tools select option {
+  background: var(--btn-face);
+  color: var(--btn-text);
 }
 
 .dev-tools .resource-row {
@@ -1556,7 +1588,7 @@ h2 .small {
 
 .dev-tools .dev-amount {
   flex: none;
-  width: 44px;
+  width: 88px;
   min-width: 0;
   padding: 0 6px;
   text-align: right;
@@ -2225,11 +2257,23 @@ h2 .small {
 }
 
 .stats {
-  /* 等宽网格：统计小格上下行列对齐（原来按内容宽度流式换行，参差不齐） */
+  /* 等宽网格：一行固定 6 个（用户拍板），上下行列对齐 */
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 6px;
   margin: 10px 0 8px;
+}
+
+/* 窄窗口放不下 7 列时退回 4 列 */
+@media (max-width: 900px) {
+  .stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* 开发者模式底部的内部状态读数：一行 6 个，格子更宽字不折行 */
+.stats.stats-6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .stat {
@@ -2661,28 +2705,6 @@ h2 .small {
   font-size: 12px;
 }
 
-/* 设置页的音效行：长得和其他选项行一样（左标题右箭头），点开折叠列表 */
-.sound-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  min-height: 48px;
-  margin-top: 0;
-  padding: 6px 0;
-  border-width: 0 0 1px;
-  border-color: var(--line);
-  font-weight: 600;
-  text-align: left;
-}
-
-.sound-toggle:not(:disabled):hover {
-  filter: none;
-  background: transparent;
-  color: var(--text);
-}
-
 /* 矿脉展示柜是「场景」不是按钮：点击只触发挖矿特效，大框本身不跟着亮/按下去
    （hover 提亮也要禁——否则按下去 active 归位、松开又回亮，一点击闪一下） */
 .vein-btn:not(:disabled):hover {
@@ -2719,6 +2741,180 @@ h2 .small {
   border-image: none;
   transform: none;
   filter: none;
+}
+
+/*
+  经典深色皮肤（.theme-classic）：完整复刻 UI 重设计前（0.5.2 时代）的观感——
+  青色主色、圆角平面面板、无贴图、系统字体的数字。只覆盖颜色与材质，
+  布局结构（侧栏 / 页签 / 展示柜）与字号沿用现在的可读性设定。
+  所有覆盖都挂在 body.theme-classic 下压过贴图规则。
+*/
+body.theme-classic {
+  --bg: #12161c;
+  --panel: #1b2129;
+  --panel-2: #232b35;
+  --line: #2f3946;
+  --text: #d7dee8;
+  --muted: #8b97a7;
+  --accent: #58c4a3;
+  --accent-rgb: 88, 196, 163;
+  --btn-face: #232b35;
+  --btn-text: #d7dee8;
+  --bg-glow: #1a2029;
+  --track: #141920;
+  /* 经典时代没有等宽字体，数字跟正文同族 */
+  --font-num: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+
+body.theme-classic .panel {
+  border-image: none;
+  border-width: 1px;
+  border-color: var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 2px 8px rgba(0, 0, 0, 0.22);
+}
+
+body.theme-classic button {
+  border-image: none;
+  border-width: 1px;
+  border-color: var(--line);
+  border-radius: 8px;
+  background: var(--btn-face);
+}
+
+body.theme-classic button:not(:disabled):hover {
+  filter: none;
+  border-color: #4a5a6c;
+  background: #2a3441;
+}
+
+body.theme-classic button:not(:disabled):active {
+  border-image: none;
+  transform: translateY(1px);
+  filter: none;
+}
+
+body.theme-classic button:disabled {
+  border-image: none;
+  opacity: 0.4;
+}
+
+body.theme-classic button.primary {
+  background: rgba(var(--accent-rgb), 0.08);
+}
+
+body.theme-classic button.primary:not(:disabled):hover {
+  background: rgba(var(--accent-rgb), 0.16);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.18);
+}
+
+/* 插槽格全部退回圆角平面 */
+body.theme-classic .chip,
+body.theme-classic .power-box,
+body.theme-classic .stat,
+body.theme-classic .tag,
+body.theme-classic .grid-mode,
+body.theme-classic .universe {
+  border-image: none;
+  border-color: var(--line);
+  background: var(--panel-2);
+  border-radius: 9px;
+}
+
+body.theme-classic .tag {
+  border-radius: 999px;
+}
+
+body.theme-classic .stat {
+  border-radius: 6px;
+}
+
+body.theme-classic .machine-tab {
+  border-image: none;
+  border-color: var(--line);
+  border-radius: 10px;
+}
+
+body.theme-classic .achievement {
+  border-image: none;
+  border-color: var(--line);
+  border-radius: 10px;
+  background: #1a2027;
+}
+
+/* 经典时代的绿系状态色 */
+body.theme-classic .universe.owned {
+  border-color: #4a6a5c;
+  background: #22322c;
+  box-shadow: none;
+}
+
+body.theme-classic .achievement.done {
+  border-color: #4a6a5c;
+  background: #22322c;
+  box-shadow: inset 0 0 0 1px rgba(88, 196, 163, 0.22);
+}
+
+body.theme-classic .rebirth-node.owned {
+  border-color: #4a6a5c;
+  background: #22322c;
+  color: #9fd8c4;
+}
+
+body.theme-classic .rebirth-node {
+  border-radius: 8px;
+  background: #1a2027;
+}
+
+body.theme-classic .dev-tools select,
+body.theme-classic .dev-tools input {
+  border-image: none;
+  border-width: 1px;
+  border-color: var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+body.theme-classic .rebirth-root {
+  border-radius: 8px;
+}
+
+body.theme-classic .research-item {
+  border-radius: 8px;
+}
+
+/* 矿脉展示柜：经典时代的径向底 + 圆角 */
+body.theme-classic .vein-btn {
+  border-image: none;
+  border-color: #3a4553;
+  border-radius: 10px;
+  background: radial-gradient(circle at 50% 65%, #232b35 0%, #171c23 70%);
+}
+
+/* 裂缝弹窗：经典时代的蓝边深底 */
+body.theme-classic .rift-dialog {
+  border-image: none;
+  border-width: 1px;
+  border-radius: 12px;
+  border-color: #3a5a6e;
+  background: #171d25;
+}
+
+body.theme-classic .rift-dialog h2 {
+  color: #8fd0ff;
+}
+
+/* 电压徽标：经典时代没有徽标，用青色描边融入当时的观感 */
+body.theme-classic .volt-badge.volt-max {
+  border-image: none;
+  border-color: var(--accent);
+  background: none;
+  color: var(--accent);
+  -webkit-text-fill-color: var(--accent);
 }
 
 /* 系统开了「减少动态效果」时，砍掉装饰性动画，只留必要的状态变化 */@media (prefers-reduced-motion: reduce) {

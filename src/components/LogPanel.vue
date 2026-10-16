@@ -78,7 +78,7 @@ function downloadLog(): void {
 }
 
 function clearAll(): void {
-  if (!window.confirm('清空后这份日志就找不回来了，确定吗？')) return;
+  if (!window.confirm('是否永久删除日志（真的很久!）')) return;
   clearLog();
   fallback.value = '';
   hint.value = '日志已清空。';

@@ -166,10 +166,10 @@ describe('存电装置', () => {
     core.counts[ULV_MINER] = 1; // 耗电 2 EU/t
     core.counts[ULV_MACHINE] = 1; // 耗电 8 EU/t
     core.counts['g-mv-steam'] = 1; // 128 EU/t × 0.75 效率
-    core.counts['b-3'] = 1; // MV 储电箱：16000 EU
+    core.counts['b-3'] = 1; // MV 储电箱：256000 EU
     core.ores[2] = dec('1000');
 
-    expect(core.batteryCapacity().toString()).toBe('16000');
+    expect(core.batteryCapacity().toString()).toBe('256000');
 
     // 第一阶段：发电机富余，电池充起来
     core.tick(1);

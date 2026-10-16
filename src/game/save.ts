@@ -20,6 +20,7 @@ import {
   SAVE_KEY,
   SAVE_TIME_KEY,
   SAVE_VERSION,
+  THEME_KEY,
 } from './constants';
 import { errorText, logEvent } from './log';
 
@@ -359,13 +360,13 @@ function booleanOr(value: unknown, fallback: boolean): boolean {
 // 数字显示模式只认三个合法值，乱写的退回自动（K / M 后缀那套）
 const DISPLAY_MODES = new Set<string>(['auto', 'scientific', 'full']);
 
-function cleanDisplayMode(value: unknown): DisplayMode {
+export function cleanDisplayMode(value: unknown): DisplayMode {
   return typeof value === 'string' && DISPLAY_MODES.has(value) ? (value as DisplayMode) : 'auto';
 }
 
-// 界面主题只认两套皮肤，乱写的退回暗钢（默认皮肤）
-function cleanUiTheme(value: unknown): UiTheme {
-  return value === 'light' ? 'light' : 'dark';
+// 界面主题只认三套皮肤，乱写的退回暗钢（默认皮肤）
+export function cleanUiTheme(value: unknown): UiTheme {
+  return value === 'light' || value === 'classic' ? (value as UiTheme) : 'dark';
 }
 
 // 被单独关掉的音效只认音效表里有的 id，重复与乱写直接丢
@@ -646,13 +647,43 @@ export function loadFromStorage(): GameCore | null {
   }
 }
 
+/*
+  导入的存档走与本地读取同一套校验：JSON 可解析、版本号在支持范围内，
+  然后经过 deserialize 的逐字段清洗（坏值收敛、旧版本迁移）。失败直接抛错，
+  由调用方（store.importSave）记日志并给用户提示，绝不部分生效。
+*/
+export function parseImportedSave(text: string): GameCore {
+  const data = JSON.parse(text) as SaveData;
+  if (!Number.isInteger(data.version) || data.version < 1 || data.version > SAVE_VERSION) {
+    throw new Error(`存档版本 ${String(data.version)} 无法识别（当前程序支持 1～${SAVE_VERSION}）`);
+  }
+  return deserialize(data);
+}
+
+// 界面主题存在独立键里：跨存档、跨重开一局都保留
+export function readSavedTheme(): unknown {
+  try {
+    return localStorage.getItem(THEME_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function writeSavedTheme(theme: UiTheme): void {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    // 写不进去就只在当前局生效
+  }
+}
+
 export function clearStorage(): void {
   if (typeof localStorage === 'undefined') return;
   localStorage.removeItem(SAVE_KEY);
   localStorage.removeItem(SAVE_TIME_KEY);
 }
 
-function writeSaveTime(): void {
+export function writeSaveTime(): void {
   try {
     localStorage.setItem(SAVE_TIME_KEY, String(Date.now()));
   } catch {
