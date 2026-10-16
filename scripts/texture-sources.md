@@ -243,3 +243,9 @@ blast 1~13 级：原图本身是彩色的，机器那套淡染（`TINT_STRENGTH 
 
 图标和矿脉条带一律内联进单个 HTML（`vite.config.ts` 把 `assetsInlineLimit` 提到 4 MB），
 因为 `scripts/inline-dist.ts` 打包后会删掉 `assets/` 目录 —— 超过阈值的贴图会变成打不开的外部文件。
+
+
+## 厂区机壳面
+
+`src/assets/casings/<tier>-side.png` 与 `<tier>-top.png` 由 `build-scene-casings.py` 从本机 GT5-Unofficial 开发包的 `iconsets/MACHINE_<voltage>_SIDE/TOP.png` 提取。
+染色复用 `gtnh_tiers.py`；缺少独立顶面的等级使用同级侧面。Canvas 将它们与现有机型功能面投影到完整方块表面。

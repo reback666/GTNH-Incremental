@@ -1,9 +1,9 @@
 {
   "name": "gtnh-incremental",
   "private": true,
-  "version": "0.6.3",
+  "version": "0.7.2",
   "type": "module",
-  "description": "GTNH 增量游戏数值层（纯逻辑模块，无 UI）",
+  "description": "GTNH 本地增量游戏：数值模拟、工业控制台与实时厂区",
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",

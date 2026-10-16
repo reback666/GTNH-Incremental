@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { useMotion } from '../composables/useMotion';
 import { onFx, type FxEvent } from '../game/fx';
 
 /*
@@ -20,7 +21,19 @@ interface Spark {
   delay: number;
 }
 
+const motion = useMotion();
+const timers = new Set<ReturnType<typeof setTimeout>>();
+function later(callback: () => void, delay: number) {
+  const timer = setTimeout(() => { timers.delete(timer); callback(); }, delay);
+  timers.add(timer);
+}
+function clearEffects() {
+  for (const timer of timers) clearTimeout(timer);
+  timers.clear();
+  sparks.value = [];
+}
 const sparks = ref<Spark[]>([]);
+watch(motion.active, active => { if (!active) clearEffects(); });
 let nextId = 0;
 let cleanup: (() => void) | null = null;
 
@@ -43,26 +56,24 @@ function burst(centerLeft: number, centerTop: number, count: number, colors: str
       delay: Math.random() * 0.08,
     });
   }
-  setTimeout(() => {
+  later(() => {
     sparks.value = [];
   }, 1400);
 }
 
 onMounted(() => {
-  const reduced =
-    typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduced) return;
   cleanup = onFx((event: FxEvent) => {
-    if (event.kind === 'voltage-unlock') {
+    if (motion.active.value && event.kind === 'voltage-unlock') {
       burst(30 + Math.random() * 40, 18 + Math.random() * 12, 26, FIREWORK_COLORS);
       // 半拍后补一簇小的，层次感
-      setTimeout(() => burst(25 + Math.random() * 50, 24 + Math.random() * 10, 14, FIREWORK_COLORS), 180);
+      later(() => burst(25 + Math.random() * 50, 24 + Math.random() * 10, 14, FIREWORK_COLORS), 180);
     }
   });
 });
 
 onUnmounted(() => {
   cleanup?.();
+  clearEffects();
 });
 </script>
 

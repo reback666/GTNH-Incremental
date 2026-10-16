@@ -1,0 +1,97 @@
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('../assets/fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('../assets/fonts/jetbrains-mono-latin-700-normal.woff2') format('woff2');
+}
+
+
+:root {
+  --rail: #171b22;
+  --bg: #0d1015;
+  --panel: #1e222a;
+  --panel-2: #262b34;
+  --line: #3a414d;
+  --text: #f0f5fb;
+  
+  --muted: #c6d1de;
+  --accent: #aebdce;
+  --accent-rgb: 174, 189, 206;
+  --warn: #e0a33e;
+  --danger: #d9524f;
+
+  
+  --skin-panel: url('../assets/gui/panel-dark.png');
+  --skin-btn: url('../assets/gui/btn-dark.png');
+  --skin-btn-pressed: url('../assets/gui/btn-dark-pressed.png');
+  --skin-btn-disabled: url('../assets/gui/btn-dark-disabled.png');
+  --skin-slot: url('../assets/gui/slot-dark.png');
+  --btn-face: #23262e;
+  --btn-text: #e8edf4;
+
+  
+  --bg-glow: #1a2029;
+  --track: #14181e;
+
+  
+  --font-num: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  
+  --vt1: #ff5555;
+  --vt2: #778899;
+  --vt3: #ff8c00;
+  --vt4: #ffd700;
+  --vt5: #696969;
+  --vt6: #4169e1;
+  --vt7: #ff00ff;
+  --vt8: #00ced1;
+  --vt9: #008000;
+  --vt10: #8b0000;
+  --vt11: #8b008b;
+  --vt12: #0000cd;
+  --vt13: #aa0000;
+  --vt14: linear-gradient(90deg, #ff5555, #ffaa00, #ffff55, #55ff55, #55ffff, #5555ff, #aa00aa, #ff55ff);
+  
+  --vt14-text: linear-gradient(90deg, #ff8080, #ffc069, #ffff80, #80ff80, #80ffff, #8fb8ff, #e070e0, #ff90ff);
+
+  color-scheme: dark;
+}
+
+
+body.skin-light {
+  --rail: #b9b9c1;
+  --panel: #c6c6c6;
+  --panel-2: #b0b0b0;
+  --line: #8f8f9d;
+  --text: #1e1e22;
+  --muted: #4c4c56;
+  --accent: #3d5a80;
+  --accent-rgb: 61, 90, 128;
+  --btn-face: #8b8b8b;
+  --btn-text: #16161a;
+  --skin-panel: url('../assets/gui/panel-light.png');
+  --skin-btn: url('../assets/gui/btn.png');
+  --skin-btn-pressed: url('../assets/gui/btn-pressed.png');
+  --skin-btn-disabled: url('../assets/gui/btn-disabled.png');
+  --skin-slot: url('../assets/gui/slot-item.png');
+  --bg: #90909a;
+  --bg-glow: #a2a2ac;
+  --track: #81818b;
+  color-scheme: light;
+}
+
+body.theme-classic {
+  --bg: #12161c; --panel: #1b2129; --panel-2: #232b35; --line: #2f3946;
+  --text: #d7dee8; --muted: #a8b3c2; --accent: #58c4a3; --accent-rgb: 88,196,163;
+  --btn-face: #232b35; --btn-text: #d7dee8; --track: #141920; --rail: #161e25;
+}

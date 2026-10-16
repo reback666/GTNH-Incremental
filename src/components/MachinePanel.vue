@@ -1,13 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import {
-  useGameStore,
-  type MachineColumn,
-  type MachineModelRow,
-  type ModifierRow,
-  type MachineTierGroup,
-  type PickaxeLineRow,
-} from '../game/store';
+import { useGameStore } from '../game/store';
+import type { MachineColumn, MachineModelRow, ModifierRow, MachineTierGroup, PickaxeLineRow } from '../game/presentation/types';
 import type { MachineKind, PayWith } from '../game/core';
 import {
   MAX_OVERCLOCK_LEVEL as MAX_OC,
@@ -18,13 +12,13 @@ import { formatNumber } from '../numeric/format';
 import MachineIcon from './MachineIcon.vue';
 import { pickaxeIconUrl, pickaxeIconIsStrip, pickaxeStripMeta } from '../game/pickaxe-icons';
 
-const props = defineProps<{ columns: MachineColumn[] }>();
+const props = defineProps<{ columns: MachineColumn[]; activeKind: MachineKind | 'pickaxe' | null }>();
 const store = useGameStore();
+const content = ref<HTMLElement | null>(null);
 
-// 最上方是一排大类标签，点谁就展开谁，其余挤压收起。
-// 最后一个是「镐子」：它不是机器类别，展开的是手动挖矿的三条升级线。
-// null = 全部收起（再点一次已打开的页签就收起）
-const active = ref<MachineKind | 'pickaxe' | null>('miner');
+// 内容视口保持高度，类别切换只替换视口内的内容，避免页面滚动锚点跳动。
+const emit = defineEmits<{ 'update:activeKind': [kind: MachineKind | 'pickaxe' | null] }>();
+const active = computed({ get: () => props.activeKind, set: kind => emit('update:activeKind', kind) });
 const PICKAXE_TAB = 'pickaxe';
 
 // 镐子标签上的角标：只在「有机会、又买得起」时提示
@@ -176,6 +170,10 @@ const bars = computed<Bar[]>(() => {
 });
 
 const activeColumn = computed(() => props.columns.find((item) => item.kind === active.value) ?? null);
+watch(active, () => {
+  hideTip();
+  if (content.value) content.value.scrollTop = 0;
+}, { flush: 'post' });
 
 // 列可能整列消失（比如奥术宇宙的灵气节点在没那个宇宙时不显示），
 // 这时把选中的类别拉回第一列，面板不会空着
@@ -221,8 +219,8 @@ function canBuy(model: MachineModelRow): boolean {
       <button
         type="button"
         class="machine-tab"
-        :class="{ active: active === PICKAXE_TAB }"
-        @click="active = active === PICKAXE_TAB ? null : PICKAXE_TAB"
+        :class="{ active: active === PICKAXE_TAB }" :aria-pressed="active === PICKAXE_TAB"
+        @click="active = PICKAXE_TAB"
         @mouseenter="showColumnTip($event, '镐子', store.snap.pickaxe.modifiers)"
         @mouseleave="hideTip"
         @focus="showColumnTip($event, '镐子', store.snap.pickaxe.modifiers)"
@@ -246,8 +244,8 @@ function canBuy(model: MachineModelRow): boolean {
         :key="column.kind"
         type="button"
         class="machine-tab"
-        :class="{ active: active === column.kind }"
-        @click="active = active === column.kind ? null : column.kind"
+        :class="{ active: active === column.kind }" :aria-pressed="active === column.kind"
+        @click="active = column.kind"
         @mouseenter="showColumnTip($event, column.title, column.modifiers)"
         @mouseleave="hideTip"
         @focus="showColumnTip($event, column.title, column.modifiers)"
@@ -259,19 +257,19 @@ function canBuy(model: MachineModelRow): boolean {
       </button>
     </div>
 
-    <div v-for="column in columns" :key="column.kind" class="machine-body" :class="{ collapsed: active !== column.kind }">
+    <div v-if="activeColumn" ref="content" class="machine-body" role="region" :aria-label="`${activeColumn.title}设备列表`">
       <div class="inner">
         <div class="pad">
-          <p class="muted small hint">{{ column.hint }}</p>
+          <p class="muted small hint">{{ activeColumn.hint }}</p>
 
           <dl class="stats">
-            <div v-for="stat in column.stats" :key="stat.label" class="stat">
+            <div v-for="stat in activeColumn.stats" :key="stat.label" class="stat">
               <dt>{{ stat.label }}</dt>
               <dd>{{ stat.value }}</dd>
             </div>
           </dl>
 
-          <template v-if="column.kind === 'research'">
+          <template v-if="activeColumn.kind === 'research'">
             <div class="row">
               <button
                 :class="{ primary: researchView === 'machine' }"
@@ -288,7 +286,7 @@ function canBuy(model: MachineModelRow): boolean {
             </div>
           </template>
 
-          <template v-if="column.kind !== 'research' || researchView === 'machine'">
+          <template v-if="activeColumn.kind !== 'research' || researchView === 'machine'">
           <div class="row pay-row">
             <span class="muted small">支付</span>
             <button :class="{ primary: payWith === 'coin' }" @click="payWith = 'coin'">GT 币</button>
@@ -317,7 +315,7 @@ function canBuy(model: MachineModelRow): boolean {
                 @focus="showTip($event, bar.model)"
                 @blur="hideTip"
               >
-                <span class="model-label">{{ bar.model.name }}</span>
+                <MachineIcon :model-id="bar.model.id" :kind="activeColumn.kind" :size="24" /><span class="model-label">{{ bar.model.name }}</span>
                 <span v-if="bar.model.block === 'multiblock'" class="badge mb" title="多方块：产出与效率更高，成本系数也更高">多方块</span>
                 <span v-if="!bar.model.researched" class="badge warn" title="要先在研究里解锁这一级机型">需研究</span>
                 <span
@@ -328,16 +326,16 @@ function canBuy(model: MachineModelRow): boolean {
                 >
               </span>
 
-              <div class="tier-icons">
+              <div class="tier-icons" aria-hidden="true">
                 <MachineIcon
-                  v-for="index in cells(bar.model.icons)"
+                  v-for="index in cells(Math.min(bar.model.count, 5))"
                   :key="index"
                   :model-id="bar.model.id"
-                  :kind="column.kind"
+                  :kind="activeColumn.kind"
                   :size="26"
                   class="icon-pop"
                 />
-                <span v-if="bar.model.overflow > 0" class="icon-overflow">+{{ bar.model.overflow }}</span>
+                <span v-if="bar.model.count > 5" class="icon-overflow">+{{ bar.model.count - 5 }}</span>
               </div>
 
               <span class="count">×{{ bar.model.count }}</span>
@@ -433,7 +431,7 @@ function canBuy(model: MachineModelRow): boolean {
           </template>
 
           <!-- 研究：当前研究置顶，下面列出所有还没研究出来的机型（可点选） -->
-          <template v-if="column.kind === 'research' && researchView === 'study'">
+          <template v-if="activeColumn.kind === 'research' && researchView === 'study'">
             <h3 class="research-sub">当前研究</h3>
             <div class="research">
               <div class="research-head">
@@ -495,7 +493,7 @@ function canBuy(model: MachineModelRow): boolean {
     </div>
 
     <!-- 镐子：手动挖矿的三条升级线 -->
-    <div class="machine-body" :class="{ collapsed: active !== PICKAXE_TAB }">
+    <div v-else-if="active === PICKAXE_TAB" ref="content" class="machine-body" role="region" aria-label="镐子升级列表">
       <div class="inner">
         <div class="pad">
           <p class="muted small hint">

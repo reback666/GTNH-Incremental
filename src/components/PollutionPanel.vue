@@ -2,15 +2,14 @@
 import { computed } from 'vue';
 import { useGameStore } from '../game/store';
 
-// 污染读数（计划书第六章）。整体开关在设置页（第 3 页），读数放在工厂页最下方，
-// 这样一边看机器一边就能看到污染在往哪边走。
+// 污染开关由设置页控制，这里只读取核心快照。
 const store = useGameStore();
 const risk = computed(() => store.snap.risk);
 const snap = computed(() => store.snap);
 </script>
 
 <template>
-  <section class="panel">
+  <section class="panel pollution-panel">
     <h2>污染</h2>
     <div class="pollution">
       <div class="pollution-head">

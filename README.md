@@ -1,9 +1,13 @@
 # GTNH 增量
 
-GTNH 主题的增量 / 放置小游戏：从超低压 ULV 起步，沿着 14 级电压做到 MAX。
-产物是**单个 HTML 文件**，双击就能玩，也方便直接发给别人。
+本地私人使用的 GTNH 主题增量 / 放置游戏，从 ULV 开始发展到 MAX。
+主画面是可交互的工业厂区，机器、输送线与电力反馈随真实进度变化。
 
-- **现在做到哪、接下来做什么：见 [docs/status.md](docs/status.md)（接手先看这份）**
-- 设计规划书：`plan.txt`
-- 常用命令：`npm test` / `npm run build` / `npm run dev` / `npm run balance`
-- 产物：`dist/GTNH增量.html`（单文件，全资源内联）
+- 项目现状、运行命令与产物：[docs/status.md](docs/status.md)
+- 代码结构与界面约束：[docs/architecture.md](docs/architecture.md)
+- 游戏规则与规划：`plan.txt`
+
+首次使用执行 `npm install`，开发执行 `npm run dev`。
+可运行 `npm run build` 生成便携游戏与常规 Web 目录；具体入口见操作说明。
+
+![厂区示例（独立测试进度）](docs/factory-overview.png)

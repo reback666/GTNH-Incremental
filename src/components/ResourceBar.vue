@@ -1,96 +1,53 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useGameStore } from '../game/store';
 import AnimatedNumber from './AnimatedNumber.vue';
-
+import UiIcon from './UiIcon.vue';
 const store = useGameStore();
-const snap = computed(() => store.snap);
-
-// 离线收益横幅：这次打开页面期间关掉就不再出现（关闭状态放在 store 上，换页不丢）
-const offlineDismissed = computed(() => store.offlineBannerDismissed);
+const selected = ref<{ kind: 'ore' | 'coin'; tier: number } | null>(null);
+const groups = computed(() => [
+  { kind: 'ore' as const, title: '材料库存', rows: store.snap.ores },
+  { kind: 'coin' as const, title: 'GT 币', rows: store.snap.coins },
+]);
+const activeRow = computed(() => selected.value
+  ? groups.value.find(group => group.kind === selected.value!.kind)?.rows.find(row => row.tier === selected.value!.tier)
+  : null);
+function inspect(kind: 'ore' | 'coin', tier: number) {
+  selected.value = selected.value?.kind === kind && selected.value.tier === tier ? null : { kind, tier };
+}
 </script>
 
 <template>
-  <section class="panel">
-    <!-- 离线收益：横幅卡片，看完点 × 收起 -->
-    <div v-if="store.offlineNote && !offlineDismissed" class="offline-banner">
-      <span class="offline-icon" aria-hidden="true">⏱</span>
-      <span class="offline-text">{{ store.offlineNote }}</span>
-      <button type="button" class="offline-close" aria-label="收起离线收益" @click="store.offlineBannerDismissed = true">
-        ×
-      </button>
+  <section class="panel resource-strip">
+    <div v-if="store.offlineNote && !store.offlineBannerDismissed" class="offline-banner">
+      <UiIcon name="clock" :size="16" /><span class="offline-text">{{ store.offlineNote }}</span>
+      <button type="button" class="offline-close" aria-label="收起离线收益" @click="store.offlineBannerDismissed = true">×</button>
     </div>
-
-    <!-- ── 矿石（电能四格与标题已搬进左侧仪表侧栏，换页常驻） ── -->
-    <h2>矿石</h2>
-    <div class="chips">
-      <!-- 鼠标移上去（或键盘聚焦）时，框向下拉伸出这一级的实时产量 -->
-      <div v-for="row in snap.ores" :key="row.tier" class="chip" tabindex="0">
-        <div class="chip-head">
-          <span class="chip-name">{{ row.name }}</span>
-          <AnimatedNumber :value="row.value" :display="row.amount" />
-        </div>
-        <div class="chip-detail">
-          <div class="chip-clip">
-            <div v-for="line in row.detail" :key="line.label" class="chip-line">
-              <span>{{ line.label }}</span>
-              <b>{{ line.value }}</b>
-            </div>
-          </div>
-        </div>
+    <div v-for="group in groups" :key="group.kind" class="resource-group">
+      <h2>{{ group.title }} <span class="small muted">点击查看收支</span></h2>
+      <div class="inventory-slots">
+        <button v-for="row in group.rows" :key="row.tier" type="button" class="inventory-slot"
+          :class="{ active: selected?.kind === group.kind && selected?.tier === row.tier }"
+          :aria-expanded="selected?.kind === group.kind && selected?.tier === row.tier"
+          :aria-label="`${row.name}，${row.amount}，查看收支`" @click="inspect(group.kind, row.tier)">
+          <span>{{ row.name }}</span><AnimatedNumber :value="row.value" :display="row.amount" />
+        </button>
       </div>
     </div>
-
-    <!-- ── 第三行：GT 币 ────────────────────────────────────── -->
-    <h2 class="mt">GT 币</h2>
-    <div class="chips">
-      <div v-for="row in snap.coins" :key="row.tier" class="chip" tabindex="0">
-        <div class="chip-head">
-          <span class="chip-name">{{ row.name }}</span>
-          <AnimatedNumber :value="row.value" :display="row.amount" />
-        </div>
-        <div class="chip-detail">
-          <div class="chip-clip">
-            <div v-for="line in row.detail" :key="line.label" class="chip-line">
-              <span>{{ line.label }}</span>
-              <b>{{ line.value }}</b>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div v-if="activeRow" class="inventory-detail" role="region" :aria-label="`${activeRow.name}收支明细`">
+      <strong>{{ activeRow.name }}</strong>
+      <dl><div v-for="line in activeRow.detail" :key="line.label"><dt>{{ line.label }}</dt><dd>{{ line.value }}</dd></div></dl>
+      <button type="button" aria-label="关闭资源明细" @click="selected = null">×</button>
     </div>
-
-    <!-- ── 奥术宇宙：灵气与源质 ─────────────────────────────── -->
-    <template v-if="snap.arcane.active">
-      <h2 class="mt">灵气（奥术宇宙）</h2>
+    <section v-if="store.snap.arcane.active" class="inventory-arcane">
+      <h2>灵气与源质</h2>
       <dl class="stats stats-loose">
-        <div class="stat">
-          <dt>灵气产出</dt>
-          <dd>{{ snap.arcane.visProduced }}</dd>
-        </div>
-        <div class="stat">
-          <dt>灵气消耗</dt>
-          <dd>{{ snap.arcane.visUsed }}</dd>
-        </div>
-        <div class="stat">
-          <dt>灵气充裕度</dt>
-          <dd>{{ snap.arcane.plenty }}</dd>
-        </div>
-        <div class="stat">
-          <dt>产量加成</dt>
-          <dd>普通 {{ snap.arcane.bonusNormal }} / 魔法 {{ snap.arcane.bonusMagic }}</dd>
-        </div>
-        <div class="stat">
-          <dt>源质存量</dt>
-          <dd>{{ snap.arcane.essentia }}</dd>
-        </div>
-        <div class="stat">
-          <dt>源质净变化</dt>
-          <dd :class="{ danger: !snap.arcane.essentiaPositive }">{{ snap.arcane.essentiaNet }}</dd>
-        </div>
+        <div class="stat"><dt>灵气产出</dt><dd>{{ store.snap.arcane.visProduced }}</dd></div>
+        <div class="stat"><dt>灵气消耗</dt><dd>{{ store.snap.arcane.visUsed }}</dd></div>
+        <div class="stat"><dt>灵气充裕度</dt><dd>{{ store.snap.arcane.plenty }}</dd></div>
+        <div class="stat"><dt>源质存量</dt><dd>{{ store.snap.arcane.essentia }}</dd></div>
+        <div class="stat"><dt>源质净变化</dt><dd>{{ store.snap.arcane.essentiaNet }}</dd></div>
       </dl>
-      <p class="muted small" style="margin: 6px 0 0">{{ snap.arcane.note }}</p>
-    </template>
-
+    </section>
   </section>
 </template>

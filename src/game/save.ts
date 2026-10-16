@@ -589,11 +589,11 @@ function migrateFromV1(data: SaveData): Record<string, number> {
   return counts;
 }
 
-export function saveToStorage(core: GameCore): void {
+export function saveToStorage(core: GameCore, savedAt = Date.now()): void {
   if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(serialize(core)));
-    writeSaveTime();
+    writeSaveTime(savedAt);
     if (writeFailureLogged) {
       writeFailureLogged = false;
       logEvent('info', 'save.write', '存档恢复正常，能写进去了');
@@ -683,9 +683,9 @@ export function clearStorage(): void {
   localStorage.removeItem(SAVE_TIME_KEY);
 }
 
-export function writeSaveTime(): void {
+export function writeSaveTime(savedAt = Date.now()): void {
   try {
-    localStorage.setItem(SAVE_TIME_KEY, String(Date.now()));
+    localStorage.setItem(SAVE_TIME_KEY, String(savedAt));
   } catch {
     // 写不进去就不补算离线收益：宁可少给，也不要拿一个假时间戳去算
   }
