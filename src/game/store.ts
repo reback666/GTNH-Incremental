@@ -7,6 +7,7 @@ import { type PickaxeLine } from '../numeric/pickaxe';
 import { pollutionBand } from '../numeric/pollution';
 import { type GridMode } from '../numeric/grid';
 import { challengeById, challengeSettles } from './challenges';
+import { ACHIEVEMENTS } from './achievements';
 import { type DevResourceTarget, type GameCore, type PayWith, type TickReport, type UiTheme } from './core';
 import { MACHINE_MODELS, type MachineModel } from './models';
 import { getCore, resetCore, setCore } from './engine';
@@ -14,8 +15,9 @@ import { playSound, SOUNDS, type SoundId } from './audio';
 import { emitFx } from './fx';
 import * as C from './constants';
 import { cleanDisplayMode, cleanUiTheme, clearStorage, loadFromStorage, parseImportedSave, saveToStorage, secondsSinceLastSave, serialize, writeSaveTime, readSavedTheme, writeSavedTheme } from './save';
-import { appVersion, buildStamp, stateSnapshot } from './diagnostics';
-import { errorText, logEntries, logEvent, onLogChange, setLogGameSeconds } from './log';
+import { crashDetail } from './diagnostics';
+import { appVersion, buildStamp } from './build-info';
+import { batchLogEvents, flushLog, logEntries, logEvent, onLogChange, setLogGameSeconds, type LogContext } from './log';
 
 import { buildSnapshot } from './presentation/snapshot';
 import type { Snapshot } from './presentation/types';
@@ -75,9 +77,10 @@ export const useGameStore = defineStore('game', {
     // 正在补算离线收益（这期间不让在线模拟叠上去）
     catchingUp: false,
     catchUpProgress: 0,
-    // 日志里的错误条数，以及玩家已经看过的条数（设置页按钮上的小红点用它）
+    // 未读以事件序号为游标；轮转和合并不会掩盖后续发生的新错误。
     logErrors: 0,
-    seenErrors: 0,
+    seenErrorSeq: 0,
+    unseenErrors: 0,
     // 上一拍的关键状态，用来只在「状态变了」的时候记一笔日志
     phase: {
       maxTier: 1,
@@ -89,7 +92,7 @@ export const useGameStore = defineStore('game', {
   }),
   getters: {
     snap: (state): Snapshot => state.snapshot ?? buildSnapshot(getCore()),
-    unseenLogErrors: (state): number => Math.max(0, state.logErrors - state.seenErrors),
+    unseenLogErrors: (state): number => state.unseenErrors,
   },
   actions: {
     toggleAchievements(): void {
@@ -120,13 +123,15 @@ export const useGameStore = defineStore('game', {
       this.stop();
       this.simulationPaused = false;
       this.crashStreak = 0;
+      setLogGameSeconds(0);
       const loaded = loadFromStorage();
       // 先读时间戳再补算：补算之后马上会写一次档，时间戳会被刷新
       const away = loaded ? secondsSinceLastSave() : 0;
       if (loaded) setCore(loaded);
+      setLogGameSeconds(getCore().playSeconds);
       this.applySavedTheme();
       logEvent('info', 'app.boot', `启动游戏（版本 v${appVersion()}，构建 ${buildStamp()}）`);
-      this.phase.maxTier = getCore().maxTier;
+      this.syncPhase();
       // 日志变了就刷新错误条数：设置页按钮上的小红点靠它
       cleanups.push(onLogChange(() => this.syncLogErrors()));
       this.syncLogErrors();
@@ -153,6 +158,9 @@ export const useGameStore = defineStore('game', {
       this.offlineBannerDismissed = false;
       catchUpSaveTime = baseTime;
       this.offlineNote = `离线 ${away}，正在补算生产进度…`;
+      const startedAt = performance.now();
+      logEvent('info', 'offline.start', `开始离线补算 ${away}`, undefined, { requestedSeconds: seconds, seconds: total });
+      const finishLogs = batchLogEvents();
       try {
         await advanceSimulation({
           seconds: total,
@@ -160,6 +168,8 @@ export const useGameStore = defineStore('game', {
           tick: step => {
             if (getCore() !== core) { controller.abort(); return; }
             core.tick(step);
+            setLogGameSeconds(core.playSeconds);
+            this.watch(core, core.lastReport, true);
             advanced += step;
             catchUpSaveTime = baseTime + advanced * 1000;
           },
@@ -168,13 +178,14 @@ export const useGameStore = defineStore('game', {
       } catch (error) {
         failed = true;
         this.simulationPaused = true;
-        logEvent('error', 'offline.crash', '离线补算出错，已暂停模拟并保留未补算的时间', errorText(error));
+        logEvent('error', 'offline.crash', '离线补算出错，已暂停模拟并保留未补算的时间', crashDetail(error, core), { advanced, remaining: total - advanced });
+      } finally {
+        finishLogs();
       }
       // 重置、导入或卸载后，旧异步任务不能刷新界面或覆盖新存档。
       if (controller.signal.aborted || catchUpController !== controller) return;
       catchUpController = null;
       this.catchingUp = false;
-      this.watch(core, core.lastReport);
       this.refresh();
       this.save();
       if (!failed) catchUpSaveTime = null;
@@ -184,7 +195,10 @@ export const useGameStore = defineStore('game', {
         ? `离线补算已暂停，已完成 ${formatDuration(advanced)}；刷新后可继续补算剩余时间。`
         : `离线 ${away}，已补算：矿石 +${formatNumber(gainedOre)}、GT 币 +${formatNumber(gainedCoins)}` +
           (total < seconds ? '（超过 24 小时的部分不计）' : '');
-      logEvent('info', 'offline.catchup', `离线补算 ${away}`, this.offlineNote);
+      logEvent('info', 'offline.catchup', failed ? '离线补算部分完成' : `离线补算完成 ${away}`, this.offlineNote, {
+        advanced, remaining: total - advanced, durationMs: Math.round(performance.now() - startedAt),
+        oreGained: gainedOre.toString(), coinsGained: gainedCoins.toString(), failed,
+      });
     },
     cancelCatchUp(): void {
       catchUpController?.abort();
@@ -195,11 +209,14 @@ export const useGameStore = defineStore('game', {
       clock.reset();
     },
     syncLogErrors(): void {
-      this.logErrors = logEntries().filter((entry) => entry.level === 'error').length;
+      const errors = logEntries().filter(entry => entry.level === 'error');
+      this.logErrors = errors.reduce((sum, entry) => sum + entry.repeat, 0);
+      this.unseenErrors = errors.filter(entry => entry.lastSeq > this.seenErrorSeq).length;
     },
     // 玩家翻到日志面板就算看过了
     markLogSeen(): void {
-      this.seenErrors = this.logErrors;
+      this.seenErrorSeq = Math.max(this.seenErrorSeq, ...logEntries().map(entry => entry.lastSeq));
+      this.syncLogErrors();
     },
     refresh() {
       const core = getCore();
@@ -210,14 +227,22 @@ export const useGameStore = defineStore('game', {
       this.snapshot = markRaw(buildSnapshot(core));
     },
     manualMine() {
-      getCore().manualMine();
+      const core = getCore();
+      core.manualMine();
+      logEvent('debug', 'machine.mine', '手动采矿', undefined, { veinTier: core.pickaxeVeinTier(), output: core.pickaxeOutput().toString() });
       emitFx('mine');
       sound('mine');
       this.refresh();
     },
     upgradePickaxe(line: PickaxeLine) {
       const core = getCore();
-      if (!core.upgradePickaxe(line)) return;
+      const before = balances(core);
+      const previous = core.pickaxeLevel(line);
+      if (!core.upgradePickaxe(line)) {
+        logEvent('debug', 'pickaxe.rejected', '镐子升级未满足条件', undefined, { line, level: previous });
+        return;
+      }
+      recordAction(core, 'pickaxe.upgrade', '升级镐子', before, { line, before: previous, after: core.pickaxeLevel(line) });
       sound('buy');
       this.refresh();
       this.save();
@@ -230,7 +255,12 @@ export const useGameStore = defineStore('game', {
         logEvent('warn', 'buy.missing', `找不到机型 ${modelId}，这次建造被跳过`);
         return 0;
       }
+      const before = balances(core);
+      const ownedBefore = core.countOf(model.id);
       const bought = core.buy(model, count, payWith);
+      if (bought > 0) recordAction(core, 'machine.buy', `建造 ${model.name} ×${bought}`, before,
+        { modelId, requested: count, actual: bought, payWith, before: ownedBefore, after: core.countOf(model.id) });
+      else logEvent('debug', 'buy.rejected', `未能建造 ${model.name}`, undefined, { modelId, requested: count, payWith });
       if (bought > 0) sound('buy');
       this.refresh();
       this.save();
@@ -241,8 +271,12 @@ export const useGameStore = defineStore('game', {
       const core = getCore();
       const model = findModel(modelId);
       if (!model) return 0;
+      const before = balances(core);
+      const ownedBefore = core.countOf(model.id);
       const sold = core.sell(model, count, payWith);
       if (sold > 0) {
+        recordAction(core, 'machine.sell', `出售 ${model.name} ×${sold}`, before,
+          { modelId, requested: count, actual: sold, payWith, before: ownedBefore, after: core.countOf(model.id) });
         sound('sell');
         this.refresh();
         this.save();
@@ -253,13 +287,18 @@ export const useGameStore = defineStore('game', {
       const core = getCore();
       const target = core.maxTier + 1;
       const ok = core.unlock(target);
+      if (ok) this.watchVoltage(core);
       this.refresh();
       this.save();
       return ok;
     },
     // 超频档位：0-3。档位越高越快、越费电，也越容易坏
     setOverclock(modelId: string, level: number): boolean {
-      const ok = getCore().setOverclock(modelId, level);
+      const core = getCore();
+      const before = core.overclockOf(modelId);
+      const ok = core.setOverclock(modelId, level);
+      if (ok && before !== core.overclockOf(modelId)) logEvent('info', 'machine.overclock', `调整 ${findModel(modelId)?.name ?? modelId} 超频`, undefined,
+        { modelId, before, after: core.overclockOf(modelId) });
       if (ok) sound('toggle');
       this.refresh();
       this.save();
@@ -268,6 +307,7 @@ export const useGameStore = defineStore('game', {
     // 手动维护：把该机型坏掉的机器全部修好
     repair(modelId: string): number {
       const fixed = getCore().repair(modelId);
+      if (fixed > 0) logEvent('info', 'machine.repair', `维护 ${findModel(modelId)?.name ?? modelId}，修复 ${fixed} 台`, undefined, { modelId, fixed });
       this.refresh();
       this.save();
       return fixed;
@@ -283,6 +323,7 @@ export const useGameStore = defineStore('game', {
           'info',
           'machine.run',
           core.isStopped(modelId) ? `${name}：全部停机` : `${name}：恢复运行`,
+          undefined, { modelId, stopped: core.isStopped(modelId), count: core.countOf(modelId) },
         );
         this.refresh();
         this.save();
@@ -293,10 +334,11 @@ export const useGameStore = defineStore('game', {
     // 手选研究项目：算力只往选中的那台机器上投
     setResearchTarget(modelId: string): boolean {
       const core = getCore();
+      const before = core.researchTarget;
       const ok = core.setResearchTarget(modelId);
       if (ok) {
         const name = findModel(modelId)?.name ?? modelId;
-        logEvent('info', 'research.target', `研究项目改成 ${name}`);
+        if (before !== core.researchTarget) logEvent('info', 'research.target', `研究项目改成 ${name}`, undefined, { modelId, before });
         this.refresh();
         this.save();
       }
@@ -304,34 +346,45 @@ export const useGameStore = defineStore('game', {
     },
     // 换电网 / 开关污染机制：都属于设置，改完立刻生效并存档
     setGrid(mode: GridMode): void {
-      getCore().setGrid(mode);
+      const core = getCore();
+      const before = core.grid;
+      if (core.setGrid(mode) && core.grid !== before) logEvent('info', 'grid.change', '切换电网', undefined, { before, after: core.grid });
       this.refresh();
       this.save();
     },
     // 硅基宇宙的三项 AI 开关
     setSiliconOption(option: 'repair' | 'overclock' | 'shedding', value: boolean): void {
       const core = getCore();
+      const before = option === 'repair' ? core.siliconAutoRepair : option === 'overclock' ? core.siliconAutoOverclock : core.siliconShedding;
       if (option === 'repair') core.siliconAutoRepair = value;
       else if (option === 'overclock') core.siliconAutoOverclock = value;
       else core.siliconShedding = value;
+      if (before !== value) logEvent('info', 'silicon.option', '调整硅基自动控制', undefined, { option, before, after: value });
       this.refresh();
       this.save();
     },
     // 解锁电网要花对应等级的 GT 币
     unlockGrid(mode: GridMode): boolean {
-      const ok = getCore().unlockGrid(mode);
+      const core = getCore();
+      const before = balances(core);
+      const ok = core.unlockGrid(mode);
+      if (ok) recordAction(core, 'grid.unlock', '解锁电网', before, { mode });
       this.refresh();
       this.save();
       return ok;
     },
     setPollutionEnabled(enabled: boolean): void {
-      getCore().setPollutionEnabled(enabled);
+      const core = getCore();
+      if (core.pollutionEnabled !== enabled) logEvent('info', 'settings.pollution', enabled ? '开启污染机制' : '关闭污染机制', undefined, { enabled });
+      core.setPollutionEnabled(enabled);
       this.refresh();
       this.save();
     },
     // 开发者模式：只是测试用的开关，关着的时候下面这些快捷操作都不生效
     setDevMode(enabled: boolean): void {
-      getCore().setDevMode(enabled);
+      const core = getCore();
+      if (core.devMode !== enabled) logEvent('info', 'dev.mode', enabled ? '开启开发者模式' : '关闭开发者模式', undefined, { enabled });
+      core.setDevMode(enabled);
       this.refresh();
       this.save();
     },
@@ -366,8 +419,10 @@ export const useGameStore = defineStore('game', {
     },
     // 自动存档间隔（秒）：存档框的滑条，改完立刻按新间隔重启定时器
     setAutosaveSeconds(seconds: number): boolean {
+      const before = getCore().autosaveSeconds;
       const ok = getCore().setAutosaveSeconds(seconds);
       if (ok) {
+        if (before !== seconds) logEvent('info', 'settings.autosave', '调整自动存档间隔', undefined, { before, after: getCore().autosaveSeconds });
         this.restartAutosave();
         this.refresh();
         this.save();
@@ -376,24 +431,34 @@ export const useGameStore = defineStore('game', {
     },
     devUnlockTo(tier: number): boolean {
       const ok = getCore().devUnlockTo(tier);
+      if (ok) logEvent('info', 'dev.voltage', '开发者调整电压', undefined, { tier });
       this.refresh();
       this.save();
       return ok;
     },
     devAdjustResource(target: DevResourceTarget, amount: string, sign: 1 | -1): boolean {
-      const ok = getCore().devAdjustResource(target, amount, sign);
+      const core = getCore();
+      const before = balances(core);
+      const ok = core.devAdjustResource(target, amount, sign);
+      if (ok) recordAction(core, 'dev.resource', '开发者调整资源', before, { target: JSON.stringify(target), amount, sign });
       this.refresh();
       this.save();
       return ok;
     },
     devAdvance(seconds: number): boolean {
       const ok = getCore().devAdvance(seconds);
+      if (ok) {
+        setLogGameSeconds(getCore().playSeconds);
+        logEvent('info', 'dev.advance', '开发者推进时间', undefined, { seconds });
+        this.watch(getCore(), getCore().lastReport);
+      }
       this.refresh();
       this.save();
       return ok;
     },
     devClearMachines(): boolean {
       const ok = getCore().devClearMachines();
+      if (ok) logEvent('info', 'dev.machines', '开发者清空机器');
       this.refresh();
       this.save();
       return ok;
@@ -401,6 +466,7 @@ export const useGameStore = defineStore('game', {
     // 测试用：直接把某个宇宙加进来
     devGrantUniverse(id: string): boolean {
       const ok = getCore().devGrantUniverse(id);
+      if (ok) logEvent('info', 'dev.universe', '开发者添加宇宙', undefined, { id });
       this.refresh();
       this.save();
       return ok;
@@ -408,13 +474,17 @@ export const useGameStore = defineStore('game', {
     // 测试用：把某个宇宙撤掉
     devRevokeUniverse(id: string): boolean {
       const ok = getCore().devRevokeUniverse(id);
+      if (ok) logEvent('info', 'dev.universe', '开发者移除宇宙', undefined, { id });
       this.refresh();
       this.save();
       return ok;
     },
     // 记住「下次转生带哪个宇宙」，跟着存档走
     setPendingUniverse(id: string | null): boolean {
-      const ok = getCore().setPendingUniverse(id);
+      const core = getCore();
+      const before = core.pendingUniverse;
+      const ok = core.setPendingUniverse(id);
+      if (ok && before !== core.pendingUniverse) logEvent('info', 'rebirth.universe', '调整下次转生宇宙', undefined, { before, after: core.pendingUniverse });
       this.refresh();
       this.save();
       return ok;
@@ -423,12 +493,14 @@ export const useGameStore = defineStore('game', {
     rebirth(route: 'rift' | 'max', universe?: string): string | null {
       const core = getCore();
       // 结算口径要在 rebirth() 改写状态之前取好
+      const previousRun = core.rebirthCount + 1;
       const challenge = core.activeChallenge;
       const passed =
         challenge !== null &&
         challengeSettles(challenge, core.challengeViolated, core.challengePrimed);
       const gained = core.rebirth(route, universe);
       if (gained !== null) {
+        setLogGameSeconds(core.playSeconds);
         const note =
           challenge === null
             ? ''
@@ -439,9 +511,11 @@ export const useGameStore = defineStore('game', {
           'info',
           'rebirth.done',
           `转生完成（${route === 'rift' ? '时空裂缝' : '打到 MAX'}），获得 ${gained.toString()} 条时空线缆${note}`,
+          undefined, { route, gained: gained.toString(), previousRun, run: core.rebirthCount + 1, universe: universe ?? null, challenge, passed },
         );
         sound('rebirth');
         sound(passed ? 'challengePass' : 'challengeFail');
+        this.syncPhase();
       }
       this.refresh();
       this.save();
@@ -449,22 +523,31 @@ export const useGameStore = defineStore('game', {
     },
     declineRift(): void {
       getCore().declineRift();
+      logEvent('info', 'rebirth.decline', '放弃本周目的时空裂缝');
       this.refresh();
       this.save();
     },
     buyPlanckAnchor(): void {
+      const before = getCore().cables.toString();
+      const owned = getCore().planckAnchor;
       getCore().buyPlanckAnchor();
+      if (!owned && getCore().planckAnchor) logEvent('info', 'rebirth.anchor', '购买普朗克锚', undefined,
+        { cablesBefore: before, cablesAfter: getCore().cables.toString() });
       sound('planck');
       this.refresh();
       this.save();
     },
     setPendingChallenge(id: string | null): void {
+      const before = getCore().pendingChallenge;
       getCore().setPendingChallenge(id);
+      if (before !== getCore().pendingChallenge) logEvent('info', 'challenge.select', '调整下周目挑战', undefined, { before, after: getCore().pendingChallenge });
       this.refresh();
       this.save();
     },
     buyRebirthNode(id: string): boolean {
+      const before = getCore().cables.toString();
       const ok = getCore().buyRebirthNode(id);
+      if (ok) logEvent('info', 'rebirth.node', '购买星图节点', undefined, { id, cablesBefore: before, cablesAfter: getCore().cables.toString() });
       if (ok) sound('buy');
       this.refresh();
       this.save();
@@ -472,14 +555,17 @@ export const useGameStore = defineStore('game', {
     },
     step(dtSeconds: number) {
       // 补算离线收益时不让在线模拟叠上去，否则同一段时间会被算两遍
-      if (this.catchingUp) return;
+      if (this.catchingUp || this.simulationPaused) return;
       const core = getCore();
       try {
         const report = core.tick(dtSeconds);
+        setLogGameSeconds(core.playSeconds);
+        if (this.crashStreak > 0) logEvent('info', 'tick.recovered', '模拟运算已恢复', undefined, { failedTicks: this.crashStreak });
         this.crashStreak = 0;
         this.watch(core, report);
       } catch (error) {
         this.crashStreak += 1;
+        setLogGameSeconds(core.playSeconds);
         // 连崩到上限就停下模拟：推不动的游戏继续空转会一直刷屏，
         // 而日志里已经有现场，玩家刷新页面就能重来
         if (this.crashStreak === 1 || this.crashStreak === CRASH_STREAK_LIMIT) {
@@ -487,7 +573,7 @@ export const useGameStore = defineStore('game', {
             'error',
             'tick.crash',
             `模拟运算出错（连续第 ${this.crashStreak} 次）`,
-            [errorText(error), ...stateSnapshot(core)].join('\n'),
+            crashDetail(error, core),
           );
         }
         if (this.crashStreak >= CRASH_STREAK_LIMIT && !this.simulationPaused) {
@@ -495,7 +581,7 @@ export const useGameStore = defineStore('game', {
           logEvent(
             'error',
             'tick.paused',
-            '连续出错，模拟已暂停：把日志发给作者后刷新页面即可重新开始',
+            '连续出错，模拟已暂停；可下载日志保留现场，再刷新页面重试',
           );
         }
       }
@@ -512,6 +598,7 @@ export const useGameStore = defineStore('game', {
     },
     // 导出当前存档为格式化 JSON（供下载）
     exportSave(): string {
+      logEvent('info', 'save.export', '导出当前存档');
       return JSON.stringify(serialize(getCore()), null, 2);
     },
     /*
@@ -528,7 +615,7 @@ export const useGameStore = defineStore('game', {
         writeSaveTime();
         this.applySavedTheme();
         this.loadUiState();
-        this.phase.maxTier = getCore().maxTier;
+        this.syncPhase();
         this.syncLogErrors();
         this.refresh();
         this.save();
@@ -545,9 +632,11 @@ export const useGameStore = defineStore('game', {
       this.cancelCatchUp();
       this.simulationPaused = false;
       this.crashStreak = 0;
-      logEvent('info', 'save.reset', '重开一局（本地存档已清除）');
       clearStorage();
       resetCore();
+      setLogGameSeconds(getCore().playSeconds);
+      this.syncPhase();
+      logEvent('info', 'save.reset', '重开一局（本地存档已清除）');
       // 主题与设置页的界面状态都是纯界面偏好（各自存在独立键里），重开一局不清
       this.applySavedTheme();
       this.loadUiState();
@@ -643,10 +732,10 @@ export const useGameStore = defineStore('game', {
       clock.reset();
       simulationTimer = setInterval(() => this.pollTime(), C.SIM_STEP_MS);
       this.restartAutosave();
-      const save = () => { this.pollTime(); this.save(); };
+      const save = () => { this.pollTime(); this.save(); flushLog(); };
       const visibility = () => {
         this.pollTime();
-        if (document.hidden) this.save();
+        if (document.hidden) { this.save(); flushLog(); }
       };
       window.addEventListener('beforeunload', save);
       window.addEventListener('pagehide', save);
@@ -668,33 +757,44 @@ export const useGameStore = defineStore('game', {
     },
     // 关键状态变化各记一笔：玩家来问「产出为什么不对」时，
     // 「什么时候断电的、什么时候进重度污染的」比最后一刻的数值更能说明问题
-    watch(core: GameCore, report: TickReport): void {
+    syncPhase(): void {
+      const core = getCore();
+      this.phase = {
+        maxTier: core.maxTier, band: core.pollutionEnabled ? pollutionBand(core.pollution) : 'clean',
+        powerShort: core.lastReport.powerRatio < 1, riftPending: core.riftPending(),
+        challengeFailed: core.challengeViolated ? core.activeChallenge : null,
+      };
+    },
+    watch(core: GameCore, report: TickReport, offline = false): void {
+      setLogGameSeconds(core.playSeconds);
+      this.watchVoltage(core, offline);
       const phase = this.phase;
-      if (core.maxTier !== phase.maxTier) {
-        phase.maxTier = core.maxTier;
-        logEvent('info', 'voltage.unlock', `电压上限变为 ${VOLTAGE_TIERS[core.maxTier - 1]}`);
-        sound('unlock');
-        emitFx('voltage-unlock');
-      }
       if (report.researchUnlocked !== null) {
         const done = MACHINE_MODELS.find((item) => item.id === report.researchUnlocked);
         logEvent(
           'info',
           'research.done',
           `研究完成：${done?.name ?? report.researchUnlocked} 可以建造了`,
+          undefined, { modelId: report.researchUnlocked },
         );
-        sound('achievement');
+        if (!offline) sound('achievement');
       }
-      if (report.achievementsGained > 0) sound('achievement');
+      if (report.achievementsGained > 0) {
+        const ids = Object.keys(core.achieved).slice(-report.achievementsGained);
+        const names = ids.map(id => ACHIEVEMENTS.find(item => item.id === id)?.name ?? id);
+        logEvent('info', 'achievement.gained', `达成成就：${names.join('、')}`, undefined, { count: report.achievementsGained, ids: ids.join(',') });
+        if (!offline) sound('achievement');
+      }
       const band = core.pollutionEnabled ? pollutionBand(core.pollution) : 'clean';
       if (band !== phase.band) {
         logEvent(
           band === 'clean' ? 'info' : 'warn',
           'pollution.band',
           `污染进入${POLLUTION_BAND_NAME[band]}（${formatNumber(core.pollution)}%）`,
+          undefined, { before: phase.band, after: band, pollution: core.pollution.toString() },
         );
         phase.band = band;
-        if (band !== 'clean') sound('pollution');
+        if (!offline && band !== 'clean') sound('pollution');
       }
       const short = report.powerRatio < 1;
       if (short !== phase.powerShort) {
@@ -703,22 +803,37 @@ export const useGameStore = defineStore('game', {
           'power.ratio',
           short ? '电力不足，产出开始降载' : '供电恢复正常',
           `供电比 ${(report.powerRatio * 100).toFixed(0)}%`,
+          { powerRatio: report.powerRatio, generated: report.euGenerated.toString(), capacity: report.euCapacity.toString(),
+            consumed: report.euConsumed.toString(), storedEU: core.storedEU.toString(), grid: core.grid },
         );
-        sound(short ? 'outage' : 'restore');
+        if (!offline) sound(short ? 'outage' : 'restore');
         phase.powerShort = short;
       }
-      if (report.mutations > 0) sound('mutation');
-      if (report.siphons > 0) sound('steal');
+      if (report.mutations > 0) {
+        logEvent('info', 'pollution.mutation', '污染变异产生额外收益', undefined, { count: report.mutations });
+        if (!offline) sound('mutation');
+      }
+      if (report.siphons > 0) {
+        logEvent('warn', 'power.siphon', '黑市电网窃取了 GT 币', undefined, { count: report.siphons, totalSiphoned: core.siphoned.toString() });
+        if (!offline) sound('steal');
+      }
+      if (report.faultsGained + report.corrosionFaults > 0) logEvent('warn', 'machine.fault', '机器新增故障', undefined,
+        { overclockFaults: report.faultsGained, corrosionFaults: report.corrosionFaults });
+      if (report.autoRepairs > 0) logEvent('info', 'machine.autoRepair', '自动维护修复机器', undefined, { count: report.autoRepairs });
+      if (report.autoOverclockUp + report.autoOverclockDown > 0) logEvent('info', 'machine.autoOverclock', '自动调整机器超频', undefined,
+        { increased: report.autoOverclockUp, decreased: report.autoOverclockDown });
+      if (report.sheddedKinds.length > 0) logEvent('warn', 'silicon.shedding', '自动停机以降低负载', undefined, { models: report.sheddedKinds.join(',') });
       if (report.collapses > 0) {
-        logEvent('warn', 'pollution.collapse', '工厂崩溃：污染摧毁了一台机器');
-        sound('collapse');
+        logEvent('warn', 'pollution.collapse', `工厂崩溃：污染摧毁了 ${report.collapses} 台机器`, undefined,
+          { count: report.collapses, pollution: core.pollution.toString() });
+        if (!offline) sound('collapse');
       }
       const rift = core.riftPending();
       if (rift !== phase.riftPending) {
         phase.riftPending = rift;
         if (rift) {
           logEvent('info', 'rebirth.rift', '时空裂缝出现（本周目第一次到 LuV）');
-          sound('rebirth');
+          if (!offline) sound('rebirth');
         }
       }
       // 挑战违规只在失效那一拍上报，记一条日志让玩家知道这局拿不到加成了
@@ -732,10 +847,34 @@ export const useGameStore = defineStore('game', {
         );
       }
     },
+    watchVoltage(core: GameCore, offline = false): void {
+      if (core.maxTier === this.phase.maxTier) return;
+      const before = this.phase.maxTier;
+      this.phase.maxTier = core.maxTier;
+      setLogGameSeconds(core.playSeconds);
+      logEvent('info', 'voltage.unlock', `电压上限变为 ${VOLTAGE_TIERS[core.maxTier - 1]}`, undefined,
+        { before, after: core.maxTier, voltage: VOLTAGE_TIERS[core.maxTier - 1] });
+      if (!offline) { sound('unlock'); emitFx('voltage-unlock'); }
+    },
   },
 });
 
 function findModel(id: string): MachineModel | undefined {
   return MACHINE_MODELS.find((model) => model.id === id);
+}
+
+function balances(core: GameCore): { ores: GameCore['ores']; coins: GameCore['coins']; cables: string } {
+  return { ores: [...core.ores], coins: [...core.coins], cables: core.cables.toString() };
+}
+
+function recordAction(core: GameCore, code: string, message: string, before: ReturnType<typeof balances>, context: LogContext): void {
+  const changes = (previous: GameCore['ores'], current: GameCore['ores']) => current.flatMap((amount, index) =>
+    amount.eq(previous[index]!) ? [] : [`${VOLTAGE_TIERS[index]}: ${previous[index]!.toString()} → ${amount.toString()} (${amount.minus(previous[index]!).toString()})`],
+  ).join('; ');
+  setLogGameSeconds(core.playSeconds);
+  logEvent('info', code, message, undefined, {
+    ...context, oreChanges: changes(before.ores, core.ores), coinChanges: changes(before.coins, core.coins),
+    ...(before.cables !== core.cables.toString() ? { cablesBefore: before.cables, cablesAfter: core.cables.toString() } : {}),
+  });
 }
 

@@ -1,3 +1,4 @@
+import { MAX_TIER } from '../src/numeric/voltage';
 import { describe, expect, it } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { GameCore } from '../src/game/core';
@@ -18,19 +19,19 @@ describe('平行宇宙', () => {
     const core = new GameCore();
     expect(core.universes).toEqual([]);
 
-    core.maxTier = 14;
+    core.maxTier = MAX_TIER;
     core.runEU = dec('1e24'); // 按公式结算要有累计 EU，否则线缆为 0
     expect(core.rebirth('max', 'industry')?.gt(0)).toBe(true);
     expect(core.hasUniverse('industry')).toBe(true);
     expect(core.addUniverse('industry')).toBe(false); // 已拥有，不重复
 
-    core.maxTier = 14;
+    core.maxTier = MAX_TIER;
     core.runEU = dec('1e24');
     core.rebirth('max', 'arcane');
     expect(core.universes).toEqual(['industry', 'arcane']);
 
     // 不选也能转生
-    core.maxTier = 14;
+    core.maxTier = MAX_TIER;
     core.runEU = dec('1e24');
     core.rebirth('max');
     expect(core.universes).toEqual(['industry', 'arcane']);
@@ -168,7 +169,7 @@ describe('平行宇宙', () => {
     expect(serialize(restored)).toEqual(serialize(core));
 
     // 转生时才真正拿到，并把选择清掉
-    restored.maxTier = 14;
+    restored.maxTier = MAX_TIER;
     restored.runEU = dec('1e24');
     restored.rebirth('max', restored.pendingUniverse ?? undefined);
     expect(restored.hasUniverse('arcane')).toBe(true);

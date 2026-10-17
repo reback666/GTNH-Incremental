@@ -1,3 +1,5 @@
+import { VOLTAGES } from '../content';
+
 // 矿脉贴图与特殊渲染。
 //
 // 素材：GTNH 的 GT5-Unofficial jar，由 scripts/build-veins.py 生成：
@@ -12,7 +14,7 @@ import { VEIN_MATERIALS, type VeinFx } from './vein-materials';
 
 export type { VeinFx };
 
-const tierFiles = import.meta.glob('../assets/veins/t*.png', {
+const tierFiles = import.meta.glob('../assets/veins/*.png', {
   eager: true,
   query: '?url',
   import: 'default',
@@ -33,7 +35,7 @@ function urlsByPattern(files: Record<string, string>, pattern: RegExp): Record<s
   return urls;
 }
 
-const TIER_URLS = urlsByPattern(tierFiles, /t(\d+)\.png$/i);
+const TIER_URLS = urlsByPattern(tierFiles, /\/([^/]+)\.png$/i);
 const FX_URLS = urlsByPattern(fxFiles, /fx\/([^/]+)\.png$/i);
 
 export interface VeinTierInfo extends VeinTierMeta {
@@ -48,7 +50,7 @@ export const VEIN_TIERS: VeinTierInfo[] = VEIN_META.map((meta) => ({
 }));
 
 export function veinIconUrl(oreTier: number): string | undefined {
-  return TIER_URLS[oreTier];
+  return TIER_URLS[VOLTAGES[oreTier]?.ore.texture];
 }
 
 export function veinTierInfo(oreTier: number): VeinTierInfo | undefined {

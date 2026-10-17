@@ -6,7 +6,7 @@ import { machineCost } from '../numeric/cost';
 
 // 计划书第八章：成本/产出比 500。
 // ULV 制造机每秒 1 枚币（作者定），首台成本 500 枚币，两者之比仍是 500，
-// 所以整体节奏与之前一致：每级 50 台约 58 小时通关。
+// 每级 50 台的全通推算见 docs/balance.md，由当前电压总数与参数生成。
 // 注意：单独把产量调小、成本不动，会让通关时间同比拉长，改节奏请改成本。
 export const BASE_MACHINE_COST = '500';
 export const BASE_MACHINE_OUTPUT = '1';
@@ -53,7 +53,9 @@ export const SIM_STEP_MS = 1000;
 // v22：加了自动存档间隔（存档框里的滑条，秒）
 // v23：加了音效开关（设置页：总开关 + 每种音效单独关）
 // v24：加了界面主题（设置页：暗钢 / 原版亮灰，GT GUI 重设计的两套皮肤）
-export const SAVE_VERSION = 24;
+// v25：在 UIV 与 UXV 之间插入 UMV，旧档的 UXV / MAX 等级与资源位置顺移。
+// v26：记录稳定的电压标识，配置增减或调整顺序时按标识恢复资源与进度。
+export const SAVE_VERSION = 26;
 
 // 自动存档间隔（秒）：存档框滑条的范围，默认沿用写死的 10 秒
 export const AUTOSAVE_SECONDS_DEFAULT = 10;

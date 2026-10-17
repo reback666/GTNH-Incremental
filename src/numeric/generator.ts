@@ -1,23 +1,19 @@
 import { Decimal, dec, pow, type DecimalInput } from './decimal';
-import { assertTier } from './voltage';
+import { assertTier, tierOf, VOLTAGE_STEP } from './voltage';
+import { CONTENT } from '../content';
 
 // 数值来源：GTNH「发电机」条目（gtnh.huijiwiki.com/wiki/发电机，与英文 wiki 的
 // Singleblock Generators 同步）。单方块发电机以该等级的标准电压最多输出 1A 电流，
 // 所以每级输出功率 = 该级电压：LV 32、MV 128、HV 512 EU/t，每级 4 倍。
 // 这与计划书第二章「每级电压为前一级的 4 倍」完全一致。
 export const ULV_OUTPUT_EU_PER_TICK = '8';
-export const VOLTAGE_STEP_FOR_OUTPUT = 4;
 
 // 燃料效率随等级递减。GTNH 原表：LV 85%、MV 75%、HV 66%，EV 及以后约 65%。
 // ULV 在 GTNH 里没有对应的单方块发电机，沿用 LV 的宽松值。
-export const GENERATOR_FUEL_EFFICIENCY: Record<number, string> = {
-  1: '0.85',
-  2: '0.85',
-  3: '0.75',
-  4: '0.66',
-};
-
-export const DEFAULT_FUEL_EFFICIENCY = '0.65';
+export const GENERATOR_FUEL_EFFICIENCY: Record<number, string> = Object.fromEntries(
+  Object.entries(CONTENT.rules.generatorEfficiency).map(([id, efficiency]) => [tierOf(id), efficiency]),
+);
+export const DEFAULT_FUEL_EFFICIENCY = CONTENT.rules.defaultGeneratorEfficiency;
 
 // 单枚矿石的能量值。作者定：1 枚 ULV 矿石 = 128 EU，高等级矿石每级 ×2。
 // 递增倍数与采矿机提速倍数共同决定「采矿机产矿」与「发电机烧矿」之比：
@@ -30,7 +26,7 @@ export const ORE_ENERGY_FACTOR = '2';
 export function generatorOutputEU(tier: number, outputFactor: DecimalInput = '1'): Decimal {
   assertTier(tier);
   return dec(ULV_OUTPUT_EU_PER_TICK)
-    .times(pow(String(VOLTAGE_STEP_FOR_OUTPUT), tier - 1))
+    .times(pow(String(VOLTAGE_STEP), tier - 1))
     .times(dec(outputFactor));
 }
 

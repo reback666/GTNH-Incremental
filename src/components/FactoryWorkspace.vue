@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { useGameStore } from '../game/store';
 import type { MachineKind } from '../game/core';
 import { VOLTAGE_TIERS } from '../numeric/voltage';
-import FactoryScene from './FactoryScene.vue';
+import FactoryScene from './FactoryScene3D.vue';
 import MachinePanel from './MachinePanel.vue';
 import ResourceBar from './ResourceBar.vue';
 import VeinPanel from './VeinPanel.vue';

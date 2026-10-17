@@ -1,3 +1,4 @@
+import { MAX_TIER } from '../src/numeric/voltage';
 import { describe, expect, it, beforeEach } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { GameCore } from '../src/game/core';
@@ -217,9 +218,9 @@ describe('第三阶段：转生与永久加成', () => {
 
   it('打到 MAX 按公式结算，没到 MAX 不能转生', () => {
     const core = new GameCore();
-    core.maxTier = 14;
+    core.maxTier = MAX_TIER;
     core.runEU = dec('1e24');
-    const expected = rebirthCables({ totalEU: '1e24', maxTier: 14, rebirthCount: 0 });
+    const expected = rebirthCables({ totalEU: '1e24', maxTier: MAX_TIER, rebirthCount: 0 });
     expect(core.cablesFor('max').toString()).toBe(expected.toString());
     expect(core.rebirth('max')?.toString()).toBe(expected.toString());
     expect(core.cables.toString()).toBe(expected.toString());
@@ -233,7 +234,7 @@ describe('第三阶段：转生与永久加成', () => {
 
   it('转生只清本周目，线缆 / 加成 / 次数 / 累计统计都留下', () => {
     const core = new GameCore();
-    core.maxTier = 14;
+    core.maxTier = MAX_TIER;
     core.ores[0] = dec('100');
     core.coins[3] = dec('5');
     core.counts['m-1'] = 3;
@@ -328,7 +329,7 @@ describe('第三阶段：转生与永久加成', () => {
 
   it('存档往返保留转生状态', () => {
     const core = new GameCore();
-    core.maxTier = 14;
+    core.maxTier = MAX_TIER;
     core.cables = dec('5');
     core.rebirthCount = 2;
     core.rebirthNodes = ['speed-1', 'economy-1'];
@@ -374,7 +375,7 @@ describe('界面购买入口', () => {
     const store = useGameStore();
     store.boot();
     const core = getCore();
-    core.maxTier = 14;
+    core.maxTier = MAX_TIER;
     core.coins = core.coins.map(() => dec('1e30'));
     core.ores = core.ores.map(() => dec('1e30'));
     core.researchedModels = MACHINE_MODELS.map((model) => model.id);

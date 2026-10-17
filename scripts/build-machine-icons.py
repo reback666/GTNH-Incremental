@@ -9,7 +9,7 @@ GT 自己在运行时给机壳染色，之前这里漏了这步，导致各等�
 染色表见 scripts/gtnh_tiers.py。
 
 多方块机器不在这里生成（它们是整套结构，用 wiki 整机图，见 build-multiblock-icons.py）；
-存电装置 / 净化器 / 计算机 / 研究站在 build-facility-icons.py 里生成（同样是机壳 + 面片）。
+绘制型设施在 build-facility-icons.py 里生成。面片与来源由 src/content/ 的 texture 配方指定。
 
 用法：python scripts/build-machine-icons.py
 产物：src/assets/machines/m-<等级>.png、c-<等级>.png、以及单方块发电机
@@ -20,11 +20,13 @@ from __future__ import annotations
 import glob
 import io
 import zipfile
+import argparse
+from contextlib import ExitStack
 from pathlib import Path
 
 from PIL import Image
 
-from gtnh_tiers import tint_casing
+from gtnh_tiers import tint_casing, load_models, casing_voltage
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "src" / "assets" / "machines"
@@ -35,55 +37,22 @@ JAR_GLOB = str(
     / ".gradle/caches/modules-2/files-2.1/com.github.GTNewHorizons/GT5-Unofficial/*/*/GT5-Unofficial-*-dev.jar"
 )
 
-VOLTAGES = [
-    "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM",
-    "UV", "UHV", "UEV", "UIV", "UXV", "MAX",
-]
-MAX_TIER = len(VOLTAGES)
-
-# 魔法机器：LV~LuV，机壳在电压色的基础上再往「奥术紫」偏，一眼能和电力版区分
-ARCANE_FROM_TIER = 2
-ARCANE_TO_TIER = 7
 ARCANE_TINT = (0xB0, 0x60, 0xFF)
 ARCANE_TINT_STRENGTH = 0.55
 
-MINER_FACE = f"{ASSETS}/basicmachines/miner/OVERLAY_FRONT.png"
-MACHINE_FACE = f"{ASSETS}/basicmachines/macerator/OVERLAY_FRONT.png"
-PLASMA_FACE = f"{ASSETS}/basicmachines/chemical_reactor/OVERLAY_FRONT.png"
 
-# 单方块发电机：机型 id →（等级，面片）
-SINGLE_GENERATORS: dict[str, tuple[int, str]] = {
-    "g-ulv": (1, f"{ASSETS}/iconsets/STEAM_TURBINE_SIDE.png"),
-    "g-lv-steam": (2, f"{ASSETS}/iconsets/STEAM_TURBINE_SIDE.png"),
-    "g-lv-comb": (2, f"{ASSETS}/iconsets/DIESEL_GENERATOR_TOP.png"),
-    "g-lv-gas": (2, f"{ASSETS}/iconsets/GAS_TURBINE_SIDE.png"),
-    "g-mv-steam": (3, f"{ASSETS}/iconsets/STEAM_TURBINE_SIDE.png"),
-    "g-mv-comb": (3, f"{ASSETS}/iconsets/DIESEL_GENERATOR_TOP.png"),
-    "g-mv-gas": (3, f"{ASSETS}/iconsets/GAS_TURBINE_SIDE.png"),
-    "g-hv-steam": (4, f"{ASSETS}/iconsets/STEAM_TURBINE_SIDE.png"),
-    "g-hv-comb": (4, f"{ASSETS}/iconsets/DIESEL_GENERATOR_TOP.png"),
-    "g-hv-gas": (4, f"{ASSETS}/iconsets/GAS_TURBINE_SIDE.png"),
-    "g-ev-comb": (5, f"{ASSETS}/iconsets/DIESEL_GENERATOR_TOP.png"),
-    "g-ev-gas": (5, f"{ASSETS}/iconsets/GAS_TURBINE_SIDE.png"),
-    "g-ev-plasma": (5, PLASMA_FACE),
-    "g-iv-comb": (6, f"{ASSETS}/iconsets/DIESEL_GENERATOR_TOP.png"),
-    "g-iv-gas": (6, f"{ASSETS}/iconsets/GAS_TURBINE_SIDE.png"),
-    "g-iv-plasma": (6, PLASMA_FACE),
-}
-
-
-def build(archive: zipfile.ZipFile, model_id: str, tier: int, face_path: str) -> None:
+def build(archive: zipfile.ZipFile, icon_key: str, tier: int, face_path: str, arcane: bool = False) -> None:
     casing = Image.open(
-        io.BytesIO(archive.read(f"{ASSETS}/iconsets/MACHINE_{VOLTAGES[tier - 1]}_SIDE.png"))
-    ).convert("RGBA")
+        io.BytesIO(archive.read(f"{ASSETS}/iconsets/MACHINE_{casing_voltage(tier)}_SIDE.png"))
+    ).convert("RGBA").crop((0, 0, 16, 16))
     face = (
         Image.open(io.BytesIO(archive.read(face_path))).convert("RGBA").crop((0, 0, 16, 16))
     )
     icon = tint_casing(casing, tier)
-    if model_id.startswith(("mm-", "mg-", "mc-")):
+    if arcane:
         icon = tint_arcane(icon)
     icon.alpha_composite(face)
-    icon.resize((32, 32), Image.NEAREST).save(OUT_DIR / f"{model_id}.png")
+    icon.resize((32, 32), Image.NEAREST).save(OUT_DIR / f"{icon_key}.png")
 
 
 # 魔法机器的机壳：在电压色的基础上再混一层奥术紫，保留等级差别又能一眼认出是魔法版
@@ -109,25 +78,28 @@ def tint_arcane(casing: Image.Image) -> Image.Image:
 
 
 def main() -> None:
-    jar = (glob.glob(JAR_GLOB) or [""])[0]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--jar", type=Path, help="GregTech jar，默认从 Gradle 缓存查找")
+    parser.add_argument("--resource-pack", type=Path, help="制造机采用的 Modernity-GTNH 材质包")
+    args = parser.parse_args()
+    jar = args.jar or (glob.glob(JAR_GLOB) or [""])[0]
     if not jar:
         raise SystemExit("找不到 GT5-Unofficial jar")
 
     count = 0
-    with zipfile.ZipFile(jar) as archive:
-        for tier in range(1, MAX_TIER + 1):
-            build(archive, f"m-{tier}", tier, MINER_FACE)
-            build(archive, f"c-{tier}", tier, MACHINE_FACE)
-            count += 2
-        for model_id, (tier, face_path) in SINGLE_GENERATORS.items():
-            build(archive, model_id, tier, face_path)
+    with ExitStack() as stack:
+        archive = stack.enter_context(zipfile.ZipFile(jar))
+        assembler = stack.enter_context(zipfile.ZipFile(args.resource_pack)) if args.resource_pack else archive
+        made = set()
+        for model in load_models():
+            recipe = model.get("texture", {})
+            icon_key = model["icon"]
+            if "face" not in recipe or icon_key in made:
+                continue
+            source = assembler if recipe.get("source") == "resourcePack" else archive
+            build(source, icon_key, model["tier"], recipe["face"], recipe.get("arcane", False))
+            made.add(icon_key)
             count += 1
-        # 奥术宇宙的魔法机器：和同级电力机器同一套面片，只是机壳偏紫
-        for tier in range(ARCANE_FROM_TIER, ARCANE_TO_TIER + 1):
-            build(archive, f"mm-{tier}", tier, MINER_FACE)
-            build(archive, f"mg-{tier}", tier, f"{ASSETS}/iconsets/STEAM_TURBINE_SIDE.png")
-            build(archive, f"mc-{tier}", tier, MACHINE_FACE)
-            count += 3
     print(f"共 {count} 个单方块机型图标（机壳按电压染色 + 面片）")
 
 

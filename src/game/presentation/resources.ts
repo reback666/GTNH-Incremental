@@ -94,8 +94,8 @@ export function oreRates(core: GameCore): { gross: Decimal; spent: Decimal }[] {
 }
 
 export function ratedOreRates(core: GameCore): { gross: Decimal; spent: Decimal }[] {
-  const gross = Array.from({ length: 14 }, () => ZERO) as Decimal[];
-  const spent = Array.from({ length: 14 }, () => ZERO) as Decimal[];
+  const gross = Array.from({ length: MAX_TIER }, () => ZERO) as Decimal[];
+  const spent = Array.from({ length: MAX_TIER }, () => ZERO) as Decimal[];
   for (const model of core.unlockedModels('miner')) {
     const n = core.countOf(model.id);
     if (n === 0) continue;

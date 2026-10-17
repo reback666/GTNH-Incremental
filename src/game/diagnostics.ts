@@ -1,7 +1,7 @@
 import { oreMaterial } from './vein-materials';
 import { SIM_STEP_MS } from './constants';
 import { MACHINE_MODELS } from './models';
-import { formatLogEntry, logEntries, levelName } from './log';
+import { errorText, formatLogEntry, logEntries, logStatus, levelName } from './log';
 import { type GameCore } from './core';
 import { coinName } from '../numeric/credit';
 import { ZERO } from '../numeric/decimal';
@@ -9,17 +9,10 @@ import { formatNumber } from '../numeric/format';
 import { gridMode } from '../numeric/grid';
 import { VOLTAGE_TIERS } from '../numeric/voltage';
 import { formatDuration, formatStamp } from '../numeric/time';
+import { appVersion, buildStamp } from './build-info';
 
 // 玩家反馈问题时要交给作者的那份材料：
 // 环境信息 + 导出那一刻的游戏状态 + 日志。全部拼成纯文本，玩家能直接粘贴。
-
-export function buildStamp(): string {
-  return typeof __BUILD_STAMP__ === 'string' ? __BUILD_STAMP__ : '开发环境';
-}
-
-export function appVersion(): string {
-  return typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '开发环境';
-}
 
 // 环境信息：同一个问题在不同浏览器 / 打开方式下表现可能完全不同，
 // 这几行是作者判断「是不是只有他一个人这样」的起点。
@@ -118,7 +111,7 @@ export function stateSnapshot(core: GameCore): string[] {
 
   // 上一拍的实时读数：问题是「产出不对」时，这几项最能说明当时的厂况
   const report = core.lastReport;
-  const step = SIM_STEP_MS / 1000;
+  const step = report.stepSeconds > 0 ? report.stepSeconds : SIM_STEP_MS / 1000;
   const sum = (list: GameCore['ores']) => list.reduce((total, item) => total.plus(item), ZERO);
   lines.push(
     `上一拍：发电 ${formatNumber(report.euGenerated.div(step))} EU/t` +
@@ -131,20 +124,46 @@ export function stateSnapshot(core: GameCore): string[] {
   return lines;
 }
 
+export function diagnosticSnapshot(core: GameCore): string[] {
+  try { return stateSnapshot(core); }
+  catch (error) { return ['游戏状态快照读取失败：' + errorText(error)]; }
+}
+
+export function crashDetail(error: unknown, core: GameCore): string {
+  // 堆栈和现场各留空间，防止长堆栈把电压、周目等关键现场全部挤掉。
+  return [errorText(error).slice(0, 900), ...diagnosticSnapshot(core).slice(0, 4)].join('\n');
+}
+
+export function buildDiagnosticJson(core: GameCore, entries = logEntries()): string {
+  return JSON.stringify({
+    schemaVersion: 1,
+    exportedAt: new Date().toISOString(),
+    environment: environmentInfo(),
+    logging: logStatus(),
+    state: diagnosticSnapshot(core),
+    entries,
+  }, null, 2);
+}
+
 export function buildDiagnosticReport(core: GameCore, entries = logEntries()): string {
-  const errors = entries.filter((entry) => entry.level === 'error').length;
-  const warnings = entries.filter((entry) => entry.level === 'warn').length;
+  const errors = entries.filter((entry) => entry.level === 'error').reduce((sum, entry) => sum + entry.repeat, 0);
+  const warnings = entries.filter((entry) => entry.level === 'warn').reduce((sum, entry) => sum + entry.repeat, 0);
+  const status = logStatus();
+  const storageName = { pending: '等待批量保存', saved: '已保存在本机', memory: '暂存在内存' }[status.storageState];
   return [
     '=== GTNH 增量 诊断日志 ===',
     ...environmentInfo(),
+    `本次打开：${status.sessionId}｜调试日志：${status.debugEnabled ? '开启' : '关闭'}`,
+    `留存上限：${status.limit} 条（优先保留错误与警告）｜本次容量淘汰：${status.discarded} 次事件`,
+    `日志存储：${storageName}${status.storageError ? '｜' + status.storageError : ''}`,
     '',
     '--- 导出时的游戏状态 ---',
-    ...stateSnapshot(core),
+    ...diagnosticSnapshot(core),
     '',
     `--- 日志（共 ${entries.length} 条：错误 ${errors}、警告 ${warnings}）---`,
     ...(entries.length === 0 ? ['（没有记录到任何事件）'] : entries.map(formatLogEntry)),
     '',
-    `--- 日志结束（级别：${levelName('info')} / ${levelName('warn')} / ${levelName('error')}）---`,
+    `--- 日志结束（级别：${levelName('debug')} / ${levelName('info')} / ${levelName('warn')} / ${levelName('error')}）---`,
   ].join('\n');
 }
 

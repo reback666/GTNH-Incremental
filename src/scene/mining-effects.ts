@@ -1,4 +1,4 @@
-import type { Point } from './layout';
+interface Point { x: number; y: number }
 
 interface Rect { left: number; top: number; width: number; height: number }
 

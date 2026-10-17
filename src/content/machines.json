@@ -1,0 +1,330 @@
+[
+  {
+    "id": "g-ulv",
+    "name": "原始发电机",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.85",
+    "outputFactor": "1",
+    "costFactor": "1",
+    "voltage": "ULV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_SIDE.png"
+    }
+  },
+  {
+    "id": "g-lv-steam",
+    "name": "基础蒸汽轮机",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.85",
+    "outputFactor": "1",
+    "costFactor": "1",
+    "voltage": "LV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_SIDE.png"
+    }
+  },
+  {
+    "id": "g-lv-comb",
+    "name": "基础内燃发电机",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.95",
+    "outputFactor": "1",
+    "costFactor": "1.2",
+    "voltage": "LV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_TOP.png"
+    }
+  },
+  {
+    "id": "g-lv-gas",
+    "name": "基础燃气轮机",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.95",
+    "outputFactor": "1",
+    "costFactor": "1.2",
+    "voltage": "LV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_SIDE.png"
+    }
+  },
+  {
+    "id": "g-mv-steam",
+    "name": "进阶蒸汽轮机",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.75",
+    "outputFactor": "1",
+    "costFactor": "0.9",
+    "voltage": "MV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_SIDE.png"
+    }
+  },
+  {
+    "id": "g-mv-comb",
+    "name": "进阶内燃发电机",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.90",
+    "outputFactor": "1",
+    "costFactor": "1.15",
+    "voltage": "MV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_TOP.png"
+    }
+  },
+  {
+    "id": "g-mv-gas",
+    "name": "进阶燃气轮机",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.90",
+    "outputFactor": "1",
+    "costFactor": "1.15",
+    "voltage": "MV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_SIDE.png"
+    }
+  },
+  {
+    "id": "g-hv-steam",
+    "name": "涡轮蒸汽轮机",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.66",
+    "outputFactor": "1",
+    "costFactor": "0.85",
+    "voltage": "HV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_SIDE.png"
+    }
+  },
+  {
+    "id": "g-hv-comb",
+    "name": "涡轮内燃发电机",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.85",
+    "outputFactor": "1",
+    "costFactor": "1.15",
+    "voltage": "HV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_TOP.png"
+    }
+  },
+  {
+    "id": "g-hv-gas",
+    "name": "涡轮燃气轮机",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.85",
+    "outputFactor": "1",
+    "costFactor": "1.15",
+    "voltage": "HV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_SIDE.png"
+    }
+  },
+  {
+    "id": "g-hv-mb-steam",
+    "name": "大型蒸汽涡轮",
+    "category": "generator",
+    "block": "multiblock",
+    "fuelEfficiency": "0.95",
+    "outputFactor": "4",
+    "costFactor": "4",
+    "voltage": "HV"
+  },
+  {
+    "id": "g-ev-comb",
+    "name": "涡轮增压内燃发电机",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.65",
+    "outputFactor": "1",
+    "costFactor": "1",
+    "voltage": "EV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_TOP.png"
+    }
+  },
+  {
+    "id": "g-ev-gas",
+    "name": "涡轮燃气轮机II",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.60",
+    "outputFactor": "1",
+    "costFactor": "1",
+    "voltage": "EV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_SIDE.png"
+    }
+  },
+  {
+    "id": "g-ev-plasma",
+    "name": "等离子发电机Mk I",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.50",
+    "outputFactor": "1.2",
+    "costFactor": "1.3",
+    "voltage": "EV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/basicmachines/chemical_reactor/OVERLAY_FRONT.png"
+    }
+  },
+  {
+    "id": "g-ev-mb-gas",
+    "name": "大型燃气涡轮",
+    "category": "generator",
+    "block": "multiblock",
+    "fuelEfficiency": "0.85",
+    "outputFactor": "4",
+    "costFactor": "4",
+    "voltage": "EV"
+  },
+  {
+    "id": "g-iv-comb",
+    "name": "终极化学能释放者",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.50",
+    "outputFactor": "1",
+    "costFactor": "0.9",
+    "voltage": "IV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_TOP.png"
+    }
+  },
+  {
+    "id": "g-iv-gas",
+    "name": "涡轮燃气轮机III",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.50",
+    "outputFactor": "1",
+    "costFactor": "0.9",
+    "voltage": "IV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_SIDE.png"
+    }
+  },
+  {
+    "id": "g-iv-plasma",
+    "name": "等离子发电机Mk II",
+    "category": "generator",
+    "block": "single",
+    "fuelEfficiency": "0.60",
+    "outputFactor": "1.2",
+    "costFactor": "1.3",
+    "voltage": "IV",
+    "texture": {
+      "face": "assets/gregtech/textures/blocks/basicmachines/chemical_reactor/OVERLAY_FRONT.png"
+    }
+  },
+  {
+    "id": "g-iv-mb-steam",
+    "name": "特大高压蒸汽涡轮",
+    "category": "generator",
+    "block": "multiblock",
+    "fuelEfficiency": "0.90",
+    "outputFactor": "4.5",
+    "costFactor": "4.5",
+    "voltage": "IV"
+  },
+  {
+    "id": "g-luv-mb-gas",
+    "name": "特大燃气涡轮",
+    "category": "generator",
+    "block": "multiblock",
+    "fuelEfficiency": "0.90",
+    "outputFactor": "4.5",
+    "costFactor": "4.5",
+    "voltage": "LuV"
+  },
+  {
+    "id": "g-zpm-mb-plasma",
+    "name": "大型等离子涡轮",
+    "category": "generator",
+    "block": "multiblock",
+    "fuelEfficiency": "0.95",
+    "outputFactor": "5",
+    "costFactor": "5",
+    "voltage": "ZPM"
+  },
+  {
+    "id": "g-uv-mb-plasma",
+    "name": "特大等离子涡轮",
+    "category": "generator",
+    "block": "multiblock",
+    "fuelEfficiency": "0.95",
+    "outputFactor": "5.5",
+    "costFactor": "5.5",
+    "voltage": "UV"
+  },
+  {
+    "id": "g-uhv-mb-naquadah",
+    "name": "大型硅岩反应堆",
+    "category": "generator",
+    "block": "multiblock",
+    "fuelEfficiency": "0.96",
+    "outputFactor": "6.2",
+    "costFactor": "6.2",
+    "voltage": "UHV"
+  },
+  {
+    "id": "g-uev-mb-decay",
+    "name": "超临界蒸汽涡轮",
+    "category": "generator",
+    "block": "multiblock",
+    "fuelEfficiency": "0.97",
+    "outputFactor": "6.5",
+    "costFactor": "6.5",
+    "voltage": "UEV"
+  },
+  {
+    "id": "g-uiv-mb-dyson",
+    "name": "特大超临界蒸汽涡轮",
+    "category": "generator",
+    "block": "multiblock",
+    "fuelEfficiency": "0.99",
+    "outputFactor": "6.8",
+    "costFactor": "6.8",
+    "voltage": "UIV"
+  },
+  {
+    "id": "g-umv-mb-dyson",
+    "name": "戴森球地面单元",
+    "category": "generator",
+    "block": "multiblock",
+    "fuelEfficiency": "0.99",
+    "outputFactor": "7.1",
+    "costFactor": "7.1",
+    "voltage": "UMV"
+  },
+  {
+    "id": "g-uxv-mb-annihilation",
+    "name": "屏蔽拉格朗日湮灭矩阵",
+    "category": "generator",
+    "block": "multiblock",
+    "fuelEfficiency": "0.98",
+    "outputFactor": "7.4",
+    "costFactor": "7.4",
+    "voltage": "UXV"
+  },
+  {
+    "id": "g-max-mb-blackhole",
+    "name": "鸿蒙之眼",
+    "category": "generator",
+    "block": "multiblock",
+    "fuelEfficiency": "0.99",
+    "outputFactor": "8",
+    "costFactor": "8",
+    "voltage": "MAX"
+  }
+]

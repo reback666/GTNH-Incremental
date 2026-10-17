@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { MAX_TIER, MIN_TIER, VOLTAGE_TIERS, voltageMultiplier } from '../src/numeric/voltage';
 
 describe('电压体系', () => {
-  it('共 14 级，顺序为 ULV→…→MAX', () => {
-    expect(VOLTAGE_TIERS.length).toBe(14);
+  it('共 15 级，UMV 位于 UIV 与 UXV 之间', () => {
+    expect(VOLTAGE_TIERS.length).toBe(15);
     expect(MIN_TIER).toBe(1);
-    expect(MAX_TIER).toBe(14);
+    expect(MAX_TIER).toBe(15);
     expect(VOLTAGE_TIERS).toEqual([
       'ULV',
       'LV',
@@ -19,6 +19,7 @@ describe('电压体系', () => {
       'UHV',
       'UEV',
       'UIV',
+      'UMV',
       'UXV',
       'MAX',
     ]);
@@ -29,6 +30,7 @@ describe('电压体系', () => {
     expect(voltageMultiplier(2).toString()).toBe('4');
     expect(voltageMultiplier(5).toString()).toBe('256');
     expect(voltageMultiplier(14).toString()).toBe('67108864');
+    expect(voltageMultiplier(MAX_TIER).toString()).toBe('268435456');
   });
 
   it('每一级恰好是前一级的 4 倍', () => {
@@ -39,6 +41,6 @@ describe('电压体系', () => {
 
   it('越界 tier 直接报错', () => {
     expect(() => voltageMultiplier(0)).toThrow(RangeError);
-    expect(() => voltageMultiplier(15)).toThrow(RangeError);
+    expect(() => voltageMultiplier(MAX_TIER + 1)).toThrow(RangeError);
   });
 });

@@ -2,6 +2,10 @@
 
 界面里的机器图标和矿脉贴图都不是手画的，全部从 GTNH 的贴图合成，脚本可重跑。
 
+## GTNH 标志
+
+左上角 `src/assets/gtnh-logo.png` 来自本机 PrismLauncher 的 `icons/gtnh_icon.png`，与 GTNH 2.8.4 实例内同名图标一致；仅裁去透明边缘，保留原图颜色与比例。构建时内联到便携 HTML。
+
 ## GUI 皮肤（面板 / 插槽 / 按钮 / 页签 / 进度条）
 
 UI 重设计（2026-10-04 拍板「GT 机器 GUI 深度复刻 + 贴图+CSS 混合」）后，界面骨架
@@ -19,7 +23,7 @@ UI 重设计（2026-10-04 拍板「GT 机器 GUI 深度复刻 + 贴图+CSS 混�
 | `tab-cover*.png` | `tab/cover_normal` / `cover_highlight` / `cover_disabled` | 页签（cover 是 GT 机器 GUI 的盖板页签） |
 | `tab-title.png` | `tab/title_dark.png` | 面板标题条 |
 | `arrow-empty.png` | `progressbar/arrow.png` 上帧（20×18） | 箭头进度条空底 |
-| `arrow-fill-t1..14.png` | 同上下帧按电压色染色 | 进度填充：14 级电压色（与 `gtnh_tiers.py` 同源），MAX 横向彩虹；染色方式与镐子爆破线同族（亮度转灰阶乘色、暗部 0.3 保底） |
+| `arrow-fill-t1..15.png` | 同上下帧按电压色染色 | 进度填充：15 级电压色（由 `src/content/voltages.json` 派生），MAX 横向彩虹；染色方式与镐子爆破线同族（亮度转灰阶乘色、暗部 0.3 保底） |
 | `glow-blue.png` / `glow-rainbow.png` | TecTech `background/blue_glow.png` / `rainbow_glow.png` | 辉光点缀（转生页 / MAX 级） |
 
 生成脚本：`python scripts/build-gui-skins.py`，预览图 `docs/gui-skins.png`。
@@ -45,7 +49,7 @@ UI 重设计（2026-10-04 拍板「GT 机器 GUI 深度复刻 + 贴图+CSS 混�
 GT 的机器不是一张整图，而是「**机壳 + 功能面片**」两层叠出来的。按同样方式合成：
 
 ```
-底层：iconsets/MACHINE_<电压>_SIDE.png      按电压等级着色的机壳，14 级全都有
+底层：iconsets/MACHINE_<电压>_SIDE.png      按电压等级着色的机壳，15 级全都有
 面片：该机器的 SIDE / OVERLAY_* / LARGETURBINE_* 贴图，叠在上面
 ```
 
@@ -60,7 +64,7 @@ GT 的机器不是一张整图，而是「**机壳 + 功能面片**」两层叠�
 | 各级燃气轮机 | `iconsets/GAS_TURBINE_SIDE.png` |
 | 各级等离子发电机 | 等离子发电机没有独立贴图，暂借 `basicmachines/chemical_reactor/OVERLAY_FRONT.png` |
 | 各级采矿机 | `basicmachines/miner/OVERLAY_FRONT.png` |
-| 各级制造机 | `basicmachines/macerator/OVERLAY_FRONT.png` |
+| 各级制造机 | `basicmachines/assembler/OVERLAY_FRONT.png` |
 | 各级计算机 | `iconsets/EM_COMPUTER.png` 的最上一格（原图是 5 帧竖排条带） |
 | 各级研究站 | `iconsets/OVERLAY_FRONT_RESEARCH_COMPLETER.png` |
 
@@ -76,22 +80,13 @@ GT 的机器不是一张整图，而是「**机壳 + 功能面片**」两层叠�
 不在图标上叠任何额外标记 —— 等级靠面板里的等级名与机器名区分
 （试过在图标下缘加一条等级色带，实际看着很突兀，已去掉）。
 
-染色表在 `scripts/gtnh_tiers.py`，取自 GTNH 中文 wiki「电力」页面里按等级上色的表，
-与 GT 自己的能量仓口贴图一致（MV 橙、HV 金）；MAX 在 GT 里是彩虹，这里按横向彩虹上色。
+电压、资源、配色和机器合成配方统一定义在 `src/content/`，扩展字段见 `docs/custom-content.md`。
+`scripts/gtnh_tiers.py` 直接读取电压与规则 JSON，机器目录通过 TypeScript 注册器导出，
+不另维护电压表、颜色表、机器名单或开放等级。
 
-| 等级 | 主色 | | 等级 | 主色 |
-|---|---|---|---|---|
-| ULV | `#FF5555` | | ZPM | `#00CED1` |
-| LV | `#778899` | | UV | `#008000` |
-| MV | `#FF8C00` | | UHV | `#8B0000` |
-| HV | `#FFD700` | | UEV | `#8B008B` |
-| EV | `#696969` | | UIV | `#0000CD` |
-| IV | `#4169E1` | | UXV | `#AA0000` |
-| LuV | `#FF00FF` | | MAX | 彩虹 |
-
-生成脚本：`python scripts/build-machine-icons.py`（采矿机 / 制造机 / 单方块发电机）、
-`python scripts/build-facility-icons.py`（存电装置 / 净化器 / 计算机 / 研究站）。
-两个脚本都从 `gtnh_tiers.py` 取染色，所以各等级的图标颜色是一致的。
+生成脚本：`python -B scripts/build-machine-icons.py --resource-pack "<Modernity-GTNH.zip>"`
+处理面片配方（包括计算机 / 研究站）；`python -B scripts/build-facility-icons.py`
+处理电池、净化器、节点与抑制器的绘制配方。
 
 **多方块机器不在这张表里** —— 它们是整套结构，图标直接用 wiki 上的整机渲染图，见下一节。
 
@@ -99,20 +94,19 @@ GT 的机器不是一张整图，而是「**机壳 + 功能面片**」两层叠�
 
 · 这是**正面视图**，不像 GTNH 里 NEI 那样是 3D 方块渲染。
 · 等离子发电机的面片是借来的，不是它自己的贴图。
-· 制造机的机型还没定（计划书第二十一章），所以 14 级现在共用同一个面片，只有机壳颜色不同。
+· 制造机使用 Modernity-GTNH 的组装机面片与机壳第一帧；ULV、UXV、MAX 为自定义扩展。
 
 ## 重新生成
 
 需要那台装了 GTNH 开发环境的机器。步骤：
 
-1. 用 `System.IO.Compression` 从 jar 解出上表里的贴图
-2. 在浏览器里用 canvas 按「机壳 → 面片」顺序绘制到 16×16，再最近邻放大到 32×32
-3. 以机型 id 命名写回 `src/assets/machines/`
+运行上述 Python 生成脚本；脚本直接从 jar / 材质包读取贴图，按「机壳 → 面片」合成，
+再以最近邻放大到 32×32，按机型 id 写入 `src/assets/machines/`。
 
 ## 矿脉贴图
 
 `src/assets/veins/tN.png` 是**竖排的帧条带**（宽 32，每帧高 32），界面用 CSS `steps()` 逐帧切换，
-和 Minecraft 的动画贴图同一套机制。层级照抄原版的矿石方块：
+和 Minecraft 的动画贴图同一套机制。文件名由 `ore.texture` 决定，帧信息在 `src/assets/veins/meta.json` 中按素材键记录。层级照抄原版的矿石方块：
 
 ```
 石头底 + 染料色染过的矿石斑点 + 动画叠加层（ore_OVERLAY.png 的多帧）
@@ -126,11 +120,10 @@ GT 的机器不是一张整图，而是「**机壳 + 功能面片**」两层叠�
 | T9 | 宇宙中子素 | `CUSTOM/cosmicneutronium/ore_OVERLAY.png` | 3 帧 × 3 tick |
 | T10 | 无尽 | `CUSTOM/infinity/block1.png` | 31 帧 × 3 tick |
 | T11 | 龙芯 | `CUSTOM/draconium/ore_OVERLAY.png`（10 帧来回播成 18 帧） | 18 帧 × 4 tick |
-| T13 | 时空 | `CUSTOM/spacetime/block1.png` | 113 帧 × 3 tick |
+| T14 | 时空 | `CUSTOM/spacetime/block1.png` | 113 帧 × 3 tick |
 
-T12 海珀珍没有原版贴图可用（它的材质定义在 GT++，颜色取自
-`gtPlusPlus.core.material.MaterialsElements$STANDALONE` 里的 `HYPOGEN`：RGBA {220, 120, 75, 2}），
-所以按材料色重绘斑点，保留原有明暗。
+T12 为 UMV 的超时空金属，按 `MaterialsUEVplus.TranscendentMetal` 的 RGB 50/50/50 重绘静态斑点。
+T13 海珀珍沿用 `scripts/textures/hypogen-coil.png` 中的 Modernity-GTNH UXV 线圈能量流，119 帧、每帧 50ms。
 
 `src/assets/veins/fx/` 是原版特殊渲染用的光晕贴图，界面用 CSS mask 上色：
 无尽用 `HALO.png`（图标外扩 10/16 的方形暗光晕 + 60% 透明度的脉动重影），
@@ -158,11 +151,11 @@ T12 海珀珍没有原版贴图可用（它的材质定义在 GT++，颜色取�
 | `x-<等级>` | 计算机 | `iconsets/EM_COMPUTER.png` | LuV（tier 7） |
 | `r-<等级>` | 研究站 | `iconsets/OVERLAY_FRONT_RESEARCH_COMPLETER.png` | LuV（tier 7） |
 
-生成脚本：`python scripts/build-facility-icons.py`，开放等级与 `models.ts`、`numeric/research.ts` 对齐。
+生成脚本按内容目录中的 `texture.face` / `texture.draw` 选择面片或绘制图案；开放范围由机器系列配置决定。
 
 ## 镐子图标（金刚杵）
 
-`src/assets/pickaxe/` 下是镐子三条升级线的图标，每条线 14 张：
+`src/assets/pickaxe/` 下是镐子三条升级线的图标，每条线 15 张：
 
 ```
 线          文件前缀        素材
@@ -178,24 +171,21 @@ T12 海珀珍没有原版贴图可用（它的材质定义在 GT++，颜色取�
 **金刚杵全线是动画**：本体按材质包 mcmeta 的序列流动（33 拍 × 50ms：停 4 拍 → 1..15 → 14..1
 往复），发光曲线随等级换电压色——只动高饱和像素（曲线 ≥0.35 饱和度）、保留每帧明度呼吸；
 换色会把目标等级色的**明度**也乘进去（有的等级色只差明度，只换色相会撞档）。
-图标输出 32×1056 条带，界面元数据 `PICKAXE_STRIP_META.vajra`。
+图标输出 32×1056 条带，界面元数据 `pickaxeStripMeta`，文件映射使用电压配置的 `textureKey`。
 满级曲线改用无尽矿石的流动色（毕业 = 无尽材质）。
 **材质包里的 itemVajraCore.png 不要用**——那是 Gravisuite 版金刚杵的电量指示层
 （100% 蓝芯 / 0% 红芯），与电压等级无关（2026-10-03 用户指正，曾误合上去过）。
 
-**采集（drill）不走电压色**（2026-10-03 用户拍板）：机体保持 IC2 原版不上色，只有右上角的
-金属钻头（低饱和且亮，色距分界自动识别）随等级换成对应矿脉的材质色——等级 n 取
-`src/assets/veins/t(n-1).png` 斑点平均色（锻铁白 / 铜橙 / 铝蓝 / … / 时空紫，全线静态）。
-blast 1~13 级：原图本身是彩色的，机器那套淡染（`TINT_STRENGTH = 0.2`）用在它身上
+**采集（drill）**：机体保持 IC2 原版不上色，只有右上角的金属钻头随等级换电压色。
+blast 1~14 级：原图本身是彩色的，机器那套淡染（`TINT_STRENGTH = 0.2`）用在它身上
 几乎看不出等级差别，所以先按感知亮度把原图转成明暗，再乘上该等级的电压色（暗部有 0.45
-的亮度保底）。配色取自 `gtnh_tiers.py`。**满级（14）是无尽矿石材质的流动动画**（2026-10-03
+的亮度保底）。配色取自 `gtnh_tiers.py`。**满级（15）是无尽矿石材质的流动动画**（2026-10-03
 用户拍板，先后否掉 MAX 横向彩虹 / 世界崩解之镐光谱 / 静态矿石斑点三版）：输出 32×992 的
 竖排 31 帧条带，颜色只取矿石斑点自身（饱和度 ≥ 0.2，灰白石底不参与，空格由同帧多源 BFS
 取最近斑点色），帧节奏 150ms/帧与矿脉一致。连锁采集满级钻头同一套流动规则（机体不上色）。
-（连锁采集曾试过「钻头染矿脉材质色 / 动画矿脉跟流动」，用户看完退回电压色版。）
 
 界面里三条线按**各自升了多少次**上色（`pickaxeIconTier`）。
-分母用「这条线满级时的总次数」（金刚杵 13、连锁采集 7、连锁爆破 28），
+分母取各条升级线在 MAX 时的总次数，上限定义见 `src/numeric/pickaxe.ts`，
 所以金刚杵一级一档、连锁采集一级约两档、连锁爆破两左右一档。
 **分母不能用「当前电压给的机会数」** —— 那个数在前期很小（ULV 时金刚杵只有 1 次），
 升一次就是 100%，图标会直接跳成满级材质。
@@ -220,24 +210,22 @@ blast 1~13 级：原图本身是彩色的，机器那套淡染（`TINT_STRENGTH 
 | 大型等离子涡轮（ZPM） | `大型等离子涡轮.png` |
 | 特大等离子涡轮（UV） | `特大等离子涡轮.png` |
 | 大型硅岩反应堆（UHV） | `大型硅岩反应堆.png` |
-| 衰变发电机（UEV） | `衰变发电机.png` |
-| 戴森云地面单元（UIV） | `戴森云地面单元.png` |
-| 湮灭发电机（UXV） | `湮灭发电机.png` |
-| 黑洞发电机（MAX） | `亚稳态黑洞遏制场结构导出.png` |
+| 超临界蒸汽涡轮（UEV） | `衰变发电机.png`（待替换） |
+| 特大超临界蒸汽涡轮（UIV） | `戴森云地面单元.png`（待替换） |
+| 戴森球地面单元（UMV） | `戴森云地面单元.png` |
+| 屏蔽拉格朗日湮灭矩阵（UXV） | `湮灭发电机.png`（待替换） |
+| 鸿蒙之眼（MAX） | `亚稳态黑洞遏制场结构导出.png`（待替换） |
 
 取图说明：
 
-· 中文 wiki 的条目名和图片名都按上面写，图片走 `api.php?action=query&prop=imageinfo` 拿原始 URL
-· 「黑洞发电机」在 wiki 上没有同名条目，「亚稳态黑洞遏制场」是同一套黑洞机器的结构图，
-  暂借来做图标
-· 衰变发电机与湮灭发电机两张原图都是 TecTech 的深蓝结构，缩到 32×32 后差异不大
-  （1024 个像素里差 119 个）—— 面板上有机器名，能区分；想更醒目可以换图
+· 上表右列记录现用图片名，图片走 `api.php?action=query&prop=imageinfo` 拿原始 URL。
+· 标为待替换的图片沿用改名前的素材，未与新机器原型同步。
 
 已知不足：整机图是渲染图，不是像素画，缩到 32×32 后是柔和的缩略图，
 和单方块机型的像素风图标不是一种画法。
 
 重新生成：`python scripts/build-veins.py`（默认从 gradle 缓存里找 jar，可用 `--jar` 指定）。
-它会重写 `src/assets/veins/t*.png`、`fx/*.png` 与 `src/game/vein-meta.ts`。
+它会按 `ore.texture` 重写矿脉 PNG、`fx/*.png` 与 `src/assets/veins/meta.json`。
 
 ## 打包约定
 
@@ -245,7 +233,14 @@ blast 1~13 级：原图本身是彩色的，机器那套淡染（`TINT_STRENGTH 
 因为 `scripts/inline-dist.ts` 打包后会删掉 `assets/` 目录 —— 超过阈值的贴图会变成打不开的外部文件。
 
 
-## 厂区机壳面
+## LV 3D 主厂区
 
-`src/assets/casings/<tier>-side.png` 与 `<tier>-top.png` 由 `build-scene-casings.py` 从本机 GT5-Unofficial 开发包的 `iconsets/MACHINE_<voltage>_SIDE/TOP.png` 提取。
-染色复用 `gtnh_tiers.py`；缺少独立顶面的等级使用同级侧面。Canvas 将它们与现有机型功能面投影到完整方块表面。
+六种机器的机壳、五类功能面、运行覆盖层与发光覆盖层全部提取自本机 `Modernity-GTNH-9ebdeed-pre.zip`，没有原版 jar 回退或电压色重绘。名称与原型配置位于 `src/content/scene-machines.json`；每张原始路径、尺寸、动画帧及各面图层的权威清单为 `src/assets/factory3d/manifest.json`。
+
+生成命令：`python -B scripts/extract-factory3d.py --pack "<Modernity-GTNH.zip>"`。输出保留原始 PNG 条带，运行时按 mcmeta 合成机壳与覆盖层。地板复用独立演示的素材与蓝图，来源见 `gtnh3d/ASSETS.md`，不经过机器提取器。
+
+## 旧等距场景机壳素材
+
+`src/assets/casings/<textureKey>-side.png` 与 `<textureKey>-top.png` 由 `build-scene-casings.py` 从本机 GT5-Unofficial 开发包的 `iconsets/MACHINE_<voltage>_SIDE/TOP.png` 提取。
+文件名由电压配置的 `textureKey` 决定，原版机壳电压可由 `casingVoltage` 指定。
+染色复用 `gtnh_tiers.py`；缺少独立顶面的等级使用同级侧面。这些素材保留在素材目录中，当前 3D 主厂区不使用它们。

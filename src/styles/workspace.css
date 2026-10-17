@@ -2,6 +2,7 @@
 .command-rail { position: sticky; top: 0; height: 100vh; padding: 30px 18px 24px; background: var(--rail); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
 .rail-brand { display: flex; align-items: center; gap: 12px; }
 .brand-mark { display: grid; place-items: center; width: 42px; height: 46px; background: rgba(var(--accent-rgb), 0.1); border: 1px solid rgba(var(--accent-rgb), 0.35); border-radius: 8px; color: var(--accent); }
+.brand-mark img { display: block; object-fit: contain; }
 .rail-brand strong { display: block; font: 700 24px/1.2 var(--font-num); letter-spacing: 0.04em; }
 .rail-brand div span { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
 .rail-divider { height: 1px; background: var(--line); margin: 28px 0 24px; }

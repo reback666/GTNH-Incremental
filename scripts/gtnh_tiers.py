@@ -1,4 +1,4 @@
-"""GTNH 的 14 级电压配色，以及给机壳上色的工具。
+"""GTNH 的电压配色，以及给机壳上色的工具。
 
 GT 的机壳贴图（`iconsets/MACHINE_<电压>_SIDE.png`）本身是**灰度**的，
 游戏里由 GT 在运行时按电压染色。
@@ -16,47 +16,55 @@ MV 橙、HV 金），MAX 是彩虹。
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from PIL import Image
+
+ROOT = Path(__file__).resolve().parent.parent
+VOLTAGE_DEFINITIONS = json.loads((ROOT / "src/content/voltages.json").read_text(encoding="utf-8"))
+RULES = json.loads((ROOT / "src/content/rules.json").read_text(encoding="utf-8"))
+VOLTAGES = [voltage["id"] for voltage in VOLTAGE_DEFINITIONS]
+MAX_TIER = len(VOLTAGES)
+
+
+def rgb(color: str) -> tuple[int, int, int]:
+    return tuple(int(color[index:index + 2], 16) for index in (1, 3, 5))
+
+
+def texture_key(tier: int) -> str:
+    return VOLTAGE_DEFINITIONS[tier - 1]["textureKey"]
+
+
+def casing_voltage(tier: int) -> str:
+    voltage = VOLTAGE_DEFINITIONS[tier - 1]
+    return voltage.get("casingVoltage", voltage["id"])
+
+
+def load_models() -> list[dict]:
+    import subprocess
+    result = subprocess.run(
+        ["node", "--import", "tsx", "--input-type=module", "-e",
+         "import { CONTENT } from './src/content/index.ts'; process.stdout.write(JSON.stringify(CONTENT.models));"],
+        cwd=ROOT, check=True, capture_output=True, encoding="utf-8",
+    )
+    return json.loads(result.stdout)
+
 
 # 淡染力度：0 = 完全保留金属灰，1 = 完全按等级色乘。
 # 取 0.2 是照着实机那种「黑机身、只透出一点色相」的观感定的。
 TINT_STRENGTH = 0.2
 
-# tier（1 = ULV）→ 电压主色
-TIER_COLORS: dict[int, tuple[int, int, int]] = {
-    1: (0xFF, 0x55, 0x55),  # ULV 红
-    2: (0x77, 0x88, 0x99),  # LV 石板灰
-    3: (0xFF, 0x8C, 0x00),  # MV 橙
-    4: (0xFF, 0xD7, 0x00),  # HV 金
-    5: (0x69, 0x69, 0x69),  # EV 暗灰
-    6: (0x41, 0x69, 0xE1),  # IV 宝蓝
-    7: (0xFF, 0x00, 0xFF),  # LuV 品红
-    8: (0x00, 0xCE, 0xD1),  # ZPM 青
-    9: (0x00, 0x80, 0x00),  # UV 绿
-    10: (0x8B, 0x00, 0x00),  # UHV 深红
-    11: (0x8B, 0x00, 0x8B),  # UEV 深品红
-    12: (0x00, 0x00, 0xCD),  # UIV 中蓝
-    13: (0xAA, 0x00, 0x00),  # UXV 暗红
+TIER_COLORS = {
+    index + 1: rgb(voltage["color"])
+    for index, voltage in enumerate(VOLTAGE_DEFINITIONS) if voltage["color"] is not None
 }
-
-# MAX 没有单一主色，GT 里是彩虹，这里按横向彩虹上色
-MAX_RAINBOW = [
-    (0xFF, 0x55, 0x55),
-    (0xFF, 0xAA, 0x00),
-    (0xFF, 0xFF, 0x55),
-    (0x55, 0xFF, 0x55),
-    (0x55, 0xFF, 0xFF),
-    (0x55, 0x55, 0xFF),
-    (0xAA, 0x00, 0xAA),
-    (0xFF, 0x55, 0xFF),
-]
+MAX_RAINBOW = [rgb(color) for color in RULES["rainbow"]]
 
 
 def tier_color(tier: int) -> tuple[int, int, int] | None:
-    """返回该等级的染色；MAX（14）返回 None，表示用彩虹。"""
-    if tier == 14:
-        return None
-    return TIER_COLORS[tier]
+    """返回该等级的染色；MAX 返回 None，表示用彩虹。"""
+    return TIER_COLORS.get(tier)
 
 
 def _tint(pixel: tuple[int, int, int, int], color: tuple[int, int, int]):

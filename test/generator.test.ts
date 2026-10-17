@@ -1,3 +1,4 @@
+import { MAX_TIER } from '../src/numeric/voltage';
 import { describe, expect, it } from 'vitest';
 import {
   generatorFuelEfficiency,
@@ -48,7 +49,7 @@ describe('发电机', () => {
 
   it('越界等级直接报错', () => {
     expect(() => generatorOutputEU(0)).toThrow(RangeError);
-    expect(() => generatorOutputEU(15)).toThrow(RangeError);
+    expect(() => generatorOutputEU(MAX_TIER + 1)).toThrow(RangeError);
     expect(() => generatorFuelEfficiency(99)).toThrow(RangeError);
     expect(() => oreEnergyValue(0)).toThrow(RangeError);
   });

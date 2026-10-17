@@ -191,7 +191,7 @@ export interface ResearchStats {
 // 待研究机型列表里的一行
 export interface ResearchOptionRow {
   id: string;
-  // 机型名，例如「黑洞发电机」
+  // 机型名，例如「鸿蒙之眼」
   name: string;
   // 所属电压等级名，例如 MAX
   tierName: string;

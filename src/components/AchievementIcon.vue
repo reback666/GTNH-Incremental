@@ -29,7 +29,7 @@ const pickaxeStripStyle = computed(() => {
   return { backgroundImage: `url(${url})`, backgroundSize: `${props.size}px auto` };
 });
 
-// 矿脉贴图是竖排帧条带（9 / 10 / 11 / 13 级带动画），这里只取第一帧：
+// 矿脉贴图是竖排帧条带（9 / 10 / 11 / 13 / 14 级带动画），这里只取第一帧：
 // 宽度按 size 缩放，容器裁掉下面的帧。
 const veinStyle = computed(() => {
   if (props.icon.kind !== 'vein') return undefined;

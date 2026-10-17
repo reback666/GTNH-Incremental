@@ -3,12 +3,12 @@
 // 容量跟着电压走 —— 高一级的机器耗电是 4 倍，电池容量同样 ×4，
 // 这样「装满一块电池能用多久」在所有等级上一致。
 import { Decimal, ZERO, dec } from './decimal';
-import { assertTier } from './voltage';
+import { assertTier, VOLTAGE_STEP } from './voltage';
 
 // 一台 ULV 电池的容量：16000 EU（2026-10-05 用户拍板 ×16，原来 1000）。
 // ULV 发电机的额定输出是 8 EU/t，装满约等于它跑 2000 秒。
 export const ULV_BATTERY_CAPACITY = '16000';
-export const BATTERY_CAPACITY_FACTOR = '4';
+export const BATTERY_CAPACITY_FACTOR = String(VOLTAGE_STEP);
 
 export function batteryCapacityEU(tier: number): Decimal {
   assertTier(tier);

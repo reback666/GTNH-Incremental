@@ -140,7 +140,7 @@ lines.push('### 1.1 已定的规则');
 lines.push('');
 lines.push('| 项 | 规则 | 来源 |');
 lines.push('| --- | --- | --- |');
-lines.push('| 电压 | 14 级 ULV→MAX，每级 4 倍 | 计划书第二章 |');
+lines.push(`| 电压 | ${MAX_TIER} 级 ULV→MAX，每级 4 倍 | 计划书第二章 |`);
 lines.push('| 机器成本 | 基础 × 4^(tier-1) × 1.07^已购，单位是**上一级**的币 | 计划书第七章、第八章 |');
 lines.push('| 机器产出 | 基础 × 4^(tier-1)，单位是**本级**的币 | 计划书第八章 |');
 lines.push('| 币值 | 4 合 1：1 枚 tier-n 币 = 4^(n-1) 枚 tier-1 币 | 计划书第七章 |');

@@ -7,6 +7,7 @@
 //
 // 耗电差都控制在 10% 上下：电网是取舍，不该压过机器本身的数量与等级。
 import { Decimal, dec } from './decimal';
+import { tierOf } from './voltage';
 
 export type GridMode = 'normal' | 'stable' | 'volatile' | 'black';
 
@@ -34,7 +35,7 @@ export const GRID_MODES: GridModeInfo[] = [
     name: '普通电网',
     energyMultiplier: '1',
     summary: '耗电不变，线路老，每 5 分钟有 5% 概率断电 5 秒',
-    unlockTier: 1,
+    unlockTier: tierOf('ULV'),
     outage: { checkSeconds: 300, chance: 0.05, outageSeconds: 5 },
   },
   {
@@ -42,7 +43,7 @@ export const GRID_MODES: GridModeInfo[] = [
     name: '稳定电网',
     energyMultiplier: '1.08',
     summary: '耗电 +8%，加装稳压装置，绝不会断电',
-    unlockTier: 2,
+    unlockTier: tierOf('LV'),
     outage: null,
   },
   {
@@ -50,7 +51,7 @@ export const GRID_MODES: GridModeInfo[] = [
     name: '波动电网',
     energyMultiplier: '0.9',
     summary: '耗电 -10%，每 5 分钟有 15% 概率断电 10 秒',
-    unlockTier: 3,
+    unlockTier: tierOf('MV'),
     outage: { checkSeconds: 300, chance: 0.15, outageSeconds: 10 },
   },
   {
@@ -58,7 +59,7 @@ export const GRID_MODES: GridModeInfo[] = [
     name: '黑市电网',
     energyMultiplier: '0.85',
     summary: '耗电 -15%，每分钟随机被窃取一种 GT 币的 1%',
-    unlockTier: 4,
+    unlockTier: tierOf('HV'),
     outage: null,
   },
 ];

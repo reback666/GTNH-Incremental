@@ -1,29 +1,12 @@
 import { Decimal, pow } from './decimal';
 
-// 计划书第二章：14 个电压等级，每一级电压为前一级的 4 倍。
-export const VOLTAGE_TIERS = [
-  'ULV',
-  'LV',
-  'MV',
-  'HV',
-  'EV',
-  'IV',
-  'LuV',
-  'ZPM',
-  'UV',
-  'UHV',
-  'UEV',
-  'UIV',
-  'UXV',
-  'MAX',
-] as const;
+import { CONTENT, VOLTAGES } from '../content';
 
-// tier 索引为 1..14（ULV=1，MAX=14），对外统一使用该索引。
+export const VOLTAGE_TIERS = VOLTAGES.map((voltage) => voltage.name ?? voltage.id);
 export const MIN_TIER = 1;
-export const MAX_TIER = VOLTAGE_TIERS.length;
-
-// 相邻电压等级的倍数。
-export const VOLTAGE_STEP = 4;
+export const MAX_TIER = VOLTAGES.length;
+export const VOLTAGE_STEP = CONTENT.rules.voltageStep;
+export { tierOf } from '../content';
 
 export function isValidTier(tier: number): boolean {
   return Number.isInteger(tier) && tier >= MIN_TIER && tier <= MAX_TIER;

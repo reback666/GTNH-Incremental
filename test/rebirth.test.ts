@@ -83,7 +83,7 @@ describe('转生公式', () => {
   });
 
   it('参数越界直接报错', () => {
-    expect(() => rebirthCables({ totalEU: '1e40', maxTier: 15, rebirthCount: 0 })).toThrow(
+    expect(() => rebirthCables({ totalEU: '1e40', maxTier: 16, rebirthCount: 0 })).toThrow(
       RangeError,
     );
     expect(() => rebirthGuarantee(-1)).toThrow(RangeError);

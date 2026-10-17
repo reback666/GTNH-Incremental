@@ -1,0 +1,34 @@
+{
+  "voltageStep": 4,
+  "coinStep": 4,
+  "computeStep": 4,
+  "researchVoltage": "LuV",
+  "researchGateVoltage": "ZPM",
+  "rainbow": [
+    "#ff5555",
+    "#ffaa00",
+    "#ffff55",
+    "#55ff55",
+    "#55ffff",
+    "#5555ff",
+    "#aa00aa",
+    "#ff55ff"
+  ],
+  "rainbowText": [
+    "#ff8080",
+    "#ffc069",
+    "#ffff80",
+    "#80ff80",
+    "#80ffff",
+    "#8fb8ff",
+    "#e070e0",
+    "#ff90ff"
+  ],
+  "generatorEfficiency": {
+    "ULV": "0.85",
+    "LV": "0.85",
+    "MV": "0.75",
+    "HV": "0.66"
+  },
+  "defaultGeneratorEfficiency": "0.65"
+}
