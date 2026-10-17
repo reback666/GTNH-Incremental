@@ -1,0 +1,23 @@
+{
+  "size": 160,
+  "layers": 3,
+  "palette": [
+    "gray_concrete",
+    "polished_diorite",
+    "polished_diorite_stairs",
+    "air",
+    "polished_granite",
+    "bricks",
+    "white_concrete",
+    "polished_andesite_slab",
+    "smooth_quartz_slab",
+    "yellow_terracotta",
+    "black_concrete",
+    "grass_block",
+    "moss_block",
+    "cyan_terracotta",
+    "verdant_froglight",
+    "iron_trapdoor",
+    "pearlescent_froglight"
+  ]
+}

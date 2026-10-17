@@ -262,3 +262,41 @@ describe('机型清单', () => {
     expect(() => (miners as MachineModel[]).push(miners[0]!)).toThrow();
   });
 });
+describe('UMV 与后续电压', () => {
+  it('从 UIV 逐级解锁 UMV、UXV、MAX，UXV 仍未达到终局', () => {
+    const core = new GameCore();
+    core.maxTier = 12;
+    core.unlockedVeins = Array.from({ length: 12 }, (_, index) => index);
+    core.coins = core.coins.map(() => dec('1e30'));
+    expect(core.unlock(14)).toBe(false);
+    expect(core.unlock(13)).toBe(true);
+    expect(VOLTAGE_TIERS[core.maxTier - 1]).toBe('UMV');
+    expect(core.unlockedVeins).toContain(12);
+    expect(core.unlock(14)).toBe(true);
+    expect(VOLTAGE_TIERS[core.maxTier - 1]).toBe('UXV');
+    expect(core.canRebirth('max')).toBe(false);
+    expect(core.unlock(15)).toBe(true);
+    expect(VOLTAGE_TIERS[core.maxTier - 1]).toBe('MAX');
+    expect(core.unlockedVeins).toContain(14);
+  });
+
+  it.each([
+    [13, 'g-umv-mb-dyson'],
+    [14, 'g-uxv-mb-annihilation'],
+    [15, 'g-max-mb-blackhole'],
+  ] as const)('第 %i 档的采矿、发电、制造都能结算到对应资源', (tier, generator) => {
+    const core = new GameCore();
+    core.setDevMode(true);
+    core.devUnlockTo(tier);
+    core.devGrantResources('1e30');
+    core.counts[`m-${tier}`] = 1;
+    core.counts[`c-${tier}`] = 1;
+    core.counts[generator] = 10;
+    const before = core.coins[tier - 1]!;
+    const report = core.tick(1);
+    expect(report.powerRatio).toBe(1);
+    expect(report.oreGained[tier - 1]?.gt(0)).toBe(true);
+    expect(report.coinsGained[tier - 1]?.gt(0)).toBe(true);
+    expect(core.coins[tier - 1]!.gt(before)).toBe(true);
+  });
+});

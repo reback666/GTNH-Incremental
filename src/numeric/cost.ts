@@ -57,7 +57,7 @@ export function marginalCostMultiplier(
 export interface MachineCostInput {
   // 该机器在 ULV 的基础成本。
   baseCost: DecimalInput;
-  // 电压等级 1..14。
+  // 电压等级 1..MAX_TIER。
   tier: number;
   // 已购买数量（同机型累计）。
   purchased: number;

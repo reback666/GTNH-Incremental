@@ -1,5 +1,6 @@
 import { Decimal, ZERO, dec, pow, type DecimalInput } from './decimal';
 import { assertTier } from './voltage';
+import { CONTENT, tierOf } from '../content';
 
 // 算力与研究进度（计划书第七章资源四、第十一章「研究解锁」）。
 //
@@ -12,12 +13,12 @@ import { assertTier } from './voltage';
 // 算力不占存档里的存量，只需要记研究进度和已经研究出来的等级。
 
 // 计算机与研究站从 LuV（tier 7）起开放。
-export const RESEARCH_FROM_TIER = 7;
+export const RESEARCH_FROM_TIER = tierOf(CONTENT.rules.researchVoltage);
 // ZPM（tier 8）及以后的机型要先研究出来。
-export const RESEARCH_GATE_FROM_TIER = 8;
+export const RESEARCH_GATE_FROM_TIER = tierOf(CONTENT.rules.researchGateVoltage);
 
 // 每级 ×4，与其他资源同倍率。
-export const COMPUTE_STEP = 4;
+export const COMPUTE_STEP = CONTENT.rules.computeStep;
 
 // 一台 LuV 计算机每秒产出 1 算力（暂定值）。
 export const COMPUTE_PER_SECOND_AT_LUV = '1';

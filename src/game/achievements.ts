@@ -1,5 +1,7 @@
 import { Decimal, dec } from '../numeric/decimal';
-import type { PickaxeLine } from '../numeric/pickaxe';
+import { blastChances, collectChances, vajraMaxLevel, type PickaxeLine } from '../numeric/pickaxe';
+import { MAX_TIER, tierOf } from '../numeric/voltage';
+import { CONTENT, VOLTAGES } from '../content';
 import type { AchievementSpriteKind } from './sprites';
 
 // 成就（计划书第十六章「数据统计」、第二十章第三阶段「加入成就系统与数据统计」）。
@@ -126,8 +128,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     id: 'leave-ulv',
     name: '走出超低压',
     desc: '解锁到 LV',
-    icon: { kind: 'vein', tier: 1 },
-    check: (state) => state.peakTier >= 2,
+    icon: { kind: 'vein', tier: tierOf('LV') - 1 },
+    check: (state) => state.peakTier >= tierOf('LV'),
   },
   {
     id: 'first-overclock',
@@ -170,7 +172,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     name: '越过硬墙',
     desc: '研究出 ZPM 级机型',
     icon: { kind: 'model', id: 'r-7' },
-    check: (state) => state.researchedZpm && state.peakTier >= 8,
+    check: (state) => state.researchedZpm && state.peakTier >= tierOf('ZPM'),
   },
   {
     id: 'first-rebirth',
@@ -225,7 +227,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     id: 'cable-collector',
     name: '时空常客',
     desc: '累计获得 50 条时空线缆',
-    icon: { kind: 'vein', tier: 13 },
+    icon: { kind: 'vein', tier: MAX_TIER - 1 },
     check: (state) => state.totalCables.gte(50),
   },
   {
@@ -233,7 +235,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     name: '满级文明',
     desc: '解锁到 MAX',
     icon: { kind: 'model', id: 'g-max-mb-blackhole' },
-    check: (state) => state.peakTier >= 14,
+    check: (state) => state.peakTier >= MAX_TIER,
   },
 
   // ── 下面这批按 GTNH 的趣事与轶事来写：每一件都是老玩家会心一笑的东西 ──
@@ -241,7 +243,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     id: 'hand-drill-1000',
     name: '人形采矿机',
     desc: '手动挖矿 1000 次：前期的你比机器还勤快',
-    icon: { kind: 'pickaxe', line: 'vajra', tier: 7 },
+    icon: { kind: 'pickaxe', line: 'vajra', tier: tierOf('LuV') },
     check: (state) => state.manualMines >= 1000,
   },
   {
@@ -281,15 +283,15 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
   {
     id: 'dyson-cloud',
-    name: '把云铺到天上',
-    desc: '造一台戴森云地面单元：从地面往天上搬能量',
+    name: '超临界与星空',
+    desc: `造一台${CONTENT.byModelId.get('g-uiv-mb-dyson')!.name}或${CONTENT.byModelId.get('g-umv-mb-dyson')!.name}`,
     icon: { kind: 'model', id: 'g-uiv-mb-dyson' },
     check: (state) => state.specials.dyson >= 1,
   },
   {
     id: 'blackhole-feeder',
-    name: '往黑洞里塞料',
-    desc: '造一台黑洞发电机 —— 后期机器的招牌玩法',
+    name: '鸿蒙初开',
+    desc: `造一台${CONTENT.byModelId.get('g-max-mb-blackhole')!.name}`,
     icon: { kind: 'model', id: 'g-max-mb-blackhole' },
     check: (state) => state.specials.blackhole >= 1,
   },
@@ -297,22 +299,22 @@ export const ACHIEVEMENTS: Achievement[] = [
     id: 'naquadah-age',
     name: '硅岩时代',
     desc: '拿到第一枚硅岩币：后期的硬通货',
-    icon: { kind: 'vein', tier: 7 },
-    check: (state) => state.topCoinTier >= 7,
+    icon: { kind: 'vein', tier: tierOf('ZPM') - 1 },
+    check: (state) => state.topCoinTier >= tierOf('LuV'),
   },
   {
     id: 'infinity-start',
     name: '无尽的开端',
     desc: '拿到第一枚无尽币 —— 「无尽」是这里的终极材料之一',
-    icon: { kind: 'vein', tier: 10 },
-    check: (state) => state.topCoinTier >= 10,
+    icon: { kind: 'vein', tier: tierOf('UEV') - 1 },
+    check: (state) => state.topCoinTier >= tierOf('UHV'),
   },
   {
     id: 'planck-hand',
     name: '普朗克在手',
     desc: '拿到第一枚普朗克币：这是 MAX 级的东西',
     icon: { kind: 'sprite', sprite: 'atom' },
-    check: (state) => state.topCoinTier >= 14,
+    check: (state) => state.topCoinTier >= MAX_TIER,
   },
   {
     id: 'all-grids',
@@ -382,7 +384,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     id: 'miner-king',
     name: '矿工之王',
     desc: '累计挖到 1e12 枚矿石',
-    icon: { kind: 'pickaxe', line: 'collect', tier: 14 },
+    icon: { kind: 'pickaxe', line: 'collect', tier: MAX_TIER },
     check: (state) => state.totalOre.gte(TRILLION),
   },
   {
@@ -402,16 +404,16 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'pickaxe-graduated',
     name: '镐子毕业',
-    desc: '金刚杵（13）、连锁采集（7）、连锁爆破（28）三条线全部点满',
-    icon: { kind: 'pickaxe', line: 'blast', tier: 14 },
+    desc: `金刚杵（${vajraMaxLevel()}）、连锁采集（${collectChances(MAX_TIER)}）、连锁爆破（${blastChances(MAX_TIER)}）三条线全部点满`,
+    icon: { kind: 'pickaxe', line: 'blast', tier: MAX_TIER },
     check: (state) =>
-      state.pickaxeVajra >= 13 && state.pickaxeCollect >= 7 && state.pickaxeBlast >= 28,
+      state.pickaxeVajra >= vajraMaxLevel() && state.pickaxeCollect >= collectChances(MAX_TIER) && state.pickaxeBlast >= blastChances(MAX_TIER),
   },
   {
     id: 'research-cleared',
     name: '研究清零',
     desc: 'ZPM 及以后的机型全部研究完',
-    icon: { kind: 'model', id: 'x-14' },
+    icon: { kind: 'model', id: `x-${VOLTAGES[MAX_TIER - 1].modelKey}` },
     check: (state) => state.researchTotal > 0 && state.researchedTotal >= state.researchTotal,
   },
   {

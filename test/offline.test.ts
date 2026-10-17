@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { useGameStore } from '../src/game/store';
 import { getCore, setCore } from '../src/game/engine';
 import { GameCore } from '../src/game/core';
-import { clearStorage, saveToStorage, secondsSinceLastSave } from '../src/game/save';
+import { clearStorage, deserialize, saveToStorage, secondsSinceLastSave, serialize } from '../src/game/save';
 import { SAVE_TIME_KEY } from '../src/game/constants';
 import { dec } from '../src/numeric/decimal';
 
@@ -38,6 +38,7 @@ function withStorage(fake: FakeStorage): () => void {
 }
 
 describe('离线收益', () => {
+  afterEach(() => { useGameStore().stop(); vi.restoreAllMocks(); });
   beforeEach(() => {
     setActivePinia(createPinia());
     setCore(new GameCore());
@@ -66,6 +67,42 @@ describe('离线收益', () => {
     expect(getCore().playSeconds).toBe(24 * 3600);
     expect(store.offlineNote).toContain('24 小时');
     expect(store.offlineNote).toContain('超过 24 小时的部分不计');
+  }, 15000);
+
+  it('与逐秒在线推进得到相同的状态，包括燃料、储能与污染', async () => {
+    const core = getCore();
+    core.grid = 'stable';
+    core.maxTier = 3;
+    core.ores[0] = dec('10000');
+    core.grids = ['normal', 'stable'];
+    core.counts = { 'm-1': 5, 'g-ulv': 3, 'c-1': 1, 'b-3': 2, 'p-2': 1 };
+    core.random = () => 0.99;
+    const online = deserialize(serialize(core));
+    online.random = () => 0.99;
+    for (let i = 0; i < 120; i++) online.tick(1);
+    await useGameStore().catchUp(120);
+    expect(serialize(core)).toEqual(serialize(online));
+  });
+
+  it('补算中存档只记录已完成的时间，重置后旧任务不再更新状态', async () => {
+    const storage = fakeStorage();
+    const restore = withStorage(storage);
+    vi.spyOn(Date, 'now').mockReturnValue(1000000);
+    try {
+      const store = useGameStore();
+      const old = getCore();
+      const pending = store.catchUp(3600);
+      const completed = old.playSeconds;
+      expect(completed).toBeGreaterThan(0);
+      expect(completed).toBeLessThan(3600);
+      store.save();
+      expect(Number(storage.getItem(SAVE_TIME_KEY))).toBe(1000000 - 3600 * 1000 + completed * 1000);
+      store.reset();
+      await pending;
+      expect(getCore().playSeconds).toBe(0);
+      expect(old.playSeconds).toBe(completed);
+      expect(store.catchingUp).toBe(false);
+    } finally { restore(); }
   });
 
   it('不到一秒不补算', async () => {

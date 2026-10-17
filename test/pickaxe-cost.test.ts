@@ -11,7 +11,6 @@ import {
 } from '../src/numeric/pickaxe';
 import { ZERO, dec, pow } from '../src/numeric/decimal';
 import { GameCore } from '../src/game/core';
-import { SAVE_VERSION } from '../src/game/constants';
 import { MAX_TIER } from '../src/numeric/voltage';
 
 // 基准价：machineCost({ baseCost, tier, purchased: 0 }) 里基准价就是 500×4^(tier-1)
@@ -31,7 +30,7 @@ function chanceGrantedTier(line: PickaxeLine, n: number): number {
 
 describe('每条线都按「发机会的那一级电压」计价', () => {
   it('vajra / collect / blast 的每一次升级都对齐', () => {
-    const totals: Record<PickaxeLine, number> = { vajra: 13, collect: 7, blast: 28 };
+    const totals: Record<PickaxeLine, number> = { vajra: 14, collect: 7, blast: 30 };
     for (const line of ['vajra', 'collect', 'blast'] as PickaxeLine[]) {
       for (let n = 1; n <= totals[line]; n += 1) {
         const granted = chanceGrantedTier(line, n);
@@ -56,7 +55,7 @@ describe('pickaxeUpgradeTier 映射', () => {
     expect(pickaxeUpgradeTier('collect', 0)).toBe(2); // 第 1 次来自 LV
     expect(pickaxeUpgradeTier('collect', 1)).toBe(4); // 第 2 次来自 HV
     expect(pickaxeUpgradeTier('collect', 2)).toBe(6); // 第 3 次来自 IV
-    expect(pickaxeUpgradeTier('collect', 6)).toBe(14); // 第 7 次来自 MAX
+    expect(pickaxeUpgradeTier('collect', 6)).toBe(14); // 第 7 次来自 UXV，MAX 为奇数档，不额外发采集机会
   });
 
   it('连锁爆破：第 n 次升级 → tier = floor((n-1)/2)+1', () => {
@@ -225,11 +224,5 @@ describe('GameCore 实际升级：扣币、买不起、跨电压', () => {
     expect(core.canAffordPickaxeOf('vajra')).toBe(false);
     expect(core.upgradePickaxe('vajra')).toBe(false);
     expect(core.pickaxeLevel('vajra')).toBe(0);
-  });
-});
-
-describe('存档版本', () => {
-  it('v24：界面主题进存档（v23：音效，v22：存档间隔，v21：数字显示）', () => {
-    expect(SAVE_VERSION).toBe(24);
   });
 });

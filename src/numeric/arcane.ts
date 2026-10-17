@@ -1,5 +1,5 @@
 import { Decimal, ONE, ZERO, dec, pow, type DecimalInput } from './decimal';
-import { assertTier } from './voltage';
+import { assertTier, VOLTAGE_STEP } from './voltage';
 
 // 奥术宇宙：灵气与源质（计划书第五章）。
 //
@@ -12,7 +12,6 @@ import { assertTier } from './voltage';
 
 // 该等级的「本级 1A」：4^(tier-1) × 8。节点的产量与魔法机器的需求都按它算。
 export const NODE_VIS_AT_ULV = '8';
-export const VIS_TIER_FACTOR = 4;
 
 // 一台节点满负荷每秒吃多少源质
 export const NODE_ESSENTIA_PER_SECOND = '1';
@@ -30,7 +29,7 @@ export const ARCANE_BONUS_MAGIC = '0.3';
 // 该等级 1A 的灵气量（灵气/秒）
 export function visPerMachine(tier: number): Decimal {
   assertTier(tier);
-  return dec(NODE_VIS_AT_ULV).times(pow(String(VIS_TIER_FACTOR), tier - 1));
+  return dec(NODE_VIS_AT_ULV).times(pow(String(VOLTAGE_STEP), tier - 1));
 }
 
 // 灵气节点产量（灵气/秒）：与同级发电机同强度，也就是该等级的 1A。

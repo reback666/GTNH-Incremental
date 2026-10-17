@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MACHINE_MODELS } from '../src/game/models';
+import { MAX_TIER } from '../src/numeric/voltage';
 
 const ICON_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -36,14 +37,14 @@ describe('机型图标', () => {
     expect(wrongSize, '尺寸不对的图标').toEqual([]);
   });
 
-  it('采矿机与制造机的 14 级图标两两不同（机壳按电压染色生效）', () => {
+  it('采矿机与制造机的全部电压图标两两不同（机壳按电压染色生效）', () => {
     for (const prefix of ['m-', 'c-']) {
       const hashes = new Set<string>();
-      for (let tier = 1; tier <= 14; tier += 1) {
+      for (let tier = 1; tier <= MAX_TIER; tier += 1) {
         const file = path.join(ICON_DIR, `${prefix}${tier}.png`);
         hashes.add(createHash('md5').update(readFileSync(file)).digest('hex'));
       }
-      expect(hashes.size, `${prefix} 系列的图标数`).toBe(14);
+      expect(hashes.size, `${prefix} 系列的图标数`).toBe(MAX_TIER);
     }
   });
 
@@ -59,7 +60,7 @@ describe('机型图标', () => {
     }
   });
 
-  it('镐子三条线各有 14 张图标：金刚杵全线 32×1056 动画条带，采集/爆破 1~13 级 32×32、满级 32×992', () => {
+  it('镐子三条线覆盖全部电压：金刚杵全线动画，采集/爆破仅满级为动画', () => {
     const dir = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
       '..',
@@ -71,19 +72,19 @@ describe('机型图标', () => {
     // 采集（原版机体+电压色钻头）与爆破满级都是 31 帧无尽矿石流动条带
     const stripHeight: Record<string, (tier: number) => number> = {
       vajra: () => 1056,
-      drill: (tier) => (tier === 14 ? 992 : 32),
-      blast: (tier) => (tier === 14 ? 992 : 32),
+      drill: (tier) => (tier === MAX_TIER ? 992 : 32),
+      blast: (tier) => (tier === MAX_TIER ? 992 : 32),
     };
     for (const line of ['vajra', 'drill', 'blast']) {
       const hashes = new Set<string>();
-      for (let tier = 1; tier <= 14; tier += 1) {
+      for (let tier = 1; tier <= MAX_TIER; tier += 1) {
         const file = path.join(dir, `${line}-${tier}.png`);
         expect(existsSync(file), `缺 ${line}-${tier}.png`).toBe(true);
         const bytes = readFileSync(file);
         expect(pngSize(bytes), `${line}-${tier} 尺寸`).toBe(`32x${stripHeight[line]!(tier)}`);
         hashes.add(createHash('md5').update(bytes).digest('hex'));
       }
-      expect(hashes.size, `${line} 系列的图标数`).toBe(14);
+      expect(hashes.size, `${line} 系列的图标数`).toBe(MAX_TIER);
     }
   });
 });

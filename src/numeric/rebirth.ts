@@ -69,7 +69,7 @@ export function floorLog2(value: DecimalInput): number {
 export interface RebirthCablesInput {
   // 本周目累计产出的 EU。
   totalEU: DecimalInput;
-  // 本周目达到过的最高电压等级 1..14。
+  // 本周目达到过的最高电压等级 1..MAX_TIER。
   maxTier: number;
   // 已完成的转生次数 x，首次转生为 0。
   rebirthCount: number;

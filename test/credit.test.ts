@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_TIER } from '../src/numeric/voltage';
 import {
   coinName,
   coinValueInTier1,
@@ -31,11 +32,13 @@ describe('GT 币', () => {
     expect(coinName(1)).toBe('铜币');
     expect(coinName(8)).toBe('中子素币');
     expect(coinName(9)).toBe('宇宙中子素币');
-    expect(coinName(14)).toBe('普朗克币');
+    expect(coinName(13)).toBe('超时空金属币');
+    expect(coinName(14)).toBe('时空币');
+    expect(coinName(MAX_TIER)).toBe('普朗克币');
   });
 
   it('越界等级直接报错', () => {
     expect(() => coinValueInTier1(0)).toThrow(RangeError);
-    expect(() => paymentTier(15)).toThrow(RangeError);
+    expect(() => paymentTier(MAX_TIER + 1)).toThrow(RangeError);
   });
 });

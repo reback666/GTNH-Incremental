@@ -40,7 +40,7 @@ ISSUES = [
     ("O8", "数据语义", "低", "确认（程度修正）", "peakTier：v9 以前旧档按 maxTier 低估历史最高；devUnlockTo 会抬高并污染该统计", "save.ts:207、core.ts:525", "仅影响远古存档与 dev 操作"),
     ("O9", "体验/UI", "低", "确认", "dev 资源输入框 type=text 无校验，非法输入静默失败（devAdjustResource 返回 false 无提示）", "SettingsPanel.vue:139、core.ts:545-549", "1e999 会被 Decimal 正常接受，不算失败；dev 专用"),
     ("O10", "性能", "低", "确认（量级修正）", "每秒 1Hz 全量重建快照（十余个遍历函数）；同步 setInterval 存档；20Hz 空轮询兜底；每拍全量成就检查", "store.ts:491、734、731、core.ts:1671", "当前规模下无感，架构上可优化；「卡数百毫秒」夸大"),
-    ("O11", "性能", "极低", "确认", "machineColumn 8 类 × 14 级全遍历等「跑满」模式；代价每秒几十次数组遍历", "store.ts:1196、core.ts:713", "无感"),
+    ("O11", "性能", "极低", "确认", "machineColumn 8 类 × 15 级全遍历等「跑满」模式；代价每秒几十次数组遍历", "store.ts:1196、core.ts:713", "无感"),
     ("O12", "代码质量", "极低", "确认", "abyss.ts 用 .times('0.01') 而非 div(100)；全项目 5 处 dec(String(...)) 包装", "abyss.ts:23、store.ts:966/967/1038、core.ts:1416、research.ts:88", "Decimal 下无实际差异，纯风格"),
     ("O13", "测试", "信息", "通过", "31 个测试文件 286 条测试全部通过", "test/", "vitest run，2026-09-30"),
 ]

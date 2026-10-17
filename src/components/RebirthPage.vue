@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, nextTick } from 'vue';
-import { useGameStore, type RebirthNodeRow } from '../game/store';
+import { useGameStore } from '../game/store';
+import type { RebirthNodeRow } from '../game/presentation/types';
 import { REBIRTH_CANVAS_SIZE, REBIRTH_NODES } from '../game/rebirth';
 
 // 独立的转生页面：进来之后只显示转生相关的东西，工厂界面完全不出现。

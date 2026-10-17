@@ -13,7 +13,7 @@ export const POLLUTION_LOW = '30'; // 低于它无影响
 export const POLLUTION_HIGH = '70'; // 高于它进崩溃区
 
 // 每台运行中的机器每秒贡献：电压等级 × 这个系数（百分点）
-// 50 台 MV（3 级）= 0.12 %/秒 ≈ 7%/分钟；50 台 MAX（14 级）≈ 34%/分钟
+// 50 台 MV（3 级）= 0.12 %/秒 ≈ 7%/分钟；50 台 MAX（15 级）≈ 36%/分钟
 export const POLLUTION_PER_TIER_PER_SECOND = '0.0008';
 
 // 净化器每台每秒压下去的百分点：电压等级 × 这个系数。

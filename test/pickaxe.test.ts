@@ -30,16 +30,16 @@ describe('镐子的三条升级线', () => {
     // 金刚杵在 ULV 时没有机会（开局本来就能挖 T0，第一次升级对应 LV）
     expect(vajraChances(1)).toBe(0);
     expect(vajraChances(2)).toBe(1);
-    expect(vajraChances(MAX_TIER)).toBe(13);
+    expect(vajraChances(MAX_TIER)).toBe(14);
     expect(collectChances(1)).toBe(0);
     expect(collectChances(2)).toBe(1);
     expect(collectChances(MAX_TIER)).toBe(7);
     expect(blastChances(1)).toBe(2);
-    expect(blastChances(MAX_TIER)).toBe(28);
+    expect(blastChances(MAX_TIER)).toBe(30);
   });
 
-  it('金刚杵挖到 T13 就封顶（最高一档采矿机采的就是 T13）', () => {
-    expect(vajraMaxLevel()).toBe(13);
+  it('金刚杵挖到 T14 就封顶（最高一档采矿机采的就是 T14）', () => {
+    expect(vajraMaxLevel()).toBe(14);
   });
 
   it('连锁爆破每次机会的加值 = 2^(n/2)', () => {
@@ -64,10 +64,10 @@ describe('镐子的三条升级线', () => {
     // 用满时，总和 = 每个电压那两次机会的加值逐批加起来
     expect(blastBonus(3, 6).toString()).toBe('12.48528137423857029281013234525818847142');
     let total = dec('0');
-    for (let t = 1; t <= 14; t += 1) {
+    for (let t = 1; t <= MAX_TIER; t += 1) {
       total = total.plus(blastBonusPerUpgrade(t).times(2));
     }
-    expect(blastBonus(14, 28).toString()).toBe(total.toString());
+    expect(blastBonus(MAX_TIER, 30).toString()).toBe(total.toString());
   });
 
   it('连锁采集每级翻倍：0 级 ×1、7 级 ×128', () => {
@@ -85,8 +85,8 @@ describe('镐子的三条升级线', () => {
   });
 
   it('MAX 用满全部机会时的产出', () => {
-    const output = pickaxeOutputPerClick({ tier: 14, blastUsed: 28, collectLevel: 7 });
-    expect(output.toSignificantDigits(12).toString()).toBe('111130.91134');
+    const output = pickaxeOutputPerClick({ tier: MAX_TIER, blastUsed: 30, collectLevel: 7 });
+    expect(output.toSignificantDigits(12).toString()).toBe('157471.861352');
   });
 
   it('图标按升级次数取色：分母是总次数，前期不会一次跳满', () => {
@@ -95,22 +95,23 @@ describe('镐子的三条升级线', () => {
     expect(pickaxeIconTier('collect', 0)).toBe(1);
     expect(pickaxeIconTier('blast', 0)).toBe(1);
 
-    // 金刚杵 13 次走完 14 档，所以一级一档：
+    // 金刚杵 14 次走完 15 档，所以一级一档：
     // ULV 时升 1 次（总共才 1 次机会）也只是 LV 色，不会跳到 MAX
     expect(pickaxeIconTier('vajra', 1)).toBe(2);
     expect(pickaxeIconTier('vajra', 2)).toBe(3);
     expect(pickaxeIconTier('vajra', 13)).toBe(14);
+    expect(pickaxeIconTier('vajra', 14)).toBe(MAX_TIER);
 
-    // 连锁采集 7 次走完 14 档，每次往前挪约两档
-    expect(pickaxeIconTier('collect', 1)).toBe(2);
-    expect(pickaxeIconTier('collect', 2)).toBe(4);
-    expect(pickaxeIconTier('collect', 7)).toBe(14);
+    // 连锁采集 7 次走完 15 档，每次往前挪两档
+    expect(pickaxeIconTier('collect', 1)).toBe(3);
+    expect(pickaxeIconTier('collect', 2)).toBe(5);
+    expect(pickaxeIconTier('collect', 7)).toBe(MAX_TIER);
 
-    // 连锁爆破 28 次走完 14 档，两次左右挪一档
+    // 连锁爆破 30 次走完 15 档，两次左右挪一档
     expect(pickaxeIconTier('blast', 1)).toBe(1);
     expect(pickaxeIconTier('blast', 2)).toBe(1);
     expect(pickaxeIconTier('blast', 3)).toBe(2);
-    expect(pickaxeIconTier('blast', 28)).toBe(14);
+    expect(pickaxeIconTier('blast', 30)).toBe(MAX_TIER);
   });
 });
 
@@ -168,11 +169,11 @@ describe('游戏核心里的镐子', () => {
     expect(core.pickaxeBlast).toBe(2);
   });
 
-  it('金刚杵挖满 T13 之后不再消耗机会', () => {
+  it('金刚杵挖满 T14 之后不再消耗机会', () => {
     const core = funded(new GameCore());
     core.maxTier = MAX_TIER;
-    for (let i = 0; i < 13; i += 1) core.upgradePickaxe('vajra');
-    expect(core.pickaxeVajra).toBe(13);
+    for (let i = 0; i < MAX_TIER - 1; i += 1) core.upgradePickaxe('vajra');
+    expect(core.pickaxeVajra).toBe(MAX_TIER - 1);
     expect(core.canUpgradePickaxe('vajra')).toBe(false);
   });
 

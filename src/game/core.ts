@@ -208,7 +208,7 @@ export interface TickReport {
 }
 
 export class GameCore {
-  ores: Decimal[] = Array.from({ length: 14 }, () => ZERO);
+  ores: Decimal[] = Array.from({ length: MAX_TIER }, () => ZERO);
   coins: Decimal[] = Array.from({ length: MAX_TIER }, () => ZERO);
   // 按机型 id 存数量。机型目录见 models.ts
   counts: Record<string, number> = {};
@@ -648,7 +648,7 @@ export class GameCore {
       pickaxeBlast: this.pickaxeBlast,
       researchedTotal: this.researchedModels.length,
       // 只数「真的能被研究」的那部分：灵气节点与腐蚀抑制器要有对应平行宇宙才会出现在研究列表里。
-      // 不这么算的话，没有那两个宇宙的玩家把能研究的全研究完，也永远差着 14 台拿不到成就。
+      // 不这么算的话，没有那两个宇宙的玩家把能研究的全研究完，也拿不到成就。
       researchTotal: MACHINE_MODELS.filter(
         (model) => needsResearch(model.tier) && this.universeSatisfied(model),
       ).length,
@@ -897,7 +897,7 @@ export class GameCore {
 
   // 把本周目的一切推回开局，只留跨周目的东西
   private resetRun(): void {
-    this.ores = Array.from({ length: 14 }, () => ZERO);
+    this.ores = Array.from({ length: MAX_TIER }, () => ZERO);
     this.coins = Array.from({ length: MAX_TIER }, () => ZERO);
     this.counts = {};
     this.overclock = {};
@@ -2094,8 +2094,8 @@ function emptyReport(): TickReport {
     euCharged: ZERO,
     euDischarged: ZERO,
     faultsGained: 0,
-    oreGained: Array.from({ length: 14 }, () => ZERO),
-    oreSpent: Array.from({ length: 14 }, () => ZERO),
+    oreGained: Array.from({ length: MAX_TIER }, () => ZERO),
+    oreSpent: Array.from({ length: MAX_TIER }, () => ZERO),
     coinsGained: Array.from({ length: MAX_TIER }, () => ZERO),
   };
 }

@@ -1,3 +1,4 @@
+import { MAX_TIER } from '../src/numeric/voltage';
 import { describe, expect, it } from 'vitest';
 import { GameCore } from '../src/game/core';
 import { deserialize, serialize } from '../src/game/save';
@@ -8,7 +9,7 @@ describe('开发者模式', () => {
   it('默认关闭，关着的时候快捷操作都不生效', () => {
     const core = new GameCore();
     expect(core.devMode).toBe(false);
-    expect(core.devUnlockTo(14)).toBe(false);
+    expect(core.devUnlockTo(MAX_TIER)).toBe(false);
     expect(core.maxTier).toBe(1);
     expect(core.devGrantResources()).toBe(false);
     expect(core.ores.every((ore) => ore.isZero())).toBe(true);
@@ -22,19 +23,19 @@ describe('开发者模式', () => {
   it('解锁到某一级：开放矿脉，并把该级及以前都标记成已研究', () => {
     const core = new GameCore();
     core.setDevMode(true);
-    expect(core.devUnlockTo(14)).toBe(true);
+    expect(core.devUnlockTo(MAX_TIER)).toBe(true);
 
-    expect(core.maxTier).toBe(14);
-    expect(core.unlockedVeins).toEqual(Array.from({ length: 14 }, (_, index) => index));
+    expect(core.maxTier).toBe(MAX_TIER);
+    expect(core.unlockedVeins).toEqual(Array.from({ length: MAX_TIER }, (_, index) => index));
     // 开发者模式一口气把 ZPM 及以后的机型都标成已研究
     expect(core.researchedModels.length).toBeGreaterThan(0);
     expect(core.researchTargetModel()).toBe(null);
-    expect(core.isModelResearched(modelById('c-14'))).toBe(true);
+    expect(core.isModelResearched(modelById(`c-${MAX_TIER}`))).toBe(true);
 
     // 补一笔资源之后，MAX 的机器直接可买
     core.devGrantResources();
-    expect(core.canAfford(modelById('c-14'))).toBe(true);
-    expect(core.buy(modelById('c-14'), 1)).toBe(1);
+    expect(core.canAfford(modelById(`c-${MAX_TIER}`))).toBe(true);
+    expect(core.buy(modelById(`c-${MAX_TIER}`), 1)).toBe(1);
   });
 
   it('给资源、给线缆、快进、清空机器', () => {
@@ -43,7 +44,7 @@ describe('开发者模式', () => {
 
     core.devGrantResources('1e6');
     expect(core.ores[0]!.toString()).toBe('1000000');
-    expect(core.coins[13]!.toString()).toBe('1000000');
+    expect(core.coins[MAX_TIER - 1]!.toString()).toBe('1000000');
 
     core.devGrantCables('10');
     expect(core.cables.toString()).toBe('10');
@@ -70,8 +71,8 @@ describe('开发者模式', () => {
     expect(core.ores[1]!.toString()).toBe('1000000');
     expect(core.ores[0]!.toString()).toBe('0');
 
-    expect(core.devAdjustResource({ scope: 'coin', tier: 14 }, '500', 1)).toBe(true);
-    expect(core.coins[13]!.toString()).toBe('500');
+    expect(core.devAdjustResource({ scope: 'coin', tier: MAX_TIER }, '500', 1)).toBe(true);
+    expect(core.coins[MAX_TIER - 1]!.toString()).toBe('500');
     expect(core.coins[0]!.toString()).toBe('0');
 
     expect(core.devAdjustResource({ scope: 'ores' }, '3', -1)).toBe(true);
@@ -79,7 +80,7 @@ describe('开发者模式', () => {
     expect(core.ores[0]!.toString()).toBe('0'); // 减到 0 就停，不会变成负数
 
     expect(core.devAdjustResource({ scope: 'coins' }, '500', -1)).toBe(true);
-    expect(core.coins[13]!.toString()).toBe('0');
+    expect(core.coins[MAX_TIER - 1]!.toString()).toBe('0');
 
     expect(core.devAdjustResource({ scope: 'both' }, '2', 1)).toBe(true);
     expect(core.ores[1]!.toString()).toBe('999999');

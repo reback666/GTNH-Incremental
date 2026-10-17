@@ -31,7 +31,7 @@ export function vajraMaxLevel(): number {
 
 // 三条线各自能拿到的总机会数（随最高电压等级增长）。
 // 金刚杵从 LV 才开始给：开局本来就能挖 T0 矿脉，第一次升级对应的是 LV（挖 T1）。
-// 所以它在 ULV 时是 0 次，到 MAX 正好 13 次，和第 13 级矿脉的封顶严丝合缝。
+// 所以它在 ULV 时是 0 次，到 MAX 正好 MAX_TIER-1 次，和矿脉上限一致。
 export function vajraChances(maxTier: number): number {
   return Math.max(0, maxTier - 1) * VAJRA_CHANCES_PER_TIER;
 }
@@ -134,8 +134,8 @@ export function pickaxeTotalChances(line: PickaxeLine): number {
 }
 
 // 图标配色按「这条线升了多少次 ÷ 一共能升多少次」取，每升一级都往前挪：
-//   金刚杵 13 次走完 14 档（一级一档）、连锁采集 7 次走完 14 档（一级约两档）、
-//   连锁爆破 28 次走完 14 档（两左右一档）。
+//   金刚杵按每次一级、连锁采集按每次约两级，走完全部电压配色、
+//   连锁爆破每两次左右前进一档。
 // 分母必须用总次数，不能用「当前电压给的机会数」—— 后者在前期很小
 // （ULV 时金刚杵只有 1 次），升一次就是 100%，会直接跳成 MAX 的彩虹色。
 export function pickaxeIconTier(line: PickaxeLine, level: number): number {

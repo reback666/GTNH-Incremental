@@ -1,0 +1,199 @@
+[
+  {
+    "id": "ULV",
+    "modelKey": "1",
+    "textureKey": "1",
+    "color": "#ff5555",
+    "coin": "铜币",
+    "ore": {
+      "material": "锻铁",
+      "fx": "none",
+      "texture": "t0"
+    }
+  },
+  {
+    "id": "LV",
+    "modelKey": "2",
+    "textureKey": "2",
+    "color": "#778899",
+    "coin": "白铜币",
+    "ore": {
+      "material": "铜",
+      "fx": "none",
+      "texture": "t1"
+    }
+  },
+  {
+    "id": "MV",
+    "modelKey": "3",
+    "textureKey": "3",
+    "color": "#ff8c00",
+    "coin": "银币",
+    "ore": {
+      "material": "铝",
+      "fx": "none",
+      "texture": "t2"
+    }
+  },
+  {
+    "id": "HV",
+    "modelKey": "4",
+    "textureKey": "4",
+    "color": "#ffd700",
+    "coin": "金币",
+    "ore": {
+      "material": "不锈钢",
+      "fx": "none",
+      "texture": "t3"
+    }
+  },
+  {
+    "id": "EV",
+    "modelKey": "5",
+    "textureKey": "5",
+    "color": "#696969",
+    "coin": "铂币",
+    "ore": {
+      "material": "钛",
+      "fx": "none",
+      "texture": "t4"
+    }
+  },
+  {
+    "id": "IV",
+    "modelKey": "6",
+    "textureKey": "6",
+    "color": "#4169e1",
+    "coin": "锇币",
+    "ore": {
+      "material": "钨钢",
+      "fx": "none",
+      "texture": "t5"
+    }
+  },
+  {
+    "id": "LuV",
+    "modelKey": "7",
+    "textureKey": "7",
+    "color": "#ff00ff",
+    "coin": "硅岩币",
+    "ore": {
+      "material": "钯",
+      "fx": "none",
+      "texture": "t6"
+    }
+  },
+  {
+    "id": "ZPM",
+    "modelKey": "8",
+    "textureKey": "8",
+    "color": "#00ced1",
+    "coin": "中子素币",
+    "ore": {
+      "material": "硅岩",
+      "fx": "none",
+      "texture": "t7"
+    }
+  },
+  {
+    "id": "UV",
+    "modelKey": "9",
+    "textureKey": "9",
+    "color": "#008000",
+    "coin": "宇宙中子素币",
+    "ore": {
+      "material": "中子素",
+      "fx": "none",
+      "texture": "t8"
+    }
+  },
+  {
+    "id": "UHV",
+    "modelKey": "10",
+    "textureKey": "10",
+    "color": "#8b0000",
+    "coin": "无尽币",
+    "ore": {
+      "material": "宇宙中子素",
+      "fx": "fuzzy",
+      "texture": "t9",
+      "animation": {
+        "jar": "assets/gregtech/textures/blocks/materialicons/CUSTOM/cosmicneutronium/ore_OVERLAY.png"
+      }
+    }
+  },
+  {
+    "id": "UEV",
+    "modelKey": "11",
+    "textureKey": "11",
+    "color": "#8b008b",
+    "coin": "龙芯币",
+    "ore": {
+      "material": "无尽",
+      "fx": "halo",
+      "texture": "t10",
+      "animation": {
+        "jar": "assets/gregtech/textures/blocks/materialicons/CUSTOM/infinity/block1.png"
+      }
+    }
+  },
+  {
+    "id": "UIV",
+    "modelKey": "12",
+    "textureKey": "12",
+    "color": "#0000cd",
+    "coin": "海珀珍币",
+    "ore": {
+      "material": "龙芯",
+      "fx": "none",
+      "texture": "t11",
+      "animation": {
+        "jar": "assets/gregtech/textures/blocks/materialicons/CUSTOM/draconium/ore_OVERLAY.png"
+      }
+    }
+  },
+  {
+    "id": "UMV",
+    "modelKey": "13",
+    "textureKey": "13",
+    "color": "#228b22",
+    "coin": "超时空金属币",
+    "ore": {
+      "material": "超时空金属",
+      "fx": "none",
+      "texture": "t12",
+      "dye": "#323232"
+    }
+  },
+  {
+    "id": "UXV",
+    "modelKey": "14",
+    "textureKey": "14",
+    "color": "#aa0000",
+    "coin": "时空币",
+    "ore": {
+      "material": "海珀珍",
+      "fx": "none",
+      "texture": "t13",
+      "animation": {
+        "file": "scripts/textures/hypogen-coil.png",
+        "frameTicks": 1
+      }
+    }
+  },
+  {
+    "id": "MAX",
+    "modelKey": "15",
+    "textureKey": "15",
+    "color": null,
+    "coin": "普朗克币",
+    "ore": {
+      "material": "时空",
+      "fx": "none",
+      "texture": "t14",
+      "animation": {
+        "jar": "assets/gregtech/textures/blocks/materialicons/CUSTOM/spacetime/block1.png"
+      }
+    }
+  }
+]
