@@ -419,7 +419,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'tree-full',
     name: '加成树点满',
-    desc: '33 个永久加成节点全部买下（时空星图毕业）',
+    desc: '全部永久加成节点买下（时空星图毕业）',
     icon: { kind: 'sprite', sprite: 'star' },
     check: (state) => state.rebirthNodeCount >= 33,
   },

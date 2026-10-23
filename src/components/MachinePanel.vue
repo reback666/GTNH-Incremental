@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onDeactivated, ref, watch } from 'vue';
 import { useGameStore } from '../game/store';
 import type { MachineColumn, MachineModelRow, ModifierRow, MachineTierGroup, PickaxeLineRow } from '../game/presentation/types';
 import type { MachineKind, PayWith } from '../game/core';
@@ -119,6 +119,7 @@ function showTip(event: Event, model: MachineModelRow) {
 function hideTip() {
   tip.value = null;
 }
+onDeactivated(hideTip);
 
 // 悬停「超频」：这一档到底换来了多少速度、多花了多少电、故障率变多高
 function showOverclockTip(event: Event, model: MachineModelRow) {
@@ -251,7 +252,7 @@ function canBuy(model: MachineModelRow): boolean {
         @focus="showColumnTip($event, column.title, column.modifiers)"
         @blur="hideTip"
       >
-        <MachineIcon :model-id="tabIconId(column.kind)" :kind="column.kind" :size="38" />
+        <MachineIcon :model-id="tabIconId(column.kind)" :kind="column.kind" :size="48" />
         <span class="tab-name">{{ column.title }}</span>
         <span class="tab-count">已建 {{ column.count }} 台</span>
       </button>
@@ -315,7 +316,7 @@ function canBuy(model: MachineModelRow): boolean {
                 @focus="showTip($event, bar.model)"
                 @blur="hideTip"
               >
-                <MachineIcon :model-id="bar.model.id" :kind="activeColumn.kind" :size="24" /><span class="model-label">{{ bar.model.name }}</span>
+                <MachineIcon :model-id="bar.model.id" :kind="activeColumn.kind" :size="40" /><span class="model-label">{{ bar.model.name }}</span>
                 <span v-if="bar.model.block === 'multiblock'" class="badge mb" title="多方块：产出与效率更高，成本系数也更高">多方块</span>
                 <span v-if="!bar.model.researched" class="badge warn" title="要先在研究里解锁这一级机型">需研究</span>
                 <span
@@ -332,7 +333,7 @@ function canBuy(model: MachineModelRow): boolean {
                   :key="index"
                   :model-id="bar.model.id"
                   :kind="activeColumn.kind"
-                  :size="26"
+                  :size="32"
                   class="icon-pop"
                 />
                 <span v-if="bar.model.count > 5" class="icon-overflow">+{{ bar.model.count - 5 }}</span>

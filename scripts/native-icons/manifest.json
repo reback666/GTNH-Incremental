@@ -1,0 +1,856 @@
+{
+  "game": "GT: New Horizons 2.8.4",
+  "gregtech": "5.09.51.482",
+  "renderer": "Minecraft inventory renderer via NEI GuiItemIconDumper",
+  "size": 64,
+  "resourcePacks": [
+    "Modernity-GTNH-9ebdeed-pre.zip",
+    "Modernity-GTNH-28x-Fix.zip",
+    "Modernity-GTNHAddon-Just-Forestry-Bees.zip",
+    "Modernity-GTNHAddon-Just-Productive-Bees.zip",
+    "Modernity-GTNHAddon-NoMixinColorGCHeavyMaterial.zip",
+    "Modernity-GTNHAddon-GTNLResonaticCircuit.zip",
+    "Modernity-GTNHAddon-Medium-Large-Turbine.zip",
+    "Modernity-GTNHAddon-OutlinedOres.zip",
+    "Modernity-GTNH-UI.zip"
+  ],
+  "models": {
+    "g-ulv": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1120,
+      "name": "基础蒸汽轮机",
+      "note": "自定义 ULV 等级复用基础蒸汽轮机。"
+    },
+    "g-lv-steam": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1120,
+      "name": "基础蒸汽轮机"
+    },
+    "g-lv-comb": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1110,
+      "name": "基础内燃发电机"
+    },
+    "g-lv-gas": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1115,
+      "name": "基础燃气轮机"
+    },
+    "g-mv-steam": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1121,
+      "name": "进阶蒸汽轮机"
+    },
+    "g-mv-comb": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1111,
+      "name": "进阶内燃发电机"
+    },
+    "g-mv-gas": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1116,
+      "name": "进阶燃气轮机"
+    },
+    "g-hv-steam": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1122,
+      "name": "涡轮蒸汽轮机"
+    },
+    "g-hv-comb": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1112,
+      "name": "涡轮内燃发电机"
+    },
+    "g-hv-gas": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1117,
+      "name": "涡轮燃气轮机"
+    },
+    "g-hv-mb-steam": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1131,
+      "name": "大型蒸汽涡轮"
+    },
+    "g-ev-comb": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1113,
+      "name": "涡轮增压内燃发电机"
+    },
+    "g-ev-gas": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1118,
+      "name": "涡轮燃气轮机II"
+    },
+    "g-ev-plasma": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1196,
+      "name": "等离子发电机Mk I"
+    },
+    "g-ev-mb-gas": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1151,
+      "name": "大型燃气涡轮"
+    },
+    "g-iv-comb": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1114,
+      "name": "终极化学能释放者"
+    },
+    "g-iv-gas": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1119,
+      "name": "涡轮燃气轮机III"
+    },
+    "g-iv-plasma": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1197,
+      "name": "等离子发电机Mk II"
+    },
+    "g-iv-mb-steam": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 866,
+      "name": "特大高压蒸汽涡轮"
+    },
+    "g-luv-mb-gas": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 31073,
+      "name": "特大燃气涡轮"
+    },
+    "g-zpm-mb-plasma": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1153,
+      "name": "大型等离子涡轮"
+    },
+    "g-uv-mb-plasma": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 31074,
+      "name": "特大等离子涡轮"
+    },
+    "g-uhv-mb-naquadah": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 12732,
+      "name": "大型硅岩反应堆"
+    },
+    "g-uev-mb-decay": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 32016,
+      "name": "超临界蒸汽涡轮"
+    },
+    "g-uiv-mb-dyson": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 31076,
+      "name": "特大超临界蒸汽涡轮"
+    },
+    "g-umv-mb-dyson": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 14001,
+      "name": "戴森球地面单元"
+    },
+    "g-uxv-mb-annihilation": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 32028,
+      "name": "屏蔽拉格朗日湮灭矩阵"
+    },
+    "g-max-mb-blackhole": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15410,
+      "name": "鸿蒙之眼"
+    },
+    "m-1": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 679,
+      "name": "基础采矿机",
+      "note": "自定义 ULV 等级复用基础采矿机。"
+    },
+    "m-2": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 679,
+      "name": "基础采矿机"
+    },
+    "m-3": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 680,
+      "name": "优良采矿机"
+    },
+    "m-4": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 681,
+      "name": "进阶采矿机"
+    },
+    "m-5": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1178,
+      "name": "采矿场 III"
+    },
+    "m-6": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1179,
+      "name": "采矿场 IV"
+    },
+    "m-7": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 12741,
+      "name": "虚空采矿场 I"
+    },
+    "m-8": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 12740,
+      "name": "虚空采矿场 II"
+    },
+    "m-9": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 12739,
+      "name": "虚空采矿场 III"
+    },
+    "m-10": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 12739,
+      "name": "虚空采矿场 III",
+      "note": "扩展电压复用虚空采矿场 III，不另行染色。"
+    },
+    "m-11": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 12739,
+      "name": "虚空采矿场 III",
+      "note": "扩展电压复用虚空采矿场 III，不另行染色。"
+    },
+    "m-12": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 12739,
+      "name": "虚空采矿场 III",
+      "note": "扩展电压复用虚空采矿场 III，不另行染色。"
+    },
+    "m-13": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 12739,
+      "name": "虚空采矿场 III",
+      "note": "扩展电压复用虚空采矿场 III，不另行染色。"
+    },
+    "m-14": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 12739,
+      "name": "虚空采矿场 III",
+      "note": "扩展电压复用虚空采矿场 III，不另行染色。"
+    },
+    "m-15": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 12739,
+      "name": "虚空采矿场 III",
+      "note": "扩展电压复用虚空采矿场 III，不另行染色。"
+    },
+    "c-1": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 211,
+      "name": "基础组装机",
+      "note": "该电压没有对应单方块组装机，复用最近的原版组装机。"
+    },
+    "c-2": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 211,
+      "name": "基础组装机"
+    },
+    "c-3": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 212,
+      "name": "进阶组装机"
+    },
+    "c-4": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 213,
+      "name": "进阶组装机 II"
+    },
+    "c-5": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 214,
+      "name": "进阶组装机 III"
+    },
+    "c-6": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 215,
+      "name": "进阶组装机 IV"
+    },
+    "c-7": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 10780,
+      "name": "精英组装机"
+    },
+    "c-8": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 10781,
+      "name": "精英组装机 II"
+    },
+    "c-9": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 10782,
+      "name": "终极组装构建者"
+    },
+    "c-10": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 10783,
+      "name": "史诗组装构建者"
+    },
+    "c-11": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 10784,
+      "name": "史诗组装构建者 II"
+    },
+    "c-12": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 10785,
+      "name": "史诗组装构建者 III"
+    },
+    "c-13": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 10786,
+      "name": "史诗组装构建者 IV"
+    },
+    "c-14": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 10786,
+      "name": "史诗组装构建者 IV",
+      "note": "该电压没有对应单方块组装机，复用最近的原版组装机。"
+    },
+    "c-15": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 10786,
+      "name": "史诗组装构建者 IV",
+      "note": "该电压没有对应单方块组装机，复用最近的原版组装机。"
+    },
+    "mm-2": {
+      "registry": "Thaumcraft:blockWoodenDevice",
+      "meta": 5,
+      "name": "奥术钻探机",
+      "note": "自定义魔法采矿机采用原版奥术钻探机，各档共用原生物品图标。"
+    },
+    "mm-3": {
+      "registry": "Thaumcraft:blockWoodenDevice",
+      "meta": 5,
+      "name": "奥术钻探机",
+      "note": "自定义魔法采矿机采用原版奥术钻探机，各档共用原生物品图标。"
+    },
+    "mm-4": {
+      "registry": "Thaumcraft:blockWoodenDevice",
+      "meta": 5,
+      "name": "奥术钻探机",
+      "note": "自定义魔法采矿机采用原版奥术钻探机，各档共用原生物品图标。"
+    },
+    "mm-5": {
+      "registry": "Thaumcraft:blockWoodenDevice",
+      "meta": 5,
+      "name": "奥术钻探机",
+      "note": "自定义魔法采矿机采用原版奥术钻探机，各档共用原生物品图标。"
+    },
+    "mm-6": {
+      "registry": "Thaumcraft:blockWoodenDevice",
+      "meta": 5,
+      "name": "奥术钻探机",
+      "note": "自定义魔法采矿机采用原版奥术钻探机，各档共用原生物品图标。"
+    },
+    "mm-7": {
+      "registry": "Thaumcraft:blockWoodenDevice",
+      "meta": 5,
+      "name": "奥术钻探机",
+      "note": "自定义魔法采矿机采用原版奥术钻探机，各档共用原生物品图标。"
+    },
+    "mg-2": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1123,
+      "name": "新手魔法能源转换器",
+      "note": "魔法发电机采用原版魔法能源转换器；超出原版等级时复用大师级。"
+    },
+    "mg-3": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1124,
+      "name": "学徒魔法能源转换器",
+      "note": "魔法发电机采用原版魔法能源转换器；超出原版等级时复用大师级。"
+    },
+    "mg-4": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1125,
+      "name": "大师魔法能源转换器",
+      "note": "魔法发电机采用原版魔法能源转换器；超出原版等级时复用大师级。"
+    },
+    "mg-5": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1125,
+      "name": "大师魔法能源转换器",
+      "note": "魔法发电机采用原版魔法能源转换器；超出原版等级时复用大师级。"
+    },
+    "mg-6": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1125,
+      "name": "大师魔法能源转换器",
+      "note": "魔法发电机采用原版魔法能源转换器；超出原版等级时复用大师级。"
+    },
+    "mg-7": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 1125,
+      "name": "大师魔法能源转换器",
+      "note": "魔法发电机采用原版魔法能源转换器；超出原版等级时复用大师级。"
+    },
+    "mc-2": {
+      "registry": "thaumicenergistics:thaumicenergistics.block.arcane.assembler",
+      "meta": 0,
+      "name": "奥术装配室",
+      "note": "自定义魔法制造机采用原版奥术装配室，各档共用原生物品图标。"
+    },
+    "mc-3": {
+      "registry": "thaumicenergistics:thaumicenergistics.block.arcane.assembler",
+      "meta": 0,
+      "name": "奥术装配室",
+      "note": "自定义魔法制造机采用原版奥术装配室，各档共用原生物品图标。"
+    },
+    "mc-4": {
+      "registry": "thaumicenergistics:thaumicenergistics.block.arcane.assembler",
+      "meta": 0,
+      "name": "奥术装配室",
+      "note": "自定义魔法制造机采用原版奥术装配室，各档共用原生物品图标。"
+    },
+    "mc-5": {
+      "registry": "thaumicenergistics:thaumicenergistics.block.arcane.assembler",
+      "meta": 0,
+      "name": "奥术装配室",
+      "note": "自定义魔法制造机采用原版奥术装配室，各档共用原生物品图标。"
+    },
+    "mc-6": {
+      "registry": "thaumicenergistics:thaumicenergistics.block.arcane.assembler",
+      "meta": 0,
+      "name": "奥术装配室",
+      "note": "自定义魔法制造机采用原版奥术装配室，各档共用原生物品图标。"
+    },
+    "mc-7": {
+      "registry": "thaumicenergistics:thaumicenergistics.block.arcane.assembler",
+      "meta": 0,
+      "name": "奥术装配室",
+      "note": "自定义魔法制造机采用原版奥术装配室，各档共用原生物品图标。"
+    },
+    "b-3": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 162,
+      "name": "中压电池箱"
+    },
+    "b-4": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 163,
+      "name": "高压电池箱"
+    },
+    "b-5": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 164,
+      "name": "超高压电池箱"
+    },
+    "b-6": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 165,
+      "name": "强导压电池箱"
+    },
+    "b-7": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 166,
+      "name": "剧差压电池箱"
+    },
+    "b-8": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 167,
+      "name": "零点压电池箱"
+    },
+    "b-9": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 168,
+      "name": "极限压电池箱"
+    },
+    "b-10": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 169,
+      "name": "极高压电池箱"
+    },
+    "b-11": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 11240,
+      "name": "超极限压电池箱"
+    },
+    "b-12": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 11241,
+      "name": "极强导压电池箱"
+    },
+    "b-13": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 11242,
+      "name": "极剧差压电池箱"
+    },
+    "b-14": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 11243,
+      "name": "极上拓压电池箱"
+    },
+    "b-15": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 11245,
+      "name": "MAX电池箱"
+    },
+    "p-2": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 758,
+      "name": "中级污染清洗机"
+    },
+    "p-3": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 759,
+      "name": "进阶污染清洗机"
+    },
+    "p-4": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 760,
+      "name": "精准污染清洗机"
+    },
+    "p-5": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 761,
+      "name": "空气回收器"
+    },
+    "p-6": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 762,
+      "name": "中级空气回收器"
+    },
+    "p-7": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 763,
+      "name": "进阶空气回收器"
+    },
+    "p-8": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 764,
+      "name": "精准空气回收器"
+    },
+    "p-9": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 765,
+      "name": "大气净化者"
+    },
+    "p-10": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 766,
+      "name": "生物圈净化者"
+    },
+    "p-11": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 766,
+      "name": "生物圈净化者",
+      "note": "扩展电压复用生物圈净化者，不另行染色。"
+    },
+    "p-12": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 766,
+      "name": "生物圈净化者",
+      "note": "扩展电压复用生物圈净化者，不另行染色。"
+    },
+    "p-13": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 766,
+      "name": "生物圈净化者",
+      "note": "扩展电压复用生物圈净化者，不另行染色。"
+    },
+    "p-14": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 766,
+      "name": "生物圈净化者",
+      "note": "扩展电压复用生物圈净化者，不另行染色。"
+    },
+    "p-15": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 766,
+      "name": "生物圈净化者",
+      "note": "扩展电压复用生物圈净化者，不另行染色。"
+    },
+    "x-7": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15311,
+      "name": "量子计算机",
+      "note": "原版量子计算机控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "x-8": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15311,
+      "name": "量子计算机",
+      "note": "原版量子计算机控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "x-9": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15311,
+      "name": "量子计算机",
+      "note": "原版量子计算机控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "x-10": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15311,
+      "name": "量子计算机",
+      "note": "原版量子计算机控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "x-11": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15311,
+      "name": "量子计算机",
+      "note": "原版量子计算机控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "x-12": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15311,
+      "name": "量子计算机",
+      "note": "原版量子计算机控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "x-13": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15311,
+      "name": "量子计算机",
+      "note": "原版量子计算机控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "x-14": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15311,
+      "name": "量子计算机",
+      "note": "原版量子计算机控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "x-15": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15311,
+      "name": "量子计算机",
+      "note": "原版量子计算机控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "r-7": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15331,
+      "name": "研究站",
+      "note": "原版研究站控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "r-8": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15331,
+      "name": "研究站",
+      "note": "原版研究站控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "r-9": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15331,
+      "name": "研究站",
+      "note": "原版研究站控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "r-10": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15331,
+      "name": "研究站",
+      "note": "原版研究站控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "r-11": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15331,
+      "name": "研究站",
+      "note": "原版研究站控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "r-12": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15331,
+      "name": "研究站",
+      "note": "原版研究站控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "r-13": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15331,
+      "name": "研究站",
+      "note": "原版研究站控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "r-14": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15331,
+      "name": "研究站",
+      "note": "原版研究站控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "r-15": {
+      "registry": "gregtech:gt.blockmachines",
+      "meta": 15331,
+      "name": "研究站",
+      "note": "原版研究站控制器没有分电压图标，各档共用原生物品图标。"
+    },
+    "n-1": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "n-2": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "n-3": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "n-4": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "n-5": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "n-6": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "n-7": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "n-8": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "n-9": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "n-10": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "n-11": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "n-12": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "n-13": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "n-14": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "n-15": {
+      "registry": "Thaumcraft:blockAiry",
+      "meta": 0,
+      "name": "灵气节点",
+      "note": "使用原版灵气节点在物品栏中的发光图标，各档不另行染色。"
+    },
+    "s-1": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    },
+    "s-2": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    },
+    "s-3": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    },
+    "s-4": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    },
+    "s-5": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    },
+    "s-6": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    },
+    "s-7": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    },
+    "s-8": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    },
+    "s-9": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    },
+    "s-10": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    },
+    "s-11": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    },
+    "s-12": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    },
+    "s-13": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    },
+    "s-14": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    },
+    "s-15": {
+      "registry": "Thaumcraft:blockStoneDevice",
+      "meta": 14,
+      "name": "咒波洗涤器",
+      "note": "自定义腐蚀抑制器采用原版咒波洗涤器，各档共用原生物品图标。"
+    }
+  }
+}

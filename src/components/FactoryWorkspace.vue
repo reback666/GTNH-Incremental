@@ -34,6 +34,7 @@ function goToWorkshop(kind: MachineKind) {
 }
 </script>
 <template>
+  <div>
   <ResourceBar />
   <div class="factory-workspace">
     <aside class="operations-dock">
@@ -61,5 +62,6 @@ function goToWorkshop(kind: MachineKind) {
       <MachinePanel v-model:active-kind="selectedKind" :columns="store.snap.columns" />
     </section>
     </div>
+  </div>
   </div>
 </template>

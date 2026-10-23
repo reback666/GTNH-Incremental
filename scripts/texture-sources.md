@@ -1,6 +1,6 @@
 # 贴图来源：机器图标与矿脉
 
-界面里的机器图标和矿脉贴图都不是手画的，全部从 GTNH 的贴图合成，脚本可重跑。
+机器图标由启用 Modernity 的 GTNH 客户端原生导出；矿脉与界面皮肤从游戏贴图提取或合成。各自的来源和重跑方式见对应章节。
 
 ## GTNH 标志
 
@@ -42,66 +42,26 @@ UI 重设计（2026-10-04 拍板「GT 机器 GUI 深度复刻 + 贴图+CSS 混�
 
 ## 机器图标
 
-`src/assets/machines/<机型 id>.png` 不是手画的，而是**从 GTNH 的方块贴图合成出来的**。
+`src/assets/machines/<素材键>.png` 是 64×64 透明 PNG，由本机 GTNH 2.8.4、GregTech 5.09.51.482 在启用 Modernity 后直接渲染。
+完整图标的物品编号、名称、材质包清单与扩展机型复用关系，以 `scripts/native-icons/manifest.json` 为唯一来源。
 
-## 合成方式
+导出调用现有 NEI `GuiItemIconDumper.drawItems()` 和 `screenshot()`，实际绘制由游戏的 `GuiContainerManager.drawItem()` 完成。
+脚本只裁取原生导出器的 64×64 物品格，不自行投影方块面、不叠面片、不染色或添加标记。
+多方块机器使用物品栏中的控制器图标，不使用 wiki 整机缩略图。
 
-GT 的机器不是一张整图，而是「**机壳 + 功能面片**」两层叠出来的。按同样方式合成：
+游戏没有对应原版物品的自定义电压和设施，直接复用清单中记录的真实物品图标；同一物品只渲染一次，各档拷贝相同 PNG。
+例如魔法采矿机采用奥术钻探机，魔法制造机采用奥术装配室，腐蚀抑制器采用咒波洗涤器。等级区分由界面文字承担。
 
+### 重新导出
+
+需要已启用相同材质包、完成加载的本机 GTNH 客户端与 JDK 17 或更高版本；不需要进入存档，也不读取或修改世界、背包、账户和游戏配置。
+
+```powershell
+./scripts/export-machine-icons.ps1 -GameProcessId <javaw进程号> -JavaHome '<JDK目录>'
 ```
-底层：iconsets/MACHINE_<电压>_SIDE.png      按电压等级着色的机壳，15 级全都有
-面片：该机器的 SIDE / OVERLAY_* / LARGETURBINE_* 贴图，叠在上面
-```
 
-输出 16×16，再以最近邻放大到 32×32（保持像素硬边）。
-
-## 机型 → 面片对照
-
-| 机型 | 面片 |
-|---|---|
-| 原始发电机、各级蒸汽轮机 | `iconsets/STEAM_TURBINE_SIDE.png` |
-| 各级内燃发电机 | `iconsets/DIESEL_GENERATOR_TOP.png` |
-| 各级燃气轮机 | `iconsets/GAS_TURBINE_SIDE.png` |
-| 各级等离子发电机 | 等离子发电机没有独立贴图，暂借 `basicmachines/chemical_reactor/OVERLAY_FRONT.png` |
-| 各级采矿机 | `basicmachines/miner/OVERLAY_FRONT.png` |
-| 各级制造机 | `basicmachines/assembler/OVERLAY_FRONT.png` |
-| 各级计算机 | `iconsets/EM_COMPUTER.png` 的最上一格（原图是 5 帧竖排条带） |
-| 各级研究站 | `iconsets/OVERLAY_FRONT_RESEARCH_COMPLETER.png` |
-
-机壳按机型的电压等级取，所以同一面片在不同等级下颜色不同、能区分开。
-
-**机壳按电压淡染。** GT 的 `MACHINE_<电压>_SIDE.png` 本身是灰度图，
-游戏里由 GT 在运行时按电压上色；离线脚本必须自己补上这一步。
-
-但实测（用户在游戏里截的机器图，HV / LuV / ZPM / UHV / UEV / UIV）显示：
-**GTNH 这些机器的本体几乎是黑色/深灰**（有效像素多为 `32,32,32` / `20,20,20`），
-等级颜色只出现在很小的部位上（LuV 有粉色 `200,188,188`、ZPM 有亮灰 `140,140,140`）。
-所以机身只做很轻的染色（`TINT_STRENGTH = 0.2`），保留 GT 的深色金属观感；
-不在图标上叠任何额外标记 —— 等级靠面板里的等级名与机器名区分
-（试过在图标下缘加一条等级色带，实际看着很突兀，已去掉）。
-
-电压、资源、配色和机器合成配方统一定义在 `src/content/`，扩展字段见 `docs/custom-content.md`。
-`scripts/gtnh_tiers.py` 直接读取电压与规则 JSON，机器目录通过 TypeScript 注册器导出，
-不另维护电压表、颜色表、机器名单或开放等级。
-
-生成脚本：`python -B scripts/build-machine-icons.py --resource-pack "<Modernity-GTNH.zip>"`
-处理面片配方（包括计算机 / 研究站）；`python -B scripts/build-facility-icons.py`
-处理电池、净化器、节点与抑制器的绘制配方。
-
-**多方块机器不在这张表里** —— 它们是整套结构，图标直接用 wiki 上的整机渲染图，见下一节。
-
-## 已知不足
-
-· 这是**正面视图**，不像 GTNH 里 NEI 那样是 3D 方块渲染。
-· 等离子发电机的面片是借来的，不是它自己的贴图。
-· 制造机使用 Modernity-GTNH 的组装机面片与机壳第一帧；ULV、UXV、MAX 为自定义扩展。
-
-## 重新生成
-
-需要那台装了 GTNH 开发环境的机器。步骤：
-
-运行上述 Python 生成脚本；脚本直接从 jar / 材质包读取贴图，按「机壳 → 面片」合成，
-再以最近邻放大到 32×32，按机型 id 写入 `src/assets/machines/`。
+加 `-Catalog` 可列出游戏注册的机器和神秘时代相关物品，供维护物品映射时检查。中间文件写入 `.tmp-blueprint/native-icons/`，导出后原生 PNG 拷贝到机器素材目录。
+工具源代码位于 `scripts/native-icons/InventoryIcons.java`，仅通过本机 Attach 调用运行中客户端。
 
 ## 矿脉贴图
 
@@ -140,18 +100,7 @@ T13 海珀珍沿用 `scripts/textures/hypogen-coil.png` 中的 Modernity-GTNH UX
 
 按 16×16 一格 56px 画，和矿脉 2×2 方块的尺度对得上。
 
-## 设施图标（存电装置、净化器、计算机、研究站）
-
-四个前缀都是「机壳 + 面片」合成的，机壳统一用 `iconsets/MACHINE_<电压>_SIDE.png`：
-
-| 前缀 | 设施 | 面片 | 开放等级 |
-|---|---|---|---|
-| `b-<等级>` | 存电装置 | 自己画的电池图案（GT 的储电箱贴图不在开发包里） | MV（tier 3） |
-| `p-<等级>` | 净化器 | 自己画的过滤塔图案 | MV（tier 3） |
-| `x-<等级>` | 计算机 | `iconsets/EM_COMPUTER.png` | LuV（tier 7） |
-| `r-<等级>` | 研究站 | `iconsets/OVERLAY_FRONT_RESEARCH_COMPLETER.png` | LuV（tier 7） |
-
-生成脚本按内容目录中的 `texture.face` / `texture.draw` 选择面片或绘制图案；开放范围由机器系列配置决定。
+重新生成矿脉：`python -B scripts/build-veins.py`（默认从 Gradle 缓存查找 jar，可用 `--jar` 指定）。它会按 `ore.texture` 重写矿脉 PNG、`fx/*.png` 与 `src/assets/veins/meta.json`。
 
 ## 镐子图标（金刚杵）
 
@@ -189,43 +138,6 @@ blast 1~14 级：原图本身是彩色的，机器那套淡染（`TINT_STRENGTH 
 所以金刚杵一级一档、连锁采集一级约两档、连锁爆破两左右一档。
 **分母不能用「当前电压给的机会数」** —— 那个数在前期很小（ULV 时金刚杵只有 1 次），
 升一次就是 100%，图标会直接跳成满级材质。
-
-## 多方块机器图标（wiki 整机图）
-
-多方块机器在 GTNH 里是**整套结构**，用单方块的「机壳 + 面片」拼出来不像它本来的样子。
-所以这类机器的图标改成直接裁用 GTNH 中文 wiki 上的整机渲染图（透明底，多为 256×256）：
-
-```
-素材：src/assets/multiblocks/<机型 id>.png（wiki 原图；过大的先缩到 512 长边）
-产物：src/assets/machines/<机型 id>.png（32×32，裁掉透明边后按比例缩放）
-脚本：python scripts/build-multiblock-icons.py
-```
-
-| 机型 | wiki 文件 |
-|---|---|
-| 大型蒸汽涡轮（HV） | `大型蒸汽涡轮.png` |
-| 大型燃气涡轮（EV） | `大型燃气涡轮.png` |
-| 特大高压蒸汽涡轮（IV） | `特大高压蒸汽涡轮.png` |
-| 特大燃气涡轮（LuV） | `特大燃气涡轮.png` |
-| 大型等离子涡轮（ZPM） | `大型等离子涡轮.png` |
-| 特大等离子涡轮（UV） | `特大等离子涡轮.png` |
-| 大型硅岩反应堆（UHV） | `大型硅岩反应堆.png` |
-| 超临界蒸汽涡轮（UEV） | `衰变发电机.png`（待替换） |
-| 特大超临界蒸汽涡轮（UIV） | `戴森云地面单元.png`（待替换） |
-| 戴森球地面单元（UMV） | `戴森云地面单元.png` |
-| 屏蔽拉格朗日湮灭矩阵（UXV） | `湮灭发电机.png`（待替换） |
-| 鸿蒙之眼（MAX） | `亚稳态黑洞遏制场结构导出.png`（待替换） |
-
-取图说明：
-
-· 上表右列记录现用图片名，图片走 `api.php?action=query&prop=imageinfo` 拿原始 URL。
-· 标为待替换的图片沿用改名前的素材，未与新机器原型同步。
-
-已知不足：整机图是渲染图，不是像素画，缩到 32×32 后是柔和的缩略图，
-和单方块机型的像素风图标不是一种画法。
-
-重新生成：`python scripts/build-veins.py`（默认从 gradle 缓存里找 jar，可用 `--jar` 指定）。
-它会按 `ore.texture` 重写矿脉 PNG、`fx/*.png` 与 `src/assets/veins/meta.json`。
 
 ## 打包约定
 

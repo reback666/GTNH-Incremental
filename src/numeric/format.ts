@@ -22,6 +22,10 @@ export function setDefaultDisplayMode(mode: DisplayMode): void {
   defaultMode = mode;
 }
 
+export function getDefaultDisplayMode(): DisplayMode {
+  return defaultMode;
+}
+
 function plainText(value: Decimal, digits: number): string {
   return value.isInteger() ? value.toFixed() : value.toSignificantDigits(digits).toString();
 }

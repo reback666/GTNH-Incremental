@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useGameStore } from '../game/store';
 import { useMotion } from '../composables/useMotion';
 import { COLUMN_META } from '../game/presentation/catalog';
@@ -28,6 +28,7 @@ const running = computed(() => machines.value.reduce((sum, machine) => sum + (ma
 let view: FactoryView | null = null;
 let observer: IntersectionObserver | null = null;
 let disposed = false;
+let active = true;
 
 function select(id: string, focus = true): void {
   const machine = machines.value.find(machine => machine.id === id);
@@ -51,7 +52,7 @@ async function fullscreen(): Promise<void> {
     else await root.value?.requestFullscreen();
   } catch { /* 浏览器拒绝全屏时仍可在面板内操作。 */ }
 }
-watch([machines, motion.active], () => view?.update(machines.value, motion.active.value));
+watch([machines, motion.active], () => { if (active) view?.update(machines.value, motion.active.value); });
 watch(() => props.selectedKind, kind => {
   if (selected.value?.category === kind) return;
   const model = SCENE_MODELS.find(machine => machine.category === kind);
@@ -64,14 +65,25 @@ onMounted(async () => {
     const created = await createFactoryView(canvas.value, id => select(id, false), points => { labels.value = points; });
     if (disposed) { created.dispose(); return; }
     view = created;
-    view.update(machines.value, motion.active.value);
+    view.setVisible(false);
+    if (active) view.update(machines.value, motion.active.value);
     ready.value = true;
     canvas.value.dataset.sceneReady = 'true';
-    observer = new IntersectionObserver(entries => view?.setVisible(entries[0]?.isIntersecting ?? false));
-    observer.observe(canvas.value);
+    observer = new IntersectionObserver(entries => view?.setVisible(active && (entries[0]?.isIntersecting ?? false)));
+    if (active) observer.observe(canvas.value);
   } catch (cause) {
     if (!disposed) error.value = cause instanceof Error ? cause.message : '浏览器无法创建 3D 画面';
   }
+});
+onActivated(() => {
+  active = true;
+  view?.update(machines.value, motion.active.value);
+  if (canvas.value) observer?.observe(canvas.value);
+});
+onDeactivated(() => {
+  active = false;
+  observer?.disconnect();
+  view?.setVisible(false);
 });
 onUnmounted(() => {
   disposed = true;

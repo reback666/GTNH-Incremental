@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onDeactivated, ref } from 'vue';
 import { useGameStore } from '../game/store';
 import { VOLTAGE_TIERS } from '../numeric/voltage';
 import { dec } from '../numeric/decimal';
@@ -74,6 +74,7 @@ const THEME_ORDER = [
 ] as const;
 
 const themeMenuOpen = ref(false);
+onDeactivated(() => { modeMenuOpen.value = false; themeMenuOpen.value = false; });
 
 const themeName = computed(
   () => THEME_ORDER.find((t) => t.id === snap.value.uiTheme)?.name ?? '暗钢造型',

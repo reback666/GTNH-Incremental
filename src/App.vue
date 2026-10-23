@@ -5,12 +5,9 @@ import { useMotion } from './composables/useMotion';
 import { VOLTAGE_TIERS } from './numeric/voltage';
 import Sidebar from './components/Sidebar.vue';
 import FactoryWorkspace from './components/FactoryWorkspace.vue';
+import TechnologyWorkspace from './components/TechnologyWorkspace.vue';
 import SettingsWorkspace from './components/SettingsWorkspace.vue';
-import TechTreePanel from './components/TechTreePanel.vue';
-import GridPanel from './components/GridPanel.vue';
-import EnergyPanel from './components/EnergyPanel.vue';
 import RebirthPage from './components/RebirthPage.vue';
-import AchievementPanel from './components/AchievementPanel.vue';
 import RiftDialog from './components/RiftDialog.vue';
 import FxLayer from './components/FxLayer.vue';
 import UiIcon from './components/UiIcon.vue';
@@ -58,17 +55,16 @@ onUnmounted(() => { store.stop(); window.removeEventListener('keydown', onKeydow
         </div>
       </header>
       <div v-if="store.catchingUp" class="catchup-status" role="status"><span>正在补算生产进度</span><progress :value="store.catchUpProgress" max="1" /><b>{{ Math.round(store.catchUpProgress * 100) }}%</b></div>
-      <Transition name="page" mode="out-in">
-        <div :key="page" class="workspace-content" :inert="store.catchingUp || undefined" :aria-busy="store.catchingUp">
-          <FactoryWorkspace v-if="page === 1" />
-          <div v-else-if="page === 2" class="technology-workspace">
-            <div><TechTreePanel /><GridPanel /><AchievementPanel /></div>
-            <aside><EnergyPanel /><section class="panel technology-rift"><UiIcon name="rift" :size="32" /><h2>另一条时间线</h2><p class="muted">时空线缆 {{ store.snap.rebirth.cables }} 条 · 已转生 {{ store.snap.rebirth.count }} 次</p><button class="primary" type="button" @click="goTo(4)">探索时空星图</button></section></aside>
-          </div>
-          <RebirthPage v-else-if="page === 4" @close="goTo(1)" />
-          <SettingsWorkspace v-else />
-        </div>
-      </Transition>
+      <div class="workspace-content" :inert="store.catchingUp || undefined" :aria-busy="store.catchingUp">
+        <Transition name="page" mode="out-in">
+          <KeepAlive>
+            <FactoryWorkspace v-if="page === 1" />
+            <TechnologyWorkspace v-else-if="page === 2" @explore="goTo(4)" />
+            <RebirthPage v-else-if="page === 4" @close="goTo(1)" />
+            <SettingsWorkspace v-else />
+          </KeepAlive>
+        </Transition>
+      </div>
     </main>
   </div>
   <RiftDialog @accepted="goTo(4)" />

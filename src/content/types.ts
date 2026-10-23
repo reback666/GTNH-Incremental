@@ -33,12 +33,6 @@ export interface MachineProperties {
   visPowered?: boolean;
   overclockable?: boolean;
   icon?: string;
-  texture?: {
-    face?: string;
-    draw?: 'battery' | 'purifier' | 'node' | 'suppressor';
-    source?: 'jar' | 'resourcePack';
-    arcane?: boolean;
-  };
 }
 
 export interface MachineFamily extends MachineProperties {
