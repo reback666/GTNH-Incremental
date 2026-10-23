@@ -257,16 +257,25 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}) 
   canvas.addEventListener('keyup', keyUp);
   canvas.addEventListener('blur', clearKeys);
   window.addEventListener('blur', clearKeys);
-  const visibility = () => { previous = performance.now(); keys.clear(); dirty = true; };
+  function scheduleRender() {
+    if (active && visible && !document.hidden && !frame) frame = requestAnimationFrame(render);
+  }
+  const visibility = () => {
+    previous = performance.now();
+    keys.clear();
+    dirty = true;
+    if (!visible || document.hidden) { cancelAnimationFrame(frame); frame = 0; }
+    else scheduleRender();
+  };
   document.addEventListener('visibilitychange', visibility);
 
   function render(stamp) {
-    if (!active) return;
-    frame = requestAnimationFrame(render);
+    frame = 0;
+    if (!active || !visible || document.hidden) return;
+    scheduleRender();
     const delta = Math.min((stamp - previous) / 1000, 0.06);
     if (stamp - previous < 1000 / 30) return;
     previous = stamp;
-    if (!visible || document.hidden) return;
     if (keys.size) {
       const direction = camera.getWorldDirection(new THREE.Vector3());
       direction.y = 0;
@@ -306,10 +315,10 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}) 
 
   reset();
   resize();
-  frame = requestAnimationFrame(render);
+  scheduleRender();
   return {
     update, select, focus, reset, overview,
-    setVisible(value) { visible = value; previous = performance.now(); dirty = true; if (!value) keys.clear(); },
+    setVisible(value) { visible = value; visibility(); },
     dispose() {
       active = false;
       cancelAnimationFrame(frame);

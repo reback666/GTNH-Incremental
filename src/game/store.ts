@@ -21,9 +21,12 @@ import { batchLogEvents, flushLog, logEntries, logEvent, onLogChange, setLogGame
 
 import { buildSnapshot } from './presentation/snapshot';
 import type { Snapshot } from './presentation/types';
-import { advanceSimulation, ElapsedClock, MAX_CATCH_UP_SECONDS } from './runtime';
+import { advanceSimulation, ElapsedClock } from './runtime';
 
 const CRASH_STREAK_LIMIT = 5;
+
+export const REBIRTH_TABS = ['bonuses', 'universes', 'challenges', 'history'] as const;
+export type RebirthTab = (typeof REBIRTH_TABS)[number];
 
 const POLLUTION_BAND_NAME = {
   clean: '清洁',
@@ -57,12 +60,8 @@ export const useGameStore = defineStore('game', {
     achievementsCollapsed: false,
     // 待研究机器列表收起来没有（纯界面状态，不进存档）
     researchListCollapsed: false,
-    // 转生页的平行宇宙列表收起来没有（纯界面状态，不进存档；默认收起）
-    universesCollapsed: true,
-    // 转生页另外两块同样可折叠：挑战也默认收起（挂没挂在摘要里看），加成树默认收起（画布大）
-    challengesCollapsed: true,
-    treeCollapsed: true,
-    historyCollapsed: true,
+    // 星图下方当前打开的标签页（纯界面状态，不进存档）
+    rebirthTab: 'bonuses' as RebirthTab,
     // 科技页的电网列表，同样默认收起（摘要显示使用中的电网）
     gridPanelCollapsed: true,
     // 设置页的单效开关列表，默认收起（总开关开着就够了，细调时才展开）
@@ -101,17 +100,8 @@ export const useGameStore = defineStore('game', {
     toggleResearchList(): void {
       this.researchListCollapsed = !this.researchListCollapsed;
     },
-    toggleUniverses(): void {
-      this.universesCollapsed = !this.universesCollapsed;
-    },
-    toggleChallenges(): void {
-      this.challengesCollapsed = !this.challengesCollapsed;
-    },
-    toggleTree(): void {
-      this.treeCollapsed = !this.treeCollapsed;
-    },
-    toggleHistory(): void {
-      this.historyCollapsed = !this.historyCollapsed;
+    setRebirthTab(tab: RebirthTab): void {
+      this.rebirthTab = tab;
     },
     toggleGridPanel(): void {
       this.gridPanelCollapsed = !this.gridPanelCollapsed;
@@ -142,9 +132,10 @@ export const useGameStore = defineStore('game', {
       void this.catchUp(away);
     },
     async catchUp(seconds: number): Promise<void> {
-      const total = Number.isFinite(seconds) ? Math.min(Math.max(0, seconds), MAX_CATCH_UP_SECONDS) : 0;
-      if (total < 1 || this.simulationPaused || this.catchingUp) return;
       const core = getCore();
+      const cap = core.offlineCapSeconds();
+      const total = Number.isFinite(seconds) ? Math.min(Math.max(0, seconds), cap) : 0;
+      if (total < 1 || this.simulationPaused || this.catchingUp) return;
       const controller = new AbortController();
       catchUpController = controller;
       const oreBefore = core.totalOre;
@@ -660,10 +651,6 @@ export const useGameStore = defineStore('game', {
         const fields = [
           'achievementsCollapsed',
           'researchListCollapsed',
-          'universesCollapsed',
-          'challengesCollapsed',
-          'treeCollapsed',
-          'historyCollapsed',
           'gridPanelCollapsed',
           'soundListCollapsed',
           'offlineBannerDismissed',
@@ -672,6 +659,7 @@ export const useGameStore = defineStore('game', {
         for (const field of fields) {
           if (typeof obj[field] === 'boolean') self[field] = obj[field];
         }
+        if (REBIRTH_TABS.includes(obj.rebirthTab as RebirthTab)) this.rebirthTab = obj.rebirthTab as RebirthTab;
         if (typeof obj.devMode === 'boolean' && obj.devMode !== getCore().devMode) {
           this.setDevMode(obj.devMode);
         }
@@ -698,10 +686,7 @@ export const useGameStore = defineStore('game', {
       const obj = {
         achievementsCollapsed: this.achievementsCollapsed,
         researchListCollapsed: this.researchListCollapsed,
-        universesCollapsed: this.universesCollapsed,
-        challengesCollapsed: this.challengesCollapsed,
-        treeCollapsed: this.treeCollapsed,
-        historyCollapsed: this.historyCollapsed,
+        rebirthTab: this.rebirthTab,
         gridPanelCollapsed: this.gridPanelCollapsed,
         soundListCollapsed: this.soundListCollapsed,
         offlineBannerDismissed: this.offlineBannerDismissed,

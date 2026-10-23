@@ -206,6 +206,8 @@ export interface ResearchOptionRow {
 // 永久加成树上的一个节点
 export interface RebirthNodeRow {
   id: string;
+  branch: string;
+  branchName: string;
   layer: number;
   x: number;
   y: number;
@@ -213,10 +215,15 @@ export interface RebirthNodeRow {
   effectText: string;
   cost: string;
   requires: string[];
+  // 前置节点的显示名（星图悬停提示用）
+  requireNames: string[];
   // 宇宙支线：需要拥有该宇宙才能买（空串 = 无门控）
   requireUniverse: string;
   requireUniverseName: string;
+  icon: AchievementIcon;
   owned: boolean;
+  // 前置已买齐且宇宙门控已满足（只差线缆）
+  unlocked: boolean;
   buyable: boolean;
 }
 

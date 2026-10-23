@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { GameCore } from '../src/game/core';
 import {
@@ -5,6 +6,8 @@ import {
   REBIRTH_NODES,
   canBuyNode,
   minerSpeedMultiplier,
+  REBIRTH_CANVAS_SIZE,
+  effectTotal,
 } from '../src/game/rebirth';
 import { modelById } from './helpers';
 import { arcaneOutputBonus } from '../src/numeric/arcane';
@@ -12,13 +15,13 @@ import { pollutionDriveFactor } from '../src/numeric/abyss';
 import { dec } from '../src/numeric/decimal';
 
 // 时空星图（加成树二期，docs/转生拓展大纲.md M1）：
-// 六条支线 33 个节点，放射布局；宇宙支线要拥有对应宇宙才能买。
+// 九条支线 51 个节点，放射布局；宇宙支线要拥有对应宇宙才能买。
 
 describe('时空星图：树数据', () => {
-  it('六条支线共 33 个节点，id 唯一、前置都存在', () => {
-    expect(REBIRTH_NODES.length).toBe(33);
+  it('九条支线共 51 个节点，id 唯一、前置都存在', () => {
+    expect(REBIRTH_NODES.length).toBe(51);
     const ids = new Set(REBIRTH_NODES.map((node) => node.id));
-    expect(ids.size).toBe(33);
+    expect(ids.size).toBe(51);
     for (const node of REBIRTH_NODES) {
       for (const parentId of node.requires) {
         expect(ids.has(parentId), `${node.id} 的前置 ${parentId} 应存在`).toBe(true);
@@ -26,10 +29,10 @@ describe('时空星图：树数据', () => {
     }
   });
 
-  it('层价格是 1 / 2 / 6 / 12；全树毕业价 186 条', () => {
+  it('层价格是 1 / 2 / 6 / 12；全树毕业价 289 条', () => {
     expect(LAYER_COST).toEqual({ 1: '1', 2: '2', 3: '6', 4: '12' });
     const total = REBIRTH_NODES.reduce((sum, node) => sum.plus(dec(node.cost)), dec('0'));
-    expect(total.toString()).toBe('186');
+    expect(total.toString()).toBe('289');
   });
 
   it('宇宙支线四个节点都挂着对应的宇宙门控，其他支线没有', () => {
@@ -45,12 +48,21 @@ describe('时空星图：树数据', () => {
     }
   });
 
-  it('画布上的坐标都在 960×960 之内，根在正中心', () => {
+  it('每个节点的任务图标都指向存在的机型贴图（缺图界面会静默变空）', () => {
+    for (const node of REBIRTH_NODES) {
+      const icon = node.icon;
+      if (icon.kind !== 'model') continue;
+      const file = new URL(`../src/assets/machines/${icon.id}.png`, import.meta.url);
+      expect(existsSync(file), ` -> ${icon.id}`).toBe(true);
+    }
+  });
+
+  it('画布上的坐标都在画布之内', () => {
     for (const node of REBIRTH_NODES) {
       expect(node.x).toBeGreaterThanOrEqual(0);
-      expect(node.x).toBeLessThanOrEqual(960);
+      expect(node.x).toBeLessThanOrEqual(REBIRTH_CANVAS_SIZE);
       expect(node.y).toBeGreaterThanOrEqual(0);
-      expect(node.y).toBeLessThanOrEqual(960);
+      expect(node.y).toBeLessThanOrEqual(REBIRTH_CANVAS_SIZE);
     }
   });
 });
@@ -75,6 +87,19 @@ describe('时空星图：宇宙门控', () => {
 });
 
 describe('时空星图：加成生效', () => {
+  it('加成缓存跟随原地购买、撤销与等长替换更新，重复节点不叠加', () => {
+    const owned: string[] = [];
+    expect(minerSpeedMultiplier(owned).toString()).toBe('1');
+    owned.push('speed-1', 'speed-2a');
+    expect(minerSpeedMultiplier(owned).toString()).toBe('1.08');
+    owned[1] = 'speed-2b';
+    expect(minerSpeedMultiplier(owned).toString()).toBe('1.04');
+    expect(effectTotal(owned, 'machineSpeed').toString()).toBe('0.04');
+    owned.push('speed-1');
+    expect(effectTotal(owned, 'allMachineSpeed').toString()).toBe('0.04');
+    owned.length = 0;
+    expect(minerSpeedMultiplier(owned).toString()).toBe('1');
+  });
   function coreWithNodes(ids: string[]): GameCore {
     const core = new GameCore();
     core.rebirthNodes = ids;
@@ -200,5 +225,58 @@ describe('时空星图：加成生效', () => {
   it('同支线多层叠加：采矿机速度 = 全厂 4% + 三格 12% = +16%', () => {
     const core = coreWithNodes(['speed-1', 'speed-2a', 'speed-3a', 'speed-4a']);
     expect(minerSpeedMultiplier(core.rebirthNodes).toString()).toBe('1.16');
+  });
+  it('采掘·手动挖矿产量 +25%/层，镐子升级价格 -8%/层', () => {
+    const base = coreWithNodes([]);
+    const one = coreWithNodes(['mining-1']);
+    const two = coreWithNodes(['mining-1', 'mining-2a', 'mining-3a']);
+    base.maxTier = 3;
+    one.maxTier = 3;
+    two.maxTier = 3;
+    for (const c of [base, one, two]) {
+      c.pickaxeCollect = 5;
+      c.pickaxeBlast = 5;
+      c.pickaxeVajra = 3;
+      c.unlockedVeins = [0, 1, 2, 3];
+    }
+    expect(one.pickaxeOutput().div(base.pickaxeOutput()).toString()).toBe('1.25');
+    expect(two.pickaxeOutput().div(base.pickaxeOutput()).toString()).toBe('1.75');
+    expect(one.pickaxeUpgradeCostOf('vajra').div(base.pickaxeUpgradeCostOf('vajra')).toString()).toBe('1');
+    const costNode = coreWithNodes(['mining-1', 'mining-2b', 'mining-3b']);
+    costNode.maxTier = 3;
+    costNode.pickaxeVajra = 3;
+    const full = base.pickaxeUpgradeCostOf('vajra');
+    expect(costNode.pickaxeUpgradeCostOf('vajra').toString()).toBe(full.times('0.84').floor().toString());
+  });
+
+  it('电网·断电概率 -20%/层，黑市抽成 -20%/层', () => {
+    const outageCore = coreWithNodes(['grid-1', 'grid-3']);
+    expect(outageCore.outageFactor().toString()).toBe('0.6');
+    const siphonCore = coreWithNodes(['grid-2', 'grid-4']);
+    expect(siphonCore.siphonFactor().toString()).toBe('0.6');
+  });
+
+  it('时序·MAX 线缆结算 +5%/层，叠加后再乘普朗克锚', () => {
+    const base = coreWithNodes([]);
+    const one = coreWithNodes(['timeline-1']);
+    const three = coreWithNodes(['timeline-1', 'timeline-2a', 'timeline-3a']);
+    for (const c of [base, one, three]) {
+      c.maxTier = 15;
+      c.runEU = dec('1e40');
+      c.rebirthCount = 0;
+    }
+    const baseC = base.maxRouteCables()!;
+    expect(one.maxRouteCables()!.toString()).toBe(baseC.times('1.05').floor().toString());
+    const settled = baseC.times('1.15').floor();
+    expect(three.maxRouteCables()!.toString()).toBe(settled.toString());
+    three.planckAnchor = true;
+    expect(three.maxRouteCables()!.toString()).toBe(settled.times('1.5').floor().toString());
+  });
+
+  it('时序·离线补算上限 24h + 累计小时', () => {
+    const base = coreWithNodes([]);
+    const two = coreWithNodes(['timeline-1', 'timeline-2b', 'timeline-3b']);
+    expect(base.offlineCapSeconds()).toBe(24 * 3600);
+    expect(two.offlineCapSeconds()).toBe((24 + 12) * 3600);
   });
 });

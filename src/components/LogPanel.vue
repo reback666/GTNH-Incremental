@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useGameStore } from '../game/store';
 import { getCore } from '../game/engine';
 import { buildDiagnosticJson, buildDiagnosticReport } from '../game/diagnostics';
@@ -37,14 +37,23 @@ const fallback = ref('');
 const copying = ref(false);
 watch([level, category, query, currentSession, minutes], () => { shownLimit.value = PAGE_SIZE; });
 
-onMounted(() => {
+function activate(): void {
+  if (unsubscribe) return;
+  version.value += 1;
   unsubscribe = onLogChange(() => {
     version.value += 1;
     store.markLogSeen();
   });
   store.markLogSeen();
-});
-onUnmounted(() => unsubscribe?.());
+}
+function deactivate(): void {
+  unsubscribe?.();
+  unsubscribe = undefined;
+}
+onMounted(activate);
+onActivated(activate);
+onDeactivated(deactivate);
+onUnmounted(deactivate);
 
 function resetFilters(): void {
   level.value = '';

@@ -1,11 +1,20 @@
 import type { ResearchStats, RebirthStats, AchievementStats } from './types';
 import { ZERO, dec } from '../../numeric/decimal';
 import { VOLTAGE_TIERS } from '../../numeric/voltage';
-import { formatNumber } from '../../numeric/format';
+import { formatNumber, getDefaultDisplayMode } from '../../numeric/format';
 import { formatDuration } from '../../numeric/time';
 import { ACHIEVEMENTS } from '../achievements';
 import { universeById } from '../universes';
-import { REBIRTH_NODES, REBIRTH_ROOT, type RebirthEffectKind } from '../rebirth';
+import {
+  REBIRTH_BRANCHES,
+  REBIRTH_EFFECTS,
+  REBIRTH_NODES,
+  REBIRTH_ROOT,
+  prerequisitesMet,
+  rebirthNodeById,
+  effectTotal,
+  type RebirthEffectKind,
+} from '../rebirth';
 import { CHALLENGES, challengeById } from '../challenges';
 import { RESEARCH_FROM_TIER, researchRemaining } from '../../numeric/research';
 import { type GameCore } from '../core';
@@ -63,58 +72,20 @@ export function researchStats(core: GameCore): ResearchStats {
   };
 }
 
-const EFFECT_LABEL: Record<RebirthEffectKind, string> = {
-  allMachineSpeed: '全机器速度',
-  minerSpeed: '采矿机速度',
-  machineSpeed: '制造机速度',
-  coinOutput: 'GT 币产出',
-  fuelEfficiency: '燃料效率',
-  researchSpeed: '研究速度',
-  computeOutput: '算力产出',
-  researchCost: '研究需求',
-  generatorOutput: '发电能力',
-  energySaving: '全厂耗电',
-  batteryCapacity: '存电容量',
-  softLoading: '缺电惩罚',
-  pollutionReduction: '污染产生',
-  purifyBoost: '净化效果',
-  faultReduction: '故障率',
-  corrosionReduction: '腐蚀损伤',
-  industryDeepen: '工业 · 并联加深',
-  arcaneBonusUp: '奥术 · 充裕上限',
-  abyssNeutral: '深渊 · 中性点',
-  siliconMisjudge: '硅基 · 误判率',
-};
-
-// 减免类效果在「已生效的加成」里显示成负数
-const NEGATIVE_EFFECTS = new Set<RebirthEffectKind>([
-  'researchCost',
-  'energySaving',
-  'pollutionReduction',
-  'faultReduction',
-  'corrosionReduction',
-]);
-
-// 离散 / 特殊效果不走「±百分比」的通用格式，一条一句写死
-const FIXED_EFFECT_TEXT: Partial<Record<RebirthEffectKind, string>> = {
-  softLoading: '缺电惩罚 -50%',
-  industryDeepen: '边际增长 1.05→1.04',
-  arcaneBonusUp: '充裕上限 +10%',
-  abyssNeutral: '中性点 30%→25%',
-  siliconMisjudge: '误判率 5%→2%',
-};
-
 function effectText(kind: RebirthEffectKind, amount: string): string {
-  const fixed = FIXED_EFFECT_TEXT[kind];
-  if (fixed) return fixed;
+  const info = REBIRTH_EFFECTS[kind];
+  if (info.format === 'fixed') return info.fixedText!;
+  if (info.format === 'hours') {
+    const hrs = formatNumber(dec(amount));
+    return `${info.name} +${hrs} 小时`;
+  }
   const percent = formatNumber(dec(amount).times(100));
-  const sign = NEGATIVE_EFFECTS.has(kind) ? '-' : '+';
-  return `${EFFECT_LABEL[kind]} ${sign}${percent}%`;
+  const sign = info.reduce ? '-' : '+';
+  return `${info.name} ${sign}${percent}%`;
 }
 
 export function rebirthStats(core: GameCore): RebirthStats {
   const maxCables = core.maxRouteCables();
-  const owned = core.rebirthNodes;
   const activeChallenge =
     core.activeChallenge === null ? null : (challengeById(core.activeChallenge) ?? null);
   return {
@@ -130,7 +101,6 @@ export function rebirthStats(core: GameCore): RebirthStats {
       core.pendingUniverse === null
         ? ''
         : (universeById(core.pendingUniverse)?.name ?? core.pendingUniverse),
-    universes: core.universes.map((id) => universeById(id)?.name ?? id),
     activeChallengeName: activeChallenge ? activeChallenge.name : '',
     activeChallengeDesc: activeChallenge ? activeChallenge.desc : '',
     activeChallengeBonus:
@@ -146,6 +116,21 @@ export function rebirthStats(core: GameCore): RebirthStats {
         : (challengeById(core.pendingChallenge)?.name ?? core.pendingChallenge),
     planckOwned: core.planckAnchor,
     planckBuyable: !core.planckAnchor && core.cables.gte(dec(C.PLANCK_ANCHOR_COST)),
+    ...rebirthCatalog(core),
+  };
+}
+
+type RebirthCatalog = Pick<RebirthStats, 'universes' | 'historyRows' | 'challengeRows' | 'root' | 'nodes' | 'bonuses'>;
+const rebirthCache = new WeakMap<GameCore, { key: string; catalog: RebirthCatalog }>();
+
+function rebirthCatalog(core: GameCore): RebirthCatalog {
+  const key = JSON.stringify([getDefaultDisplayMode(), core.cables.toString(), core.rebirthNodes,
+    core.universes, core.pendingUniverse, core.pendingChallenge, core.completedChallenges, core.runHistory]);
+  const cached = rebirthCache.get(core);
+  if (cached?.key === key) return cached.catalog;
+  const owned = core.rebirthNodes;
+  const catalog: RebirthCatalog = {
+    universes: core.universes.map((id) => universeById(id)?.name ?? id),
     historyRows: core.runHistory.map((entry) => ({
       run: entry.run,
       route: entry.route === 'rift' ? '裂缝' : 'MAX',
@@ -180,6 +165,8 @@ export function rebirthStats(core: GameCore): RebirthStats {
     root: { ...REBIRTH_ROOT },
     nodes: REBIRTH_NODES.map((node) => ({
       id: node.id,
+      branch: node.branch,
+      branchName: REBIRTH_BRANCHES.find((branch) => branch.id === node.branch)?.name ?? node.branch,
       layer: node.layer,
       x: node.x,
       y: node.y,
@@ -187,30 +174,42 @@ export function rebirthStats(core: GameCore): RebirthStats {
       effectText: effectText(node.effect, node.amount),
       cost: formatNumber(dec(node.cost)),
       requires: [...node.requires],
+      requireNames: node.requires.map((id) => rebirthNodeById(id)?.name ?? id),
       requireUniverse: node.requireUniverse ?? '',
       requireUniverseName:
         node.requireUniverse === undefined
           ? ''
           : (universeById(node.requireUniverse)?.name ?? node.requireUniverse),
+      icon: node.icon,
       owned: owned.includes(node.id),
+      unlocked:
+        prerequisitesMet(owned, node) &&
+        (node.requireUniverse === undefined || core.universes.includes(node.requireUniverse)),
       buyable: core.canBuyRebirthNode(node.id),
     })),
-    bonuses: (Object.keys(EFFECT_LABEL) as RebirthEffectKind[])
-      .filter((kind) => FIXED_EFFECT_TEXT[kind] === undefined)
+    bonuses: (Object.keys(REBIRTH_EFFECTS) as RebirthEffectKind[])
+      .filter((kind) => REBIRTH_EFFECTS[kind].format !== 'fixed')
       .map((kind) => {
-        const total = REBIRTH_NODES.filter(
-          (node) => node.effect === kind && owned.includes(node.id),
-        ).reduce((sum, node) => sum.plus(dec(node.amount)), ZERO);
-        const sign = NEGATIVE_EFFECTS.has(kind) ? '-' : '+';
+        const info = REBIRTH_EFFECTS[kind];
+        const total = effectTotal(owned, kind);
         return {
-          label: EFFECT_LABEL[kind],
-          value: `${sign}${formatNumber(total.times(100))}%`,
+          label: info.name,
+          value:
+            info.format === 'hours'
+              ? `+${formatNumber(total)} 小时`
+              : `${info.reduce ? '-' : '+'}${formatNumber(total.times(100))}%`,
         };
       }),
   };
+  rebirthCache.set(core, { key, catalog });
+  return catalog;
 }
 
+const achievementCache = new WeakMap<GameCore, { times: (number | undefined)[]; stats: AchievementStats }>();
+
 export function achievementStats(core: GameCore): AchievementStats {
+  const cached = achievementCache.get(core);
+  if (cached && ACHIEVEMENTS.every((achievement, index) => cached.times[index] === core.achieved[achievement.id])) return cached.stats;
   const rows = ACHIEVEMENTS.map((achievement) => {
     const at = core.achieved[achievement.id];
     return {
@@ -222,7 +221,9 @@ export function achievementStats(core: GameCore): AchievementStats {
       icon: achievement.icon,
     };
   });
-  return { rows, done: rows.filter((row) => row.achieved).length, total: rows.length };
+  const stats = { rows, done: rows.filter((row) => row.achieved).length, total: rows.length };
+  achievementCache.set(core, { times: ACHIEVEMENTS.map(achievement => core.achieved[achievement.id]), stats });
+  return stats;
 }
 
 // 累计统计：跨周目累加的那些数

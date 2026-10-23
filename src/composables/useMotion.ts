@@ -22,5 +22,5 @@ export function useMotion() {
     enabled.value = !enabled.value;
     try { localStorage.setItem(KEY, enabled.value ? 'on' : 'off'); } catch { /* 只影响偏好持久化。 */ }
   }
-  return { active: computed(() => enabled.value && !reduced.value), reduced, enabled, toggle };
+  return { active: computed(() => enabled.value && !reduced.value), feedback: computed(() => !reduced.value), reduced, enabled, toggle };
 }

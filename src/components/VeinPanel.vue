@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onActivated, onBeforeUnmount, onDeactivated, ref, watch } from 'vue';
 import { useGameStore } from '../game/store';
 import { useMotion } from '../composables/useMotion';
 import { miningOrigin } from '../scene/mining-effects';
@@ -39,6 +39,7 @@ const crackStyle = computed(() => ({
 }));
 
 const echoEl = ref<HTMLElement | null>(null);
+const active = ref(true);
 let pulseFrame = 0;
 
 function gaussian(): number {
@@ -58,11 +59,11 @@ function pulse() {
 }
 
 watch(
-  [() => info.value?.fx, motion.active],
-  ([fx, active]) => {
+  [() => info.value?.fx, motion.active, active],
+  ([fx, moving, visible]) => {
     if (pulseFrame) cancelAnimationFrame(pulseFrame);
     pulseFrame = 0;
-    if (fx === 'halo' && active) pulseFrame = requestAnimationFrame(pulse);
+    if (fx === 'halo' && moving && visible) pulseFrame = requestAnimationFrame(pulse);
   },
   { immediate: true },
 );
@@ -102,7 +103,9 @@ function clearEffects(): void {
   effectsTimer = null; shakeTimer = null; shakeFrame = 0;
   impacts.value = []; chips.value = []; crackSeq.value = 0; shaking.value = false;
 }
-watch(motion.active, active => { if (!active) clearEffects(); });
+watch(motion.feedback, active => { if (!active) clearEffects(); });
+onActivated(() => { active.value = true; });
+onDeactivated(() => { active.value = false; clearEffects(); });
 onBeforeUnmount(() => {
   clearEffects();
   if (pulseFrame) cancelAnimationFrame(pulseFrame);
@@ -111,7 +114,7 @@ onBeforeUnmount(() => {
 function mine(event: MouseEvent): void {
   const gain = store.snap.pickaxe.outputPerClick;
   store.manualMine();
-  if (!motion.active.value || !stage.value) return;
+  if (!motion.feedback.value || !stage.value) return;
   const rect = stage.value.getBoundingClientRect();
   const point = miningOrigin(rect, event.detail === 0 ? null : { x: event.clientX, y: event.clientY },
     { width: stage.value.clientWidth, height: stage.value.clientHeight });

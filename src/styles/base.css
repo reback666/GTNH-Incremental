@@ -28,7 +28,7 @@ button.primary { color: var(--accent); background: rgba(var(--accent-rgb), 0.1);
 button.primary:not(:disabled):hover { background: rgba(var(--accent-rgb), 0.2); box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.12); }
 button.big { width: 100%; min-height: 48px; }
 .panel { padding: 18px; margin: 0 0 16px; background: var(--panel); border: 3px solid var(--line); border-image: var(--skin-panel) 3 fill / 3px stretch; border-radius: 0; box-shadow: 0 8px 24px #0000000d; }
-.rebirth-toggle, .panel-toggle, .research-toggle { background: transparent; border-color: transparent; }
+.panel-toggle, .research-toggle { background: transparent; border-color: transparent; }
 .eyebrow { display: block; color: var(--muted); font-size: 11px; letter-spacing: 0.12em; line-height: 1.5; }
 ::selection { background: rgba(var(--accent-rgb), 0.3); }
 ::-webkit-scrollbar { width: 8px; height: 8px; }

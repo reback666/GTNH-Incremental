@@ -1,8 +1,6 @@
 import { MAX_TIER } from '../src/numeric/voltage';
 import { describe, expect, it } from 'vitest';
-import { createPinia, setActivePinia } from 'pinia';
 import { GameCore } from '../src/game/core';
-import { useGameStore } from '../src/game/store';
 import {
   CHALLENGES,
   challengeSettles,
@@ -316,17 +314,5 @@ describe('普朗克锚（C2 轻方案）', () => {
     expect(restored.planckAnchor).toBe(true);
     const fresh = deserialize({ version: 19 } as SaveData);
     expect(fresh.planckAnchor).toBe(false);
-  });
-});
-
-describe('挑战面板折叠（纯界面状态）', () => {
-  it('默认收起，点一下展开、再点收起', () => {
-    setActivePinia(createPinia());
-    const store = useGameStore();
-    expect(store.challengesCollapsed).toBe(true);
-    store.toggleChallenges();
-    expect(store.challengesCollapsed).toBe(false);
-    store.toggleChallenges();
-    expect(store.challengesCollapsed).toBe(true);
   });
 });

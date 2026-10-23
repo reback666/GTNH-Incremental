@@ -53,9 +53,6 @@
       "MAX": {
         "name": "虚空采矿场 III"
       }
-    },
-    "texture": {
-      "face": "assets/gregtech/textures/blocks/basicmachines/miner/OVERLAY_FRONT.png"
     }
   },
   {
@@ -112,10 +109,6 @@
       "MAX": {
         "name": "MAX 组装机"
       }
-    },
-    "texture": {
-      "face": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_FRONT.png",
-      "source": "resourcePack"
     }
   },
   {
@@ -130,11 +123,7 @@
     "voltageInName": false,
     "visPowered": true,
     "requiresUniverse": "arcane",
-    "overclockable": true,
-    "texture": {
-      "face": "assets/gregtech/textures/blocks/basicmachines/miner/OVERLAY_FRONT.png",
-      "arcane": true
-    }
+    "overclockable": true
   },
   {
     "id": "mg",
@@ -148,11 +137,7 @@
     "voltageInName": false,
     "visPowered": true,
     "requiresUniverse": "arcane",
-    "overclockable": false,
-    "texture": {
-      "face": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_SIDE.png",
-      "arcane": true
-    }
+    "overclockable": false
   },
   {
     "id": "mc",
@@ -166,12 +151,7 @@
     "voltageInName": false,
     "visPowered": true,
     "requiresUniverse": "arcane",
-    "overclockable": true,
-    "texture": {
-      "face": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_FRONT.png",
-      "source": "resourcePack",
-      "arcane": true
-    }
+    "overclockable": true
   },
   {
     "id": "b",
@@ -221,9 +201,6 @@
       "MAX": {
         "name": "MAX电池箱"
       }
-    },
-    "texture": {
-      "draw": "battery"
     }
   },
   {
@@ -234,9 +211,6 @@
     "outputFactor": "1",
     "costFactor": "1.2",
     "fromVoltage": "LV",
-    "texture": {
-      "draw": "purifier"
-    },
     "overrides": {
       "LV": {
         "name": "中级污染清洗机"
@@ -276,9 +250,6 @@
     "costFactor": "1",
     "fromVoltage": "LuV",
     "computeRole": "produce",
-    "texture": {
-      "face": "assets/gregtech/textures/blocks/iconsets/EM_COMPUTER.png"
-    },
     "overrides": {
       "LuV": {
         "name": "LuV 量子计算机"
@@ -317,10 +288,7 @@
     "outputFactor": "1",
     "costFactor": "1",
     "fromVoltage": "LuV",
-    "computeRole": "consume",
-    "texture": {
-      "face": "assets/gregtech/textures/blocks/iconsets/OVERLAY_FRONT_RESEARCH_COMPLETER.png"
-    }
+    "computeRole": "consume"
   },
   {
     "id": "n",
@@ -329,10 +297,7 @@
     "block": "single",
     "outputFactor": "1",
     "costFactor": "1",
-    "requiresUniverse": "arcane",
-    "texture": {
-      "draw": "node"
-    }
+    "requiresUniverse": "arcane"
   },
   {
     "id": "s",
@@ -341,9 +306,6 @@
     "block": "single",
     "outputFactor": "1",
     "costFactor": "1",
-    "requiresUniverse": "abyss",
-    "texture": {
-      "draw": "suppressor"
-    }
+    "requiresUniverse": "abyss"
   }
 ]

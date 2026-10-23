@@ -1,13 +1,11 @@
 import { MAX_TIER } from '../src/numeric/voltage';
 import { describe, expect, it } from 'vitest';
-import { createPinia, setActivePinia } from 'pinia';
 import { GameCore } from '../src/game/core';
 import { deserialize, serialize } from '../src/game/save';
 import { modelById } from './helpers';
 import { UNIVERSES, universeById } from '../src/game/universes';
 import { ZERO, dec } from '../src/numeric/decimal';
 import { coinValueInTier1 } from '../src/numeric/credit';
-import { useGameStore } from '../src/game/store';
 
 function walletValue(core: GameCore): ReturnType<typeof dec> {
   return core.coins.reduce((sum, held, index) => sum.plus(held.times(coinValueInTier1(index + 1))), ZERO);
@@ -212,18 +210,5 @@ describe('平行宇宙', () => {
     core.setDevMode(false);
     expect(core.devRevokeUniverse('arcane')).toBe(false);
     expect(core.hasUniverse('arcane')).toBe(true);
-  });
-});
-
-// 转生页上的宇宙列表：平时收成一个框，点一下才展开（纯界面状态，不进存档）
-describe('平行宇宙列表的收放', () => {
-  it('默认收起，点一下展开，再点收回', () => {
-    setActivePinia(createPinia());
-    const store = useGameStore();
-    expect(store.universesCollapsed).toBe(true);
-    store.toggleUniverses();
-    expect(store.universesCollapsed).toBe(false);
-    store.toggleUniverses();
-    expect(store.universesCollapsed).toBe(true);
   });
 });

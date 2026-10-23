@@ -5,7 +5,8 @@
 
 - 项目现状、运行命令与产物：[docs/status.md](docs/status.md)
 - 代码结构与界面约束：[docs/architecture.md](docs/architecture.md)
-- 游戏规则与规划：`plan.txt`
+- 现行游戏规则：`plan.txt`
+- 后续玩法与画面执行计划：[docs/redesign-plan.md](docs/redesign-plan.md)
 
 首次使用执行 `npm install`，开发执行 `npm run dev`。
 可运行 `npm run build` 生成便携游戏与常规 Web 目录；具体入口见操作说明。
