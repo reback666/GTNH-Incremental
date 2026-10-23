@@ -6,6 +6,7 @@ import { GameCore } from '../src/game/core';
 import { dec } from '../src/numeric/decimal';
 import { useGameStore } from '../src/game/store';
 import { getCore } from '../src/game/engine';
+import { MAX_TIER } from '../src/numeric/voltage';
 
 // 读档清洗：存档是玩家机器上的数据，坏值不能进到模拟里，也不能因为一个字段坏了
 // 就把整份存档丢掉（见 src/game/save.ts 的 clean* 一组）。
@@ -40,8 +41,8 @@ describe('读档清洗', () => {
       researchProgressByModel: { 'm-9': 'abc', 'no-such-model': '10' },
     });
 
-    expect(core.maxTier).toBe(14);
-    expect(core.peakTier).toBe(14);
+    expect(core.maxTier).toBe(MAX_TIER);
+    expect(core.peakTier).toBe(MAX_TIER);
     expect(core.unlockedVeins).toEqual([3]);
     expect(core.playSeconds).toBe(0);
     // 越界等级按 0 处理，'oops' 也退回 0
@@ -101,6 +102,74 @@ describe('读档清洗', () => {
     expect(restored.mutationTimer).toBe(45);
     expect(restored.collapseTimer).toBe(600);
     expect(serialize(restored)).toEqual(serialize(core));
+  });
+});
+
+describe('UMV 插入后的旧存档', () => {
+  it('保留 UXV/MAX 的资源、机器状态、研究与履历，重复读档不会再次顺移', () => {
+    const legacy: SaveData = {
+      ...emptySave(),
+      version: 24,
+      maxTier: 14,
+      peakTier: 14,
+      ores: Array.from({ length: 14 }, (_, index) => String(index + 1)),
+      coins: Array.from({ length: 14 }, (_, index) => String((index + 1) * 10)),
+      unlockedVeins: [0, 11, 12, 13],
+      counts: { 'm-13': 3, 'c-14': 4, 'g-uxv-mb-annihilation': 2 },
+      overclock: { 'm-13': 2 },
+      faults: { 'm-13': 1 },
+      stopped: { 'c-14': true },
+      researchedModels: ['m-13', 'c-14'],
+      researchTargetModel: 'x-14',
+      researchProgressByModel: { 'x-14': '37' },
+      pickaxeVajra: 13,
+      runHistory: [{ run: 1, route: 'max', maxTier: 14, cables: '100', seconds: 1000 }],
+    };
+    const original = JSON.stringify(legacy);
+    const core = deserialize(legacy);
+    expect(core.maxTier).toBe(15);
+    expect(core.peakTier).toBe(15);
+    expect(core.ores.slice(12).map(String)).toEqual(['0', '13', '14']);
+    expect(core.coins.slice(12).map(String)).toEqual(['0', '130', '140']);
+    expect(core.unlockedVeins).toEqual([0, 11, 12, 13, 14]);
+    expect(core.counts).toEqual({ 'm-14': 3, 'c-15': 4, 'g-uxv-mb-annihilation': 2 });
+    expect(core.overclockOf('m-14')).toBe(2);
+    expect(core.faults['m-14']).toBe(1);
+    expect(core.stopped).toEqual({ 'c-15': true });
+    expect(core.researchedModels).toEqual(['m-14', 'c-15']);
+    expect(core.researchTarget).toBe('x-15');
+    expect(core.researchProgressOf('x-15').toString()).toBe('37');
+    expect(core.pickaxeVajra).toBe(14);
+    expect(core.runHistory[0]?.maxTier).toBe(15);
+    expect(JSON.stringify(legacy)).toBe(original);
+    expect(serialize(deserialize(serialize(core)))).toEqual(serialize(core));
+  });
+
+  it('最早按等级存台数的存档仍恢复为对应电压的机型', () => {
+    const legacy: SaveData = {
+      ...emptySave(), version: 1, maxTier: 14,
+      miners: [...Array<number>(12).fill(0), 3, 4],
+      generators: [...Array<number>(12).fill(0), 5, 6],
+      machines: [...Array<number>(12).fill(0), 7, 8],
+    };
+    const core = deserialize(legacy);
+    expect(core.counts).toEqual({
+      'm-14': 3, 'm-15': 4,
+      'g-uxv-mb-annihilation': 5, 'g-max-mb-blackhole': 6,
+      'c-14': 7, 'c-15': 8,
+    });
+    expect(core.countOf('g-umv-mb-dyson')).toBe(0);
+  });
+
+  it('按等级保存的旧研究进度继续属于原来的电压', () => {
+    const core = deserialize({
+      ...emptySave(), version: 16, maxTier: 14,
+      researched: [14], researchTarget: 13, researchProgressByTier: { 13: '37' },
+    });
+    expect(core.researchedModels).toContain('c-15');
+    expect(core.researchedModels).not.toContain('c-13');
+    expect(core.researchTarget).toBe('g-uxv-mb-annihilation');
+    expect(core.researchProgressOf('g-uxv-mb-annihilation').toString()).toBe('37');
   });
 });
 

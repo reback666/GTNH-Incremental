@@ -277,7 +277,7 @@ describe('电网模式在模拟里的效果', () => {
 
 describe('设施机型', () => {
   it('净化器从 LV 起，越高级净化越快', () => {
-    expect(modelById('p-2').name).toBe('LV 净化器');
+    expect(modelById('p-2').name).toBe('中级污染清洗机');
     expect(() => modelById('p-1')).toThrow();
     expect(modelById('p-14').tier).toBe(14);
   });

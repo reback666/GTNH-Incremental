@@ -1,96 +1,72 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useGameStore } from './game/store';
-import FactoryPage from './pages/FactoryPage.vue';
-import TechnologyPage from './pages/TechnologyPage.vue';
-import SettingsPage from './pages/SettingsPage.vue';
+import { useMotion } from './composables/useMotion';
+import { VOLTAGE_TIERS } from './numeric/voltage';
+import Sidebar from './components/Sidebar.vue';
+import FactoryWorkspace from './components/FactoryWorkspace.vue';
+import TechnologyWorkspace from './components/TechnologyWorkspace.vue';
+import SettingsWorkspace from './components/SettingsWorkspace.vue';
 import RebirthPage from './components/RebirthPage.vue';
 import RiftDialog from './components/RiftDialog.vue';
-import Sidebar from './components/Sidebar.vue';
 import FxLayer from './components/FxLayer.vue';
+import UiIcon from './components/UiIcon.vue';
 
 const store = useGameStore();
-
-const PAGES = [
-  { id: 1, name: '工厂' },
-  { id: 2, name: '科技' },
-  { id: 3, name: '设置' },
-];
+const motion = useMotion();
 const page = ref(1);
-const view = ref<'factory' | 'rebirth'>('factory');
-const pages = computed(() =>
-  PAGES.map((item) => ({ ...item, badge: item.id === 3 && store.unseenLogErrors > 0 })),
-);
-
+const PAGES = [
+  { id: 1, name: '工厂总览', icon: 'factory', subtitle: '从一块矿石，到一整个工业文明。' },
+  { id: 2, name: '科技与电网', icon: 'tech', subtitle: '跨越电压等级，拓展生产的边界。' },
+  { id: 4, name: '时空星图', icon: 'rift', subtitle: '重启时间线，把这一轮积累带向下一个宇宙。' },
+  { id: 3, name: '设置与存档', icon: 'settings', subtitle: '按你的习惯配置控制台，管理本地进度。' },
+];
+const pages = computed(() => PAGES.map(item => ({ ...item, badge: item.id === 3 && store.unseenLogErrors > 0 })));
+const current = computed(() => PAGES.find(item => item.id === page.value)!);
+const tierName = computed(() => VOLTAGE_TIERS[store.snap.maxTier - 1]);
 function goTo(target: number) {
   if (page.value === target) return;
   page.value = target;
+  window.scrollTo({ top: 0, behavior: motion.active.value ? 'smooth' : 'auto' });
 }
-
-function openRebirth() {
-  view.value = 'rebirth';
-}
-
-function closeRebirth() {
-  view.value = 'factory';
-}
-
-// 键盘 1/2/3 换页：不在输入/组合输入/contenteditable时抢键
 function onKeydown(event: KeyboardEvent) {
-  if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
-  if (view.value !== 'factory') return;
+  if (event.isComposing || event.ctrlKey || event.altKey || event.metaKey) return;
   const target = event.target as HTMLElement | null;
-  if (!target) return;
-  const tag = target.tagName.toLowerCase();
-  if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
-  if (target.isContentEditable) return;
-  const index = Number(event.key);
-  if (Number.isInteger(index) && index >= 1 && index <= PAGES.length) {
-    // 三维视图自己用数字 0 复位，焦点在场景里时不切页
-    if (target.closest('[role="application"]')) return;
-    event.preventDefault();
-    goTo(index);
-  }
+  if (target?.closest('input,select,textarea,[contenteditable="true"],[role="dialog"]')) return;
+  if (/^[123]$/.test(event.key)) goTo(Number(event.key));
 }
-
-// 主题（设置页切换，随存档走）：皮肤类挂body
-watch(
-  () => store.snap.uiTheme,
-  (theme) => {
-    document.body.classList.toggle('skin-light', theme === 'light');
-    document.body.classList.toggle('theme-classic', theme === 'classic');
-  },
-  { immediate: true },
-);
-
-onMounted(() => {
-  store.boot();
-  store.start();
-  window.addEventListener('keydown', onKeydown);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', onKeydown);
-});
+watch(() => store.snap.uiTheme, theme => {
+  document.body.classList.toggle('skin-light', theme === 'light');
+  document.body.classList.toggle('theme-classic', theme === 'classic');
+}, { immediate: true });
+watch(motion.active, active => document.body.classList.toggle('motion-off', !active), { immediate: true });
+onMounted(() => { store.boot(); store.start(); window.addEventListener('keydown', onKeydown); });
+onUnmounted(() => { store.stop(); window.removeEventListener('keydown', onKeydown); });
 </script>
 
 <template>
-  <RebirthPage v-if="view === 'rebirth'" @close="closeRebirth" />
-
-  <template v-else>
-    <div class="app-shell">
-      <Sidebar :page="page" :pages="pages" @change="goTo" />
-
-      <main class="page-body" :class="{ 'page-body--fixed': page === 1 }">
+  <div class="app-shell">
+    <Sidebar :page="page" :pages="pages" @change="goTo" />
+    <main class="page-body">
+      <header class="workspace-header">
+        <div><span class="eyebrow">工业控制台 <span class="header-separator">/</span> {{ tierName }} 时代</span><h1>{{ current.name }}</h1><p>{{ current.subtitle }}</p></div>
+        <div class="header-status"><span :class="{ danger: store.snap.power.ratioShort }"><UiIcon name="power" :size="16" />供电 {{ store.snap.power.ratio }}</span>
+          <button type="button" class="era-link" @click="goTo(2)">{{ tierName }} <UiIcon name="arrow" :size="16" /></button>
+        </div>
+      </header>
+      <div v-if="store.catchingUp" class="catchup-status" role="status"><span>正在补算生产进度</span><progress :value="store.catchUpProgress" max="1" /><b>{{ Math.round(store.catchUpProgress * 100) }}%</b></div>
+      <div class="workspace-content" :inert="store.catchingUp || undefined" :aria-busy="store.catchingUp">
         <Transition name="page" mode="out-in">
-          <FactoryPage v-if="page === 1" :key="1" />
-          <TechnologyPage v-else-if="page === 2" :key="2" @open-rebirth="openRebirth" />
-          <SettingsPage v-else :key="3" />
+          <KeepAlive>
+            <FactoryWorkspace v-if="page === 1" />
+            <TechnologyWorkspace v-else-if="page === 2" @explore="goTo(4)" />
+            <RebirthPage v-else-if="page === 4" @close="goTo(1)" />
+            <SettingsWorkspace v-else />
+          </KeepAlive>
         </Transition>
-      </main>
-    </div>
-  </template>
-
-  <RiftDialog @accepted="view = 'rebirth'" />
+      </div>
+    </main>
+  </div>
+  <RiftDialog @accepted="goTo(4)" />
   <FxLayer />
 </template>

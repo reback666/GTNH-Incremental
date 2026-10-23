@@ -10,7 +10,7 @@
 
 产物：
   src/assets/veins/tN.png    贴图条带（宽 32，高 32×帧数），Minecraft 同款逐帧动画格式
-  src/game/vein-meta.ts      每级的帧数与帧长（毫秒），界面按它播放
+  src/assets/veins/meta.json  按素材键记录帧数与帧长（毫秒）
   src/assets/veins/fx/*.png  原版特殊渲染用的光晕贴图（无尽、宇宙中子素）
                              以及挖矿时的石头碎裂贴图（原版破坏阶段）
 """
@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from PIL import Image
+from gtnh_tiers import VOLTAGE_DEFINITIONS
 
 ROOT = Path(__file__).resolve().parent.parent
 VEIN_DIR = ROOT / "src" / "assets" / "veins"
@@ -44,21 +45,6 @@ JAR_GLOB = str(
 # 原版客户端的破坏阶段贴图（挖方块时那层逐渐变多的裂纹）
 VANILLA_JAR_GLOB = str(Path.home() / ".gradle/caches/retro_futura_gradle/mc-vanilla/1.7.10/client.jar")
 DESTROY_STAGES = [f"assets/minecraft/textures/blocks/destroy_stage_{i}.png" for i in range(10)]
-
-# 只有这几级在原版里带动画，贴图路径来自 GT5-Unofficial jar。
-# 其余等级原版就是静态贴图，直接用 base 图。
-ANIMATED = {
-    9: "assets/gregtech/textures/blocks/materialicons/CUSTOM/cosmicneutronium/ore_OVERLAY.png",
-    10: "assets/gregtech/textures/blocks/materialicons/CUSTOM/infinity/block1.png",
-    11: "assets/gregtech/textures/blocks/materialicons/CUSTOM/draconium/ore_OVERLAY.png",
-    13: "assets/gregtech/textures/blocks/materialicons/CUSTOM/spacetime/block1.png",
-}
-
-# 没有原版贴图可用的材料，用材料自己的颜色重绘斑点（保留原有明暗）。
-# 海珀珍（Hypogen）的颜色取自 GT++ 里 MaterialsElements$STANDALONE 的定义：RGBA {220, 120, 75, 2}
-STATIC_DYE = {
-    12: "#dc784b",
-}
 
 # 特殊渲染的光晕贴图：原版 InfinityRenderer 用 HALO，CosmicNeutroniumRenderer 用 HALO_FUZZY
 HALO_TEXTURES = {
@@ -160,7 +146,7 @@ def read_frame(
     return ordered, filled
 
 
-def build_tier(index: int, base: Image.Image, animation: Animation, texture: Image.Image) -> Image.Image:
+def build_tier(base: Image.Image, animation: Animation, texture: Image.Image) -> Image.Image:
     width, height = base.size
     spots = [(x, y) for y in range(height) for x in range(width) if is_ore_pixel(base.getpixel((x, y)))]
     source = {frame: read_frame(texture, frame) for frame in set(animation.order)}
@@ -193,24 +179,34 @@ def main() -> None:
 
     tiers = []
     with zipfile.ZipFile(jar) as archive:
-        for index in range(14):
-            base = Image.open(BASE_DIR / f"t{index}.png").convert("RGBA")
-            path = ANIMATED.get(index)
-            if path is None:
-                dye = STATIC_DYE.get(index)
+        for index, voltage in enumerate(VOLTAGE_DEFINITIONS):
+            ore = voltage["ore"]
+            texture_key = ore["texture"]
+            base = Image.open(BASE_DIR / f"{texture_key}.png").convert("RGBA")
+            recipe = ore.get("animation", {})
+            path = recipe.get("jar")
+            if "file" in recipe:
+                animation_file = ROOT / recipe["file"]
+                texture = Image.open(animation_file).convert("RGBA")
+                frames = texture.height // TILE
+                animation = Animation(str(animation_file), list(range(frames)), recipe.get("frameTicks", 1))
+                strip = build_tier(base, animation, texture)
+                durations, source = animation.durations_ms, recipe["file"]
+            elif path is None:
+                dye = ore.get("dye")
                 tile = recolor(base, dye) if dye else base
                 strip, frames, durations, source = tile, 1, [0], f"材料色 {dye}" if dye else "静态"
             else:
                 animation = read_animation(archive, path)
                 texture = Image.open(io.BytesIO(archive.read(path))).convert("RGBA")
-                strip = build_tier(index, base, animation, texture)
+                strip = build_tier(base, animation, texture)
                 frames = len(animation.order)
                 durations = animation.durations_ms
                 source = path.split("materialicons/")[-1]
-            strip.save(VEIN_DIR / f"t{index}.png")
+            strip.save(VEIN_DIR / f"{texture_key}.png")
             tiers.append(
                 {
-                    "tier": index,
+                    "texture": texture_key,
                     "frames": frames,
                     "frameDurationsMs": durations,
                     "source": source,
@@ -234,7 +230,7 @@ def main() -> None:
             )
         fx["destroy"] = build_destroy_strip()
 
-    write_meta_module(tiers, fx)
+    write_metadata(tiers, fx)
 
 
 def _has_mcmeta(archive: zipfile.ZipFile, path: str) -> bool:
@@ -264,48 +260,9 @@ def build_destroy_strip() -> dict:
     }
 
 
-def write_meta_module(tiers: list[dict], fx: dict) -> None:
-    def rows(items, key_name):
-        out = []
-        for key, value in items:
-            durations = ", ".join(str(ms) for ms in value["frameDurationsMs"])
-            out.append(
-                f"  {key_name(key)}: {{ frames: {value['frames']}, "
-                f"frameDurationsMs: [{durations}], source: '{value['source']}' }},"
-            )
-        return "\n".join(out)
-
-    body = "\n".join(
-        f"  {{ tier: {tier['tier']}, frames: {tier['frames']}, "
-        f"frameDurationsMs: [{', '.join(str(ms) for ms in tier['frameDurationsMs'])}], "
-        f"source: '{tier['source']}' }},"
-        for tier in tiers
-    )
-    text = f"""// 由 scripts/build-veins.py 生成，不要手改。
-// 数据来自 GTNH 的 GT5-Unofficial jar：帧数与每帧时长取自贴图自带的 mcmeta。
-
-export interface VeinTierMeta {{
-  tier: number;
-  frames: number;
-  frameDurationsMs: number[];
-  source: string;
-}}
-
-export interface VeinFxMeta {{
-  frames: number;
-  frameDurationsMs: number[];
-  source: string;
-}}
-
-export const VEIN_META: VeinTierMeta[] = [
-{body}
-];
-
-export const VEIN_FX_META: Record<string, VeinFxMeta> = {{
-{rows(fx.items(), lambda key: key)}
-}};
-"""
-    (ROOT / "src" / "game" / "vein-meta.ts").write_text(text, encoding="utf-8")
+def write_metadata(tiers: list[dict], fx: dict) -> None:
+    metadata = {"tiers": {row["texture"]: {key: value for key, value in row.items() if key != "texture"} for row in tiers}, "fx": fx}
+    (VEIN_DIR / "meta.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

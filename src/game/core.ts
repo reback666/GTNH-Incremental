@@ -208,7 +208,7 @@ export interface TickReport {
 }
 
 export class GameCore {
-  ores: Decimal[] = Array.from({ length: 14 }, () => ZERO);
+  ores: Decimal[] = Array.from({ length: MAX_TIER }, () => ZERO);
   coins: Decimal[] = Array.from({ length: MAX_TIER }, () => ZERO);
   // 按机型 id 存数量。机型目录见 models.ts
   counts: Record<string, number> = {};
@@ -512,7 +512,8 @@ export class GameCore {
       maxTier: this.maxTier,
       rebirthCount: this.rebirthCount,
     });
-    return this.planckAnchor ? base.times(C.PLANCK_ANCHOR_MULTIPLIER).floor() : base;
+    const settled = base.times(this.cableSettlementBonus()).floor();
+    return this.planckAnchor ? settled.times(C.PLANCK_ANCHOR_MULTIPLIER).floor() : settled;
   }
 
   canRebirth(route: 'rift' | 'max'): boolean {
@@ -572,7 +573,7 @@ export class GameCore {
 
   buyRebirthNode(id: string): boolean {
     const node = rebirthNodeById(id);
-    if (!node || !canBuyNode(this.rebirthNodes, node, this.cables)) return false;
+    if (!node || !canBuyNode(this.rebirthNodes, node, this.cables, this.universes)) return false;
     this.cables = this.cables.minus(dec(node.cost));
     this.rebirthNodes.push(node.id);
     return true;
@@ -648,7 +649,7 @@ export class GameCore {
       pickaxeBlast: this.pickaxeBlast,
       researchedTotal: this.researchedModels.length,
       // 只数「真的能被研究」的那部分：灵气节点与腐蚀抑制器要有对应平行宇宙才会出现在研究列表里。
-      // 不这么算的话，没有那两个宇宙的玩家把能研究的全研究完，也永远差着 14 台拿不到成就。
+      // 不这么算的话，没有那两个宇宙的玩家把能研究的全研究完，也拿不到成就。
       researchTotal: MACHINE_MODELS.filter(
         (model) => needsResearch(model.tier) && this.universeSatisfied(model),
       ).length,
@@ -828,6 +829,38 @@ export class GameCore {
   }
 
   // 污染产生的总倍率（「污染产生」节点）
+
+  // 手动挖矿产量倍率（采掘支线）
+  manualOutputBonus(): Decimal {
+    return this.totalBonus('manualOutput');
+  }
+
+  // 镐子升级价格倍率（采掘支线，减免）
+  pickaxeCostFactor(): Decimal {
+    return ONE.minus(effectTotal(this.rebirthNodes, 'pickaxeCost'));
+  }
+
+  // 电网断电概率倍率（电网支线，减免）
+  outageFactor(): Decimal {
+    return ONE.minus(effectTotal(this.rebirthNodes, 'outageReduction'));
+  }
+
+  // 黑市电网抽成倍率（电网支线，减免）
+  siphonFactor(): Decimal {
+    return ONE.minus(effectTotal(this.rebirthNodes, 'siphonReduction'));
+  }
+
+  // MAX 线缆结算倍率（时序支线）
+  cableSettlementBonus(): Decimal {
+    return this.totalBonus('cableGain');
+  }
+
+  // 离线补算上限秒数（时序支线，24h + 累计小时）
+  offlineCapSeconds(): number {
+    const base = 24 * 3600;
+    const bonus = effectTotal(this.rebirthNodes, 'offlineHours').toNumber() * 3600;
+    return base + bonus;
+  }
   pollutionProductionFactor(): Decimal {
     return ONE.minus(effectTotal(this.rebirthNodes, 'pollutionReduction'));
   }
@@ -897,7 +930,7 @@ export class GameCore {
 
   // 把本周目的一切推回开局，只留跨周目的东西
   private resetRun(): void {
-    this.ores = Array.from({ length: 14 }, () => ZERO);
+    this.ores = Array.from({ length: MAX_TIER }, () => ZERO);
     this.coins = Array.from({ length: MAX_TIER }, () => ZERO);
     this.counts = {};
     this.overclock = {};
@@ -1385,8 +1418,9 @@ export class GameCore {
       .filter((item) => item.amount.gt(0));
     if (held.length === 0) return;
     const target = held[Math.floor(this.random() * held.length)]!;
-    this.coins[target.index] = target.amount.times(dec('1').minus(SIPHON_RATIO));
-    this.siphoned = this.siphoned.plus(target.amount.times(SIPHON_RATIO));
+    const ratio = dec(SIPHON_RATIO).times(this.siphonFactor());
+    this.coins[target.index] = target.amount.minus(target.amount.times(ratio));
+    this.siphoned = this.siphoned.plus(target.amount.times(ratio));
     report.siphons += 1;
   }
 
@@ -1458,7 +1492,7 @@ export class GameCore {
       line,
       this.pickaxeLevel(line),
       (tier) => machineCost({ baseCost: C.BASE_MACHINE_COST, tier, purchased: 0 }),
-    );
+    ).times(this.pickaxeCostFactor()).floor();
   }
 
   // 这次升级花哪一级的币（界面显示币种用）
@@ -1508,7 +1542,7 @@ export class GameCore {
       tier: this.maxTier,
       blastUsed: this.pickaxeBlast,
       collectLevel: this.pickaxeCollect,
-    });
+    }).times(this.manualOutputBonus());
   }
 
   // 手动挖矿挖的是哪座矿脉：已解锁的最高一级，但不能超过金刚杵的等级
@@ -1680,7 +1714,7 @@ export class GameCore {
       this.outageTimer += dtSeconds;
       if (this.outageTimer >= outageRule.checkSeconds) {
         this.outageTimer -= outageRule.checkSeconds;
-        if (this.random() < outageRule.chance) {
+        if (this.random() < outageRule.chance * this.outageFactor().toNumber()) {
           this.outageSeconds = outageRule.outageSeconds;
           report.outage = true;
         }
@@ -2094,8 +2128,8 @@ function emptyReport(): TickReport {
     euCharged: ZERO,
     euDischarged: ZERO,
     faultsGained: 0,
-    oreGained: Array.from({ length: 14 }, () => ZERO),
-    oreSpent: Array.from({ length: 14 }, () => ZERO),
+    oreGained: Array.from({ length: MAX_TIER }, () => ZERO),
+    oreSpent: Array.from({ length: MAX_TIER }, () => ZERO),
     coinsGained: Array.from({ length: MAX_TIER }, () => ZERO),
   };
 }

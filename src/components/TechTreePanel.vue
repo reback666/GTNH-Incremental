@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useGameStore } from '../game/store';
 import { VOLTAGE_TIERS } from '../numeric/voltage';
+import { RESEARCH_GATE_FROM_TIER } from '../numeric/research';
 import { paymentTier, coinName } from '../numeric/credit';
 
 const store = useGameStore();
@@ -38,7 +39,7 @@ const payName = computed(() =>
       </button>
       <p class="muted" style="margin: 8px 0 0">
         解锁后开放 {{ nextName }} 级矿脉。
-        <template v-if="snap.nextTier >= 8">
+        <template v-if="snap.nextTier >= RESEARCH_GATE_FROM_TIER">
           {{ nextName }} 及以后的机型还要先在「研究」里研究出来才能建造。
         </template>
         已开放矿脉：T{{ snap.veins.join(' / T') }}

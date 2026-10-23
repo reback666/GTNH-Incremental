@@ -39,10 +39,10 @@ export default defineConfig({
     __BUILD_STAMP__: JSON.stringify(buildStamp()),
   },
   build: {
-    outDir: 'dist',
+    outDir: 'dist/web',
     target: 'es2022',
-    // 产物要内联成单个 HTML（scripts/inline-dist.ts 会删掉 assets 目录），
-    // 所以贴图必须全部内联成 data URL —— 矿脉的帧条带最大有 23 KB，
+    // 同时产出标准 Web 目录与便携单文件，贴图在两种产物中都自包含。
+    // 贴图内联成 data URL —— 矿脉的帧条带最大有 23 KB，
     // 超过 Vite 默认的 4 KB 阈值就会变成外部文件，双击打开时图会丢。
     assetsInlineLimit: 4_000_000,
   },

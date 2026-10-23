@@ -205,7 +205,7 @@ describe('存电装置', () => {
 
   it('储电箱从 MV 起才有，容量随等级 ×4', () => {
     expect(modelById('b-3').tier).toBe(3);
-    expect(modelById('b-3').name).toBe('MV 储电箱');
+    expect(modelById('b-3').name).toBe('中压电池箱');
   });
 });
 

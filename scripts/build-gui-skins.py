@@ -8,7 +8,7 @@ GT 开发包里自带整套 GUI 贴图，本脚本把它们整理成界面可直
 · panel-dark：steel.png 的压暗派生（暗色样张用）——只压底色、保住高光语法，
   否则压暗后凸起感会糊掉
 · arrow-empty / arrow-fill-t<等级>：GT 的箭头进度条是上下两帧的竖排条带
-  （上空下满），切开后把「满」帧按 14 级电压色染色（研究条等进度显示用），
+  （上空下满），切开后把「满」帧按电压色染色（研究条等进度显示用），
   染色方式与镐子爆破线同族：按感知亮度转灰阶再乘等级色，暗部有保底
 
 用法：python scripts/build-gui-skins.py
@@ -24,7 +24,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from gtnh_tiers import MAX_RAINBOW, TIER_COLORS
+from gtnh_tiers import MAX_RAINBOW, MAX_TIER, TIER_COLORS, texture_key
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "src" / "assets" / "gui"
@@ -166,7 +166,7 @@ def build_preview(pieces: dict[str, Image.Image], arrows: dict[int, Image.Image]
         "arrow-empty",
     ):
         entries.append((name, pieces[name]))
-    for tier in range(1, 15):
+    for tier in range(1, MAX_TIER + 1):
         entries.append((f"fill-t{tier}", arrows[tier]))
 
     cells = [(label, img.resize((img.width * zoom, img.height * zoom), Image.NEAREST))
@@ -227,11 +227,11 @@ def main() -> None:
         empty.save(OUT_DIR / "arrow-empty.png")
         pieces["arrow-empty"] = empty
         arrows: dict[int, Image.Image] = {}
-        for tier in range(1, 14):
+        for tier in range(1, MAX_TIER):
             arrows[tier] = tint_frame(filled, TIER_COLORS[tier])
-            arrows[tier].save(OUT_DIR / f"arrow-fill-t{tier}.png")
-        arrows[14] = tint_frame_rainbow(filled)
-        arrows[14].save(OUT_DIR / "arrow-fill-t14.png")
+            arrows[tier].save(OUT_DIR / f"arrow-fill-t{texture_key(tier)}.png")
+        arrows[MAX_TIER] = tint_frame_rainbow(filled)
+        arrows[MAX_TIER].save(OUT_DIR / f"arrow-fill-t{texture_key(MAX_TIER)}.png")
     build_preview(pieces, arrows)
     made = sorted(p.name for p in OUT_DIR.glob("*.png"))
     print(f"共 {len(made)} 张 → src/assets/gui/")

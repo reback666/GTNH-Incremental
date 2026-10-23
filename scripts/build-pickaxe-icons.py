@@ -3,14 +3,14 @@
 三条线各自的满级前的配色规则不同，但产物统一收在 src/assets/pickaxe/：
 
     金刚杵 vajra   用户材质包（Modernity-GTNH）的金刚杵本体贴图，
-                   **全部 14 级都是动画条带**——本体按材质包 mcmeta 的序列流动（33 拍、
+                   全部电压都是动画条带——本体按材质包 mcmeta 的序列流动（33 拍、
                    50ms/拍），发光曲线随等级换电压色（用户拍板）；
                    满级曲线改用无尽矿石的流动色（毕业 = 无尽材质）
     连锁采集 drill assets/ic2/textures/items/itemToolDrill.png（32×32，电动钻头）
     连锁爆破 blast assets/ic2/textures/items/itemDynamite.png（16×16，炸药）
 
-drill / blast：1~13 级底图按感知亮度转明暗再乘电压色（静态 32×32）；
-满级（14）输出**竖排 31 帧动画条带**（32×992，150ms/帧），颜色只取无尽矿石贴图
+drill / blast：满级前底图按感知亮度转明暗再乘电压色（静态 32×32）；
+满级输出竖排 31 帧动画条带（32×992，150ms/帧），颜色只取无尽矿石贴图
 （src/assets/veins/t10.png，与矿脉面板同一份）里矿石斑点自己的颜色——灰白石底不参与。
 
 用法：python scripts/build-pickaxe-icons.py
@@ -29,7 +29,7 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from gtnh_tiers import tier_color  # noqa: E402
+from gtnh_tiers import MAX_TIER, tier_color, texture_key  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "src" / "assets" / "pickaxe"
@@ -52,8 +52,6 @@ JAR_GLOB = str(
     Path.home()
     / ".gradle/caches/modules-2/files-2.1/com.github.GTNewHorizons/GT5-Unofficial/*/*/GT5-Unofficial-*-dev.jar"
 )
-
-MAX_TIER = 14
 
 # 线 id →（来源 jar，贴图路径）；vajra 不走 jar，用材质包贴图单独处理
 LINES: dict[str, tuple[str, str]] = {
@@ -123,7 +121,7 @@ def nearest_ore_map(frame: Image.Image) -> dict[tuple[int, int], tuple[int, int,
 
 
 def tint_tool(source: Image.Image, tier: int) -> Image.Image:
-    """静态电压色图标（drill / blast 的 1~13 级）。"""
+    """静态电压色图标（drill / blast 的非满级电压）。"""
     image = source.convert("RGBA")
     width, height = image.size
     scale = max(1, OUT_SIZE // max(width, height))
@@ -280,27 +278,27 @@ def main() -> None:
         for i in range(infinity_strip.height // 32)
     ]
 
-    # 金刚杵：材质包贴图，14 级全部是动画条带
+    # 金刚杵：材质包贴图，全部电压都是动画条带
     for tier in range(1, MAX_TIER + 1):
         strip = tint_vajra_strip(tier, infinity_frames)
-        strip.save(OUT_DIR / f"vajra-{tier}.png")
+        strip.save(OUT_DIR / f"vajra-{texture_key(tier)}.png")
     print(f"vajra: 材质包贴图 → {MAX_TIER} 条动画条带（{len(VAJRA_SEQUENCE)} 拍 × {VAJRA_FRAME_MS}ms）")
 
-    # 连锁爆破：1~13 级电压色，满级无尽矿石流动
+    # 连锁爆破：满级前使用电压色，满级无尽矿石流动
     blast = Image.open(io.BytesIO(jars["ic2"].read(LINES["blast"][1])))
     for tier in range(1, MAX_TIER):
-        tint_tool(blast, tier).save(OUT_DIR / f"blast-{tier}.png")
+        tint_tool(blast, tier).save(OUT_DIR / f"blast-{texture_key(tier)}.png")
     strip = tint_max_strip(blast, infinity_strip)
-    strip.save(OUT_DIR / f"blast-{MAX_TIER}.png")
+    strip.save(OUT_DIR / f"blast-{texture_key(MAX_TIER)}.png")
     print(f"blast: → {MAX_TIER - 1} 张静态 + 满级动画条带 {strip.size}")
 
     # 连锁采集：机体保持 IC2 原版，只有右上角的金属钻头随等级换电压色；
     # 满级钻头跟无尽矿石的流动色（用户要求保留两段式结构）
     drill = Image.open(io.BytesIO(jars["ic2"].read(LINES["drill"][1])))
     for tier in range(1, MAX_TIER):
-        tint_drill(drill, tier_color(tier)).save(OUT_DIR / f"drill-{tier}.png")
+        tint_drill(drill, tier_color(tier)).save(OUT_DIR / f"drill-{texture_key(tier)}.png")
     strip = tint_drill_strip(drill, infinity_strip)
-    strip.save(OUT_DIR / f"drill-{MAX_TIER}.png")
+    strip.save(OUT_DIR / f"drill-{texture_key(MAX_TIER)}.png")
     print(f"drill: 原版机体 + 电压色钻头 → {MAX_TIER - 1} 张静态 + 满级流动条带 {strip.size}")
 
 

@@ -1,0 +1,311 @@
+[
+  {
+    "id": "m",
+    "name": "采矿机",
+    "category": "miner",
+    "block": "single",
+    "outputFactor": "1",
+    "costFactor": "1",
+    "overclockable": true,
+    "overrides": {
+      "ULV": {
+        "name": "原始采矿机"
+      },
+      "LV": {
+        "name": "基础采矿机"
+      },
+      "MV": {
+        "name": "优良采矿机"
+      },
+      "HV": {
+        "name": "进阶采矿机"
+      },
+      "EV": {
+        "name": "采矿场 III"
+      },
+      "IV": {
+        "name": "采矿场 IV"
+      },
+      "LuV": {
+        "name": "虚空采矿场 I"
+      },
+      "ZPM": {
+        "name": "虚空采矿场 II"
+      },
+      "UV": {
+        "name": "虚空采矿场 III"
+      },
+      "UHV": {
+        "name": "虚空采矿场 III"
+      },
+      "UEV": {
+        "name": "虚空采矿场 III"
+      },
+      "UIV": {
+        "name": "虚空采矿场 III"
+      },
+      "UMV": {
+        "name": "虚空采矿场 III"
+      },
+      "UXV": {
+        "name": "虚空采矿场 III"
+      },
+      "MAX": {
+        "name": "虚空采矿场 III"
+      }
+    }
+  },
+  {
+    "id": "c",
+    "name": "制造机",
+    "category": "machine",
+    "block": "single",
+    "outputFactor": "1",
+    "costFactor": "1",
+    "overclockable": true,
+    "overrides": {
+      "UMV": {
+        "name": "史诗组装构建者 IV"
+      },
+      "ULV": {
+        "name": "ULV 组装机"
+      },
+      "LV": {
+        "name": "基础组装机"
+      },
+      "MV": {
+        "name": "进阶组装机"
+      },
+      "HV": {
+        "name": "进阶组装机 II"
+      },
+      "EV": {
+        "name": "进阶组装机 III"
+      },
+      "IV": {
+        "name": "进阶组装机 IV"
+      },
+      "LuV": {
+        "name": "精英组装机"
+      },
+      "ZPM": {
+        "name": "精英组装机 II"
+      },
+      "UV": {
+        "name": "终极组装构建者"
+      },
+      "UHV": {
+        "name": "史诗组装构建者"
+      },
+      "UEV": {
+        "name": "史诗组装构建者 II"
+      },
+      "UIV": {
+        "name": "史诗组装构建者 III"
+      },
+      "UXV": {
+        "name": "UXV 组装机"
+      },
+      "MAX": {
+        "name": "MAX 组装机"
+      }
+    }
+  },
+  {
+    "id": "mm",
+    "name": "魔法采矿机",
+    "category": "miner",
+    "block": "single",
+    "outputFactor": "2.5",
+    "costFactor": "1",
+    "fromVoltage": "LV",
+    "toVoltage": "LuV",
+    "voltageInName": false,
+    "visPowered": true,
+    "requiresUniverse": "arcane",
+    "overclockable": true
+  },
+  {
+    "id": "mg",
+    "name": "魔法发电机",
+    "category": "generator",
+    "block": "single",
+    "outputFactor": "2.5",
+    "costFactor": "1",
+    "fromVoltage": "LV",
+    "toVoltage": "LuV",
+    "voltageInName": false,
+    "visPowered": true,
+    "requiresUniverse": "arcane",
+    "overclockable": false
+  },
+  {
+    "id": "mc",
+    "name": "魔法制造机",
+    "category": "machine",
+    "block": "single",
+    "outputFactor": "2.5",
+    "costFactor": "1",
+    "fromVoltage": "LV",
+    "toVoltage": "LuV",
+    "voltageInName": false,
+    "visPowered": true,
+    "requiresUniverse": "arcane",
+    "overclockable": true
+  },
+  {
+    "id": "b",
+    "name": "储电箱",
+    "category": "storage",
+    "block": "single",
+    "outputFactor": "1",
+    "costFactor": "1.5",
+    "fromVoltage": "MV",
+    "overrides": {
+      "UMV": {
+        "name": "极剧差压电池箱"
+      },
+      "MV": {
+        "name": "中压电池箱"
+      },
+      "HV": {
+        "name": "高压电池箱"
+      },
+      "EV": {
+        "name": "超高压电池箱"
+      },
+      "IV": {
+        "name": "强导压电池箱"
+      },
+      "LuV": {
+        "name": "剧差压电池箱"
+      },
+      "ZPM": {
+        "name": "零点压电池箱"
+      },
+      "UV": {
+        "name": "极限压电池箱"
+      },
+      "UHV": {
+        "name": "极高压电池箱"
+      },
+      "UEV": {
+        "name": "超极限压电池箱"
+      },
+      "UIV": {
+        "name": "极强导压电池箱"
+      },
+      "UXV": {
+        "name": "极上拓压电池箱"
+      },
+      "MAX": {
+        "name": "MAX电池箱"
+      }
+    }
+  },
+  {
+    "id": "p",
+    "name": "净化器",
+    "category": "purifier",
+    "block": "single",
+    "outputFactor": "1",
+    "costFactor": "1.2",
+    "fromVoltage": "LV",
+    "overrides": {
+      "LV": {
+        "name": "中级污染清洗机"
+      },
+      "MV": {
+        "name": "进阶污染清洗机"
+      },
+      "HV": {
+        "name": "精准污染清洗机"
+      },
+      "EV": {
+        "name": "空气回收器"
+      },
+      "IV": {
+        "name": "中级空气回收器"
+      },
+      "LuV": {
+        "name": "进阶空气回收器"
+      },
+      "ZPM": {
+        "name": "精准空气回收器"
+      },
+      "UV": {
+        "name": "大气净化者"
+      },
+      "UHV": {
+        "name": "生物圈净化者"
+      }
+    }
+  },
+  {
+    "id": "x",
+    "name": "计算机",
+    "category": "research",
+    "block": "single",
+    "outputFactor": "1",
+    "costFactor": "1",
+    "fromVoltage": "LuV",
+    "computeRole": "produce",
+    "overrides": {
+      "LuV": {
+        "name": "LuV 量子计算机"
+      },
+      "ZPM": {
+        "name": "ZPM 量子计算机"
+      },
+      "UV": {
+        "name": "UV 量子计算机"
+      },
+      "UHV": {
+        "name": "UHV 量子计算机"
+      },
+      "UEV": {
+        "name": "UEV 量子计算机"
+      },
+      "UIV": {
+        "name": "UIV 量子计算机"
+      },
+      "UMV": {
+        "name": "UMV 量子计算机"
+      },
+      "UXV": {
+        "name": "UXV 量子计算机"
+      },
+      "MAX": {
+        "name": "MAX 量子计算机"
+      }
+    }
+  },
+  {
+    "id": "r",
+    "name": "研究站",
+    "category": "research",
+    "block": "single",
+    "outputFactor": "1",
+    "costFactor": "1",
+    "fromVoltage": "LuV",
+    "computeRole": "consume"
+  },
+  {
+    "id": "n",
+    "name": "灵气节点",
+    "category": "arcane",
+    "block": "single",
+    "outputFactor": "1",
+    "costFactor": "1",
+    "requiresUniverse": "arcane"
+  },
+  {
+    "id": "s",
+    "name": "腐蚀抑制器",
+    "category": "abyss",
+    "block": "single",
+    "outputFactor": "1",
+    "costFactor": "1",
+    "requiresUniverse": "abyss"
+  }
+]

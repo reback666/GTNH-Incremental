@@ -5,6 +5,9 @@ node_modules/
 dist/*
 !dist/GTNH增量.html
 coverage/
+.tmp-blueprint/
+outputs/
+gtnh3d/dist/
 __pycache__/
 *.pyc
 # 其它 CLI 工具留下的本地文件（计划缓存与它自己的忽略表）

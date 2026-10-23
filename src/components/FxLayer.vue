@@ -1,171 +1,99 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
-import { onFx, type FxEvent, type FxPoint } from '../game/fx';
-import { ParticleOverlay, type ParticleBurst } from '../rendering/particles';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { useMotion } from '../composables/useMotion';
+import { onFx, type FxEvent } from '../game/fx';
 
-/**
- * 全屏反馈层：
- * - 文字提示：订阅常驻，与粒子是否可用无关；最多 5 条，连续挖矿合并为一条增长计数。
- * - 粒子：统一走 ParticleOverlay（WebGL）。系统 reduced-motion 实时生效：
- *   开启时销毁 overlay、清掉画布；关闭后重新创建。WebGL 不可用时只有文字。
- */
+/*
+  全屏特效层：盖在页面最上方、不挡任何操作，订阅 fx 总线放粒子。
+  voltage-unlock：一簇烟花从屏幕上部炸开（金 + 主题色两批）。
+  系统开了「减少动态效果」时整个层不工作。
+*/
 
-const canvasHost = ref<HTMLDivElement | null>(null);
-let overlay: ParticleOverlay | null = null;
-let unsubscribe: (() => void) | null = null;
-const motionQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
-
-interface Toast {
+interface Spark {
   id: number;
-  key: string;
-  text: string;
-  timer: number;
-}
-const toasts = ref<Toast[]>([]);
-let toastSeq = 0;
-const MAX_TOASTS = 5;
-const TOAST_MS = 3200;
-
-function removeToast(id: number) {
-  const index = toasts.value.findIndex((t) => t.id === id);
-  if (index < 0) return;
-  window.clearTimeout(toasts.value[index]!.timer);
-  toasts.value.splice(index, 1);
+  /** left/top 用 vw / vh，散开向量与颜色交给 CSS 变量 */
+  left: number;
+  top: number;
+  dx: number;
+  dy: number;
+  color: string;
+  size: number;
+  delay: number;
 }
 
-/** 同 key 的提示原地更新文字并续时，不新增条目 */
-function addToast(text: string, key = '') {
-  if (key) {
-    const existing = toasts.value.find((t) => t.key === key);
-    if (existing) {
-      existing.text = text;
-      window.clearTimeout(existing.timer);
-      existing.timer = window.setTimeout(() => removeToast(existing.id), TOAST_MS);
-      return;
-    }
-  }
-  const id = ++toastSeq;
-  const timer = window.setTimeout(() => removeToast(id), TOAST_MS);
-  toasts.value.push({ id, key, text, timer });
-  // 先挤掉最老的挖矿提示，保证建造/维护等反馈不被连点刷掉
-  while (toasts.value.length > MAX_TOASTS) {
-    const victim = toasts.value.find((t) => t.key === 'mine' && t.id !== id) ?? toasts.value[0]!;
-    removeToast(victim.id);
-  }
+const motion = useMotion();
+const timers = new Set<ReturnType<typeof setTimeout>>();
+function later(callback: () => void, delay: number) {
+  const timer = setTimeout(() => { timers.delete(timer); callback(); }, delay);
+  timers.add(timer);
 }
-
-// 挖矿合并：1.2 秒内的连续开采累计次数
-let mineCombo = 0;
-let mineComboTimer = 0;
-
-function burst(origin: FxPoint | undefined, config: Omit<ParticleBurst, 'x' | 'y'>) {
-  if (!overlay || !origin) return;
-  overlay.burst({ x: origin.x, y: origin.y, ...config });
+function clearEffects() {
+  for (const timer of timers) clearTimeout(timer);
+  timers.clear();
+  sparks.value = [];
 }
+const sparks = ref<Spark[]>([]);
+watch(motion.active, active => { if (!active) clearEffects(); });
+let nextId = 0;
+let cleanup: (() => void) | null = null;
 
 const FIREWORK_COLORS = ['#ffd76e', '#58c4a3', '#8fd0ff', '#f0a09e'];
-const pick = () => FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)]!;
 
-function handleEvent(event: FxEvent) {
-  switch (event.kind) {
-    case 'voltage-unlock': {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      burst({ x: w * (0.3 + Math.random() * 0.4), y: h * (0.18 + Math.random() * 0.12) }, {
-        count: 26, color: pick(), spread: 12, speed: 140, life: 1.1, lifeJitter: 0.15, size: 4, sizeJitter: 1.5, gravity: 0.6,
-      });
-      burst({ x: w * (0.25 + Math.random() * 0.5), y: h * (0.24 + Math.random() * 0.1) }, {
-        count: 14, color: pick(), spread: 8, speed: 120, life: 0.9, lifeJitter: 0.1, size: 3, sizeJitter: 1, gravity: 0.6,
-      });
-      if (event.payload.name) addToast(`电压上限提升至 ${event.payload.name}`, 'voltage');
-      break;
-    }
-    case 'mine': {
-      burst(event.payload.origin, {
-        count: 12, color: '#6ee7a8', spread: 16, vy: -80, speed: 35, life: 0.75, lifeJitter: 0.15, size: 3, sizeJitter: 1, gravity: -0.4,
-      });
-      mineCombo += 1;
-      window.clearTimeout(mineComboTimer);
-      mineComboTimer = window.setTimeout(() => {
-        mineCombo = 0;
-      }, 1200);
-      if (event.payload.amount) {
-        addToast(mineCombo > 1 ? `开采 ×${mineCombo}（每次 +${event.payload.amount}）` : `+${event.payload.amount} 矿石`, 'mine');
-      }
-      break;
-    }
-    case 'build':
-      if (event.payload.count <= 0) break;
-      burst(event.payload.origin, {
-        count: 16, color: '#ffd76e', spread: 8, speed: 80, life: 0.6, lifeJitter: 0.1, size: 3, sizeJitter: 1, gravity: 0.8,
-      });
-      addToast(`建造 ${event.payload.name} ×${event.payload.count}`);
-      break;
-    case 'sell':
-      if (event.payload.count <= 0) break;
-      burst(event.payload.origin, { count: 10, color: '#8b97a7', spread: 6, speed: 60, life: 0.5, size: 2.5, gravity: 1.2 });
-      addToast(`卖出 ${event.payload.name} ×${event.payload.count}`);
-      break;
-    case 'repair':
-      if (event.payload.count <= 0) break;
-      burst(event.payload.origin, {
-        count: 14, color: '#58c4a3', spread: 8, speed: 70, life: 0.65, size: 3, sizeJitter: 1, gravity: 0.7,
-      });
-      addToast(`维护 ${event.payload.name}：修好 ${event.payload.count} 台`);
-      break;
-    case 'pickaxe-upgrade':
-      burst(event.payload.origin, {
-        count: 18, color: '#ff8c00', spread: 10, speed: 85, life: 0.7, lifeJitter: 0.12, size: 3, sizeJitter: 1, gravity: 0.6,
-      });
-      addToast(`${event.payload.name} 升至第 ${event.payload.level} 级`);
-      break;
-    case 'research-done':
-      burst({ x: window.innerWidth / 2, y: window.innerHeight * 0.3 }, {
-        count: 24, color: '#8fd0ff', spread: 14, speed: 110, life: 1.0, lifeJitter: 0.2, size: 4, sizeJitter: 1.5, gravity: 0.5,
-      });
-      addToast(`研究完成：${event.payload.name}`);
-      break;
+function burst(centerLeft: number, centerTop: number, count: number, colors: string[]) {
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+    const distance = 60 + Math.random() * 90;
+    const id = ++nextId;
+    sparks.value.push({
+      id,
+      left: centerLeft,
+      top: centerTop,
+      dx: Math.cos(angle) * distance,
+      // 稍微带一点下坠感：向上散得多、向下散得少
+      dy: Math.sin(angle) * distance * 0.7 - 20,
+      color: colors[i % colors.length]!,
+      size: 3 + Math.random() * 3,
+      delay: Math.random() * 0.08,
+    });
   }
-}
-
-function stopParticles() {
-  overlay?.dispose();
-  overlay = null;
-  // dispose 之后若画布仍留在容器里，一并清掉
-  if (canvasHost.value) canvasHost.value.replaceChildren();
-}
-
-function syncParticles() {
-  if (motionQuery?.matches) {
-    stopParticles();
-  } else if (!overlay && canvasHost.value) {
-    overlay = ParticleOverlay.create(canvasHost.value, 2048);
-  }
+  later(() => {
+    sparks.value = [];
+  }, 1400);
 }
 
 onMounted(() => {
-  // 订阅始终存在：粒子不可用时文字反馈照常
-  unsubscribe = onFx(handleEvent);
-  syncParticles();
-  motionQuery?.addEventListener('change', syncParticles);
+  cleanup = onFx((event: FxEvent) => {
+    if (motion.active.value && event.kind === 'voltage-unlock') {
+      burst(30 + Math.random() * 40, 18 + Math.random() * 12, 26, FIREWORK_COLORS);
+      // 半拍后补一簇小的，层次感
+      later(() => burst(25 + Math.random() * 50, 24 + Math.random() * 10, 14, FIREWORK_COLORS), 180);
+    }
+  });
 });
 
 onUnmounted(() => {
-  unsubscribe?.();
-  motionQuery?.removeEventListener('change', syncParticles);
-  window.clearTimeout(mineComboTimer);
-  for (const t of toasts.value) window.clearTimeout(t.timer);
-  stopParticles();
+  cleanup?.();
+  clearEffects();
 });
 </script>
 
 <template>
-  <div class="fx-layer">
-    <div ref="canvasHost" class="fx-canvas" aria-hidden="true" />
-    <div class="fx-toasts" role="status" aria-live="polite">
-      <TransitionGroup name="toast">
-        <div v-for="item in toasts" :key="item.id" class="fx-toast">{{ item.text }}</div>
-      </TransitionGroup>
-    </div>
+  <div class="fx-layer" aria-hidden="true">
+    <span
+      v-for="spark in sparks"
+      :key="spark.id"
+      class="fx-spark"
+      :style="{
+        left: spark.left + 'vw',
+        top: spark.top + 'vh',
+        width: spark.size + 'px',
+        height: spark.size + 'px',
+        background: spark.color,
+        color: spark.color,
+        '--dx': spark.dx + 'px',
+        '--dy': spark.dy + 'px',
+        animationDelay: spark.delay + 's',
+      }"
+    />
   </div>
 </template>

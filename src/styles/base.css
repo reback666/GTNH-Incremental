@@ -1,0 +1,39 @@
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: radial-gradient(ellipse at 85% 0%, var(--bg-glow), transparent 60%), var(--bg);
+  color: var(--text);
+  font: 15px/1.6 system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+#app { max-width: 1880px; margin: 0 auto; }
+h1 { margin: 0; font-size: 27px; line-height: 1.35; letter-spacing: 0.02em; }
+h2 { display: flex; align-items: center; gap: 7px; font-size: 16px; font-weight: 650; margin: 0 0 12px; color: var(--text); }
+h3 { font-size: 15px; }
+button, input, select { font: inherit; }
+button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 36px; padding: 0 12px; border: 2px solid var(--line); border-image: var(--skin-btn) 2 / 2px stretch; border-radius: 0;
+  background: var(--btn-face); color: var(--btn-text); cursor: pointer;
+  transition: background 180ms, border-color 180ms, color 180ms, box-shadow 180ms, transform 120ms;
+}
+button:not(:disabled):hover { background: var(--panel-2); border-color: var(--accent); }
+button:not(:disabled):active { border-image-source: var(--skin-btn-pressed); }
+button:disabled { color: var(--muted); opacity: 0.55; cursor: not-allowed; }
+button:focus-visible, [tabindex]:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px;
+}
+button.primary { color: var(--accent); background: rgba(var(--accent-rgb), 0.1); border-color: rgba(var(--accent-rgb), 0.4); }
+button.primary:not(:disabled):hover { background: rgba(var(--accent-rgb), 0.2); box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.12); }
+button.big { width: 100%; min-height: 48px; }
+.panel { padding: 18px; margin: 0 0 16px; background: var(--panel); border: 3px solid var(--line); border-image: var(--skin-panel) 3 fill / 3px stretch; border-radius: 0; box-shadow: 0 8px 24px #0000000d; }
+.panel-toggle, .research-toggle { background: transparent; border-color: transparent; }
+.eyebrow { display: block; color: var(--muted); font-size: 11px; letter-spacing: 0.12em; line-height: 1.5; }
+::selection { background: rgba(var(--accent-rgb), 0.3); }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
+
+body.theme-classic .panel, body.theme-classic button { border-image: none; border-width: 1px; }
+button:disabled { border-image-source: var(--skin-btn-disabled); }

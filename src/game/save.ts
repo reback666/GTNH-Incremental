@@ -1,6 +1,8 @@
 import { Decimal, ZERO, fromSaveString, toSaveString } from '../numeric/decimal';
 import type { DisplayMode } from '../numeric/format';
 import { MAX_TIER } from '../numeric/voltage';
+import { VOLTAGES } from '../content';
+import { remapVoltageSave } from './save-voltage';
 import { DEFAULT_GRID, GRID_MODES, type GridMode } from '../numeric/grid';
 import { needsResearch } from '../numeric/research';
 import { isValidOverclockLevel } from '../numeric/overclock';
@@ -22,12 +24,13 @@ import {
   SAVE_VERSION,
   THEME_KEY,
 } from './constants';
-import { errorText, logEvent } from './log';
+import { errorText, logEvent, setLogGameSeconds } from './log';
 
 // 计划书第十四章：存档 = 状态序列化成 JSON，带版本号；
 // 大数值一律以字符串存储 —— JSON.parse 只有 double 一种数字类型，超过 2^53 会在解析阶段丢精度。
 export interface SaveData {
   version: number;
+  voltageIds?: string[];
   ores: string[];
   coins: string[];
   // v2：机型 id → 数量
@@ -129,6 +132,7 @@ export interface SaveData {
 export function serialize(core: GameCore): SaveData {
   return {
     version: SAVE_VERSION,
+    voltageIds: VOLTAGES.map((voltage) => voltage.id),
     ores: core.ores.map(toSaveString),
     coins: core.coins.map(toSaveString),
     counts: { ...core.counts },
@@ -203,6 +207,7 @@ export function serialize(core: GameCore): SaveData {
 // 目标是「宁可少一点内容，也不要让越界数字进到模拟里」，同时不因为一个字段坏掉
 // 就把整份存档丢掉。
 export function deserialize(data: SaveData): GameCore {
+  data = remapVoltageSave(migrateUMV(data));
   const core = new GameCore();
   // 等级要先定下来：矿脉、机型、台数的清洗都以它为准
   core.maxTier = clampInt(data.maxTier, 1, MAX_TIER, 1);
@@ -211,7 +216,7 @@ export function deserialize(data: SaveData): GameCore {
   core.unlockedVeins = cleanVeins(data.unlockedVeins);
   core.playSeconds = nonNegativeInt(data.playSeconds);
 
-  core.ores = pad(data.ores, 14).map((text) => safeDec(text));
+  core.ores = pad(data.ores, MAX_TIER).map((text) => safeDec(text));
   core.coins = pad(data.coins, MAX_TIER).map((text) => safeDec(text));
   const counts = data.counts ? cleanCounts(data.counts) : migrateFromV1(data);
   core.counts = counts;
@@ -324,6 +329,63 @@ export function deserialize(data: SaveData): GameCore {
   return core;
 }
 
+// v24 及以前的 13 / 14 是 UXV / MAX；机型 id、矿石索引和研究记录必须一起顺移。
+function migrateUMV(data: SaveData): SaveData {
+  if (data.version >= 25) return data;
+  const shiftTier = (tier: number) => Number.isInteger(tier) && tier >= 13 && tier <= 14 ? tier + 1 : tier;
+  const shiftModel = (id: string) => id.replace(
+    /^(m|c|b|p|x|r|n|s)-(13|14)$/,
+    (_, family: string, tier: string) => `${family}-${Number(tier) + 1}`,
+  );
+  const insertTier = <T>(values: T[], empty: T): T[] => {
+    const result = values.slice();
+    if (result.length > 12) result.splice(12, 0, empty);
+    return result;
+  };
+  const shiftModels = <T>(value: Record<string, T>): Record<string, T> =>
+    Object.fromEntries(Object.entries(value).map(([id, amount]) => [shiftModel(id), amount]));
+  const veins = Array.isArray(data.unlockedVeins)
+    ? data.unlockedVeins.filter((tier) => Number.isInteger(tier) && tier >= 0 && tier < 14)
+      .map((tier) => tier >= 12 ? tier + 1 : tier)
+    : [];
+  if (data.maxTier >= 13 && data.maxTier <= 14) veins.push(12);
+  const migrated: SaveData = {
+    ...data,
+    version: 25,
+    maxTier: shiftTier(data.maxTier),
+    ores: insertTier(Array.isArray(data.ores) ? data.ores : [], '0'),
+    coins: insertTier(Array.isArray(data.coins) ? data.coins : [], '0'),
+    unlockedVeins: veins,
+  };
+  if (data.peakTier !== undefined) migrated.peakTier = shiftTier(data.peakTier);
+  if (Array.isArray(data.miners)) migrated.miners = insertTier(data.miners, 0);
+  if (Array.isArray(data.generators)) migrated.generators = insertTier(data.generators, 0);
+  if (Array.isArray(data.machines)) migrated.machines = insertTier(data.machines, 0);
+  if (data.counts) migrated.counts = shiftModels(data.counts);
+  if (data.overclock) migrated.overclock = shiftModels(data.overclock);
+  if (data.faults) migrated.faults = shiftModels(data.faults);
+  if (data.stopped) migrated.stopped = shiftModels(data.stopped);
+  if (data.researchProgressByModel) migrated.researchProgressByModel = shiftModels(data.researchProgressByModel);
+  if (Array.isArray(data.researchedModels)) {
+    migrated.researchedModels = data.researchedModels.map((id) => typeof id === 'string' ? shiftModel(id) : id);
+  }
+  if (typeof data.researchTargetModel === 'string') migrated.researchTargetModel = shiftModel(data.researchTargetModel);
+  if (Array.isArray(data.researched)) migrated.researched = data.researched.map(shiftTier);
+  if (typeof data.researchTarget === 'number') migrated.researchTarget = shiftTier(data.researchTarget);
+  if (data.researchProgressByTier) {
+    migrated.researchProgressByTier = Object.fromEntries(
+      Object.entries(data.researchProgressByTier).map(([tier, amount]) => [shiftTier(Number(tier)), amount]),
+    );
+  }
+  if (data.pickaxeVajra !== undefined) migrated.pickaxeVajra = shiftTier(data.pickaxeVajra + 1) - 1;
+  if (Array.isArray(data.runHistory)) {
+    migrated.runHistory = data.runHistory.map((entry) =>
+      isRecord(entry) && typeof entry.maxTier === 'number' ? { ...entry, maxTier: shiftTier(entry.maxTier) } : entry,
+    );
+  }
+  return migrated;
+}
+
 // ── 读档清洗用的小工具 ───────────────────────────────────────
 // 命名里的 clean* 都是「只信合法值」：认不出来的一律丢回默认值，不抛错、不猜。
 const MODEL_BY_ID = new Map(MACHINE_MODELS.map((model) => [model.id, model]));
@@ -398,7 +460,7 @@ function safeDec(value: unknown): Decimal {
 }
 
 // 矿脉表只做「去重 + 范围收敛 + 非空」，不替存档补内容：合法的存档原样保留，
-// 手改坏的（负数、超过 14 级、重复、空表）在这里抹平，不让贴图和名称查到表外。
+// 手改坏的（负数、超过电压上限、重复、空表）在这里抹平，不让贴图和名称查到表外。
 function cleanVeins(value: unknown): number[] {
   const veins = new Set<number>();
   if (Array.isArray(value)) {
@@ -589,11 +651,12 @@ function migrateFromV1(data: SaveData): Record<string, number> {
   return counts;
 }
 
-export function saveToStorage(core: GameCore): void {
+export function saveToStorage(core: GameCore, savedAt = Date.now()): void {
+  setLogGameSeconds(core.playSeconds);
   if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(serialize(core)));
-    writeSaveTime();
+    writeSaveTime(savedAt);
     if (writeFailureLogged) {
       writeFailureLogged = false;
       logEvent('info', 'save.write', '存档恢复正常，能写进去了');
@@ -632,6 +695,7 @@ export function loadFromStorage(): GameCore | null {
       throw new Error(`存档版本 ${data.version} 无法识别`);
     }
     const core = deserialize(data);
+    setLogGameSeconds(core.playSeconds);
     logEvent('info', 'save.read', `读取存档成功（存档版本 ${data.version}）`);
     return core;
   } catch (error) {
@@ -683,9 +747,9 @@ export function clearStorage(): void {
   localStorage.removeItem(SAVE_TIME_KEY);
 }
 
-export function writeSaveTime(): void {
+export function writeSaveTime(savedAt = Date.now()): void {
   try {
-    localStorage.setItem(SAVE_TIME_KEY, String(Date.now()));
+    localStorage.setItem(SAVE_TIME_KEY, String(savedAt));
   } catch {
     // 写不进去就不补算离线收益：宁可少给，也不要拿一个假时间戳去算
   }

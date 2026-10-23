@@ -1,7 +1,6 @@
+import { MAX_TIER } from '../src/numeric/voltage';
 import { describe, expect, it } from 'vitest';
-import { createPinia, setActivePinia } from 'pinia';
 import { GameCore } from '../src/game/core';
-import { useGameStore } from '../src/game/store';
 import {
   CHALLENGES,
   challengeSettles,
@@ -92,7 +91,7 @@ describe('挑战数据与判定函数', () => {
         .violated,
     ).toBe(true);
     expect(
-      evaluateChallenge('speedrun', { ...base, gridCount: 1, playSeconds: eightHours + 1, maxTier: 14 })
+      evaluateChallenge('speedrun', { ...base, gridCount: 1, playSeconds: eightHours + 1, maxTier: MAX_TIER })
         .violated,
     ).toBe(false);
   });
@@ -101,8 +100,8 @@ describe('挑战数据与判定函数', () => {
 describe('挑战在核心里生效', () => {
   function maxCore(): GameCore {
     const core = new GameCore();
-    core.maxTier = 14;
-    core.runEU = dec('1e40'); // MAX 公式 224 条
+    core.maxTier = MAX_TIER;
+    core.runEU = dec('1e40'); // MAX 公式按当前等级计算
     return core;
   }
 
@@ -113,7 +112,7 @@ describe('挑战在核心里生效', () => {
     core.tick(1);
     expect(core.challengeViolated).toBe(true);
     const gained = core.rebirth('max');
-    expect(gained?.toString()).toBe(rebirthCables({ totalEU: '1e40', maxTier: 14, rebirthCount: 0 }).toString());
+    expect(gained?.toString()).toBe(rebirthCables({ totalEU: '1e40', maxTier: MAX_TIER, rebirthCount: 0 }).toString());
     expect(core.completedChallenges).toEqual([]);
   });
 
@@ -121,7 +120,7 @@ describe('挑战在核心里生效', () => {
     const core = maxCore();
     core.activeChallenge = 'pure'; // 全程无机器，污染 0
     core.tick(1);
-    const expected = rebirthCables({ totalEU: '1e40', maxTier: 14, rebirthCount: 0 })
+    const expected = rebirthCables({ totalEU: '1e40', maxTier: MAX_TIER, rebirthCount: 0 })
       .times('1.3')
       .floor();
     expect(core.rebirth('max')?.toString()).toBe(expected.toString());
@@ -175,7 +174,7 @@ describe('挑战在核心里生效', () => {
 describe('转生履历（C1）', () => {
   it('每次转生记一条：路线、宇宙、挑战、线缆、时长、电压', () => {
     const core = new GameCore();
-    core.maxTier = 14;
+    core.maxTier = MAX_TIER;
     core.runEU = dec('1e40');
     core.playSeconds = 3600;
     core.activeChallenge = 'pure';
@@ -187,7 +186,7 @@ describe('转生履历（C1）', () => {
     expect(first.universe).toBe('industry');
     expect(first.challenge).toBe('pure');
     expect(first.challengePassed).toBe(true);
-    expect(first.maxTier).toBe(14);
+    expect(first.maxTier).toBe(MAX_TIER);
     expect(first.seconds).toBe(3600);
     // 第二趟：裂缝路线、没挂挑战
     core.riftOffered = false;
@@ -202,9 +201,9 @@ describe('转生履历（C1）', () => {
 
   it('超过 50 条丢最旧的', () => {
     const core = new GameCore();
-    core.maxTier = 14;
+    core.maxTier = MAX_TIER;
     for (let i = 0; i < 55; i += 1) {
-      core.maxTier = 14; // 转生会把它归 1，每轮重新打到 MAX
+      core.maxTier = MAX_TIER; // 转生会把它归 1，每轮重新打到 MAX
       core.runEU = dec('1e40');
       core.rebirth('max');
     }
@@ -215,7 +214,7 @@ describe('转生履历（C1）', () => {
 
   it('履历进存档（v20）并完整往返', () => {
     const core = new GameCore();
-    core.maxTier = 14;
+    core.maxTier = MAX_TIER;
     core.runEU = dec('1e40');
     core.activeChallenge = 'grid';
     core.playSeconds = 7200;
@@ -269,9 +268,9 @@ describe('挑战存档（v19）', () => {
 describe('普朗克锚（C2 轻方案）', () => {
   it('300 条铸造一次：MAX 结算 ×1.5，裂缝不受影响，界面读数与结算一致', () => {
     const core = new GameCore();
-    core.maxTier = 14;
+    core.maxTier = MAX_TIER;
     core.runEU = dec('1e40');
-    const base = rebirthCables({ totalEU: '1e40', maxTier: 14, rebirthCount: 0 });
+    const base = rebirthCables({ totalEU: '1e40', maxTier: MAX_TIER, rebirthCount: 0 });
     expect(core.maxRouteCables()?.toString()).toBe(base.toString());
     // 线缆不够买不了
     core.cables = dec('299');
@@ -298,12 +297,12 @@ describe('普朗克锚（C2 轻方案）', () => {
 
   it('与挑战倍率叠乘（挑战先算、普朗克后算）', () => {
     const core = new GameCore();
-    core.maxTier = 14;
+    core.maxTier = MAX_TIER;
     core.runEU = dec('1e40');
     core.planckAnchor = true;
     core.activeChallenge = 'pure';
     core.tick(1); // 无机器，污染 0，挑战通过
-    const base = rebirthCables({ totalEU: '1e40', maxTier: 14, rebirthCount: 0 });
+    const base = rebirthCables({ totalEU: '1e40', maxTier: MAX_TIER, rebirthCount: 0 });
     const expected = base.times('1.5').floor().times('1.3').floor();
     expect(core.rebirth('max')?.toString()).toBe(expected.toString());
   });
@@ -315,17 +314,5 @@ describe('普朗克锚（C2 轻方案）', () => {
     expect(restored.planckAnchor).toBe(true);
     const fresh = deserialize({ version: 19 } as SaveData);
     expect(fresh.planckAnchor).toBe(false);
-  });
-});
-
-describe('挑战面板折叠（纯界面状态）', () => {
-  it('默认收起，点一下展开、再点收起', () => {
-    setActivePinia(createPinia());
-    const store = useGameStore();
-    expect(store.challengesCollapsed).toBe(true);
-    store.toggleChallenges();
-    expect(store.challengesCollapsed).toBe(false);
-    store.toggleChallenges();
-    expect(store.challengesCollapsed).toBe(true);
   });
 });

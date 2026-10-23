@@ -5,7 +5,7 @@ import { assertTier, voltageMultiplier } from './voltage';
 export interface MachineOutputInput {
   // 该机器在 ULV 的基础产出。
   baseOutput: DecimalInput;
-  // 机器电压等级 1..14。
+  // 机器电压等级 1..MAX_TIER。
   tier: number;
   // 超频档位 0-3，默认 0。
   overclockLevel?: number;

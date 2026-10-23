@@ -6,11 +6,12 @@ import { VEIN_MATERIALS } from '../src/game/vein-materials';
 import { GameCore } from '../src/game/core';
 import { getCore, setCore } from '../src/game/engine';
 import { useGameStore } from '../src/game/store';
+import { MAX_TIER } from '../src/numeric/voltage';
 
 // 贴图条带、帧长、材料表是分开维护的，最容易出的错是对不上号（帧数与帧长列表不等长、等级缺项）。
 describe('矿脉贴图与特殊渲染', () => {
-  it('14 个等级都有贴图信息和材料名', () => {
-    expect(VEIN_TIERS).toHaveLength(14);
+  it('全部电压都有贴图信息和材料名', () => {
+    expect(VEIN_TIERS).toHaveLength(MAX_TIER);
     VEIN_TIERS.forEach((info, tier) => {
       expect(info.tier, `第 ${tier} 级`).toBe(tier);
       expect(info.material.length, `第 ${tier} 级材料名`).toBeGreaterThan(0);
@@ -23,14 +24,15 @@ describe('矿脉贴图与特殊渲染', () => {
       expect(info.frameDurationsMs, `T${info.tier} 帧长数量`).toHaveLength(info.frames);
     }
     const animated = VEIN_TIERS.filter((info) => info.frames > 1).map((info) => info.tier);
-    // T12 海珀珍用的是 Modernity-GTNH 材质包里 UXV 线圈的能量流动动画（119 帧 × 50ms）
-    expect(animated).toEqual([9, 10, 11, 12, 13]);
+    // T13 海珀珍用的是 Modernity-GTNH 材质包里 UXV 线圈的能量流动动画（119 帧 × 50ms）
+    expect(animated).toEqual([9, 10, 11, 13, 14]);
   });
 
   it('动画时长与原版贴图的 frametime 一致', () => {
     expect(veinLoopMs(veinTierInfo(10)!)).toBe(31 * 150);
     expect(veinLoopMs(veinTierInfo(11)!)).toBe(18 * 200);
-    expect(veinLoopMs(veinTierInfo(13)!)).toBe(113 * 150);
+    expect(veinLoopMs(veinTierInfo(13)!)).toBe(119 * 50);
+    expect(veinLoopMs(veinTierInfo(14)!)).toBe(113 * 150);
     expect(VEIN_FX_META.haloFuzzy?.frames).toBe(8);
     expect(VEIN_FX_META.haloFuzzy?.frameDurationsMs).toHaveLength(8);
     // 挖矿裂纹用原版 10 级破坏贴图
@@ -45,8 +47,8 @@ describe('矿脉贴图与特殊渲染', () => {
     ]);
   });
 
-  it('材料表盖满 14 级，而且是唯一一份来源', () => {
-    expect(VEIN_MATERIALS).toHaveLength(14);
+  it('材料表盖满全部电压，而且是唯一一份来源', () => {
+    expect(VEIN_MATERIALS).toHaveLength(MAX_TIER);
     expect(VEIN_TIERS.map((info) => info.material)).toEqual(
       VEIN_MATERIALS.map((item) => item.material),
     );

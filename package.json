@@ -1,27 +1,31 @@
 {
   "name": "gtnh-incremental",
   "private": true,
-  "version": "0.6.3",
+  "version": "0.9.0",
   "type": "module",
-  "description": "GTNH 主题离线增量游戏：Vue 界面 + Three.js 三维工业基地，支持离线收益",
+  "description": "GTNH 本地增量游戏：数值模拟、工业控制台与实时厂区",
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
     "balance": "tsx scripts/balance.ts",
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build && tsx scripts/inline-dist.ts",
-    "preview": "vite preview"
+    "build": "npm run check:content && vue-tsc --noEmit && vite build && tsx scripts/inline-dist.ts",
+    "preview": "vite preview",
+    "build:3d": "node gtnh3d/build.mjs",
+    "check:3d": "node gtnh3d/tools/check-bundle.mjs && node gtnh3d/tools/smoke.mjs",
+    "verify:3d": "node gtnh3d/tools/verify-render.mjs && node gtnh3d/tools/verify-atlas.mjs",
+    "floor:3d": "node gtnh3d/tools/floor-map.mjs",
+    "check:content": "tsx scripts/check-content.ts"
   },
   "dependencies": {
     "decimal.js": "^10.4.3",
     "pinia": "^4.0.3",
-    "three": "0.186.1",
     "vue": "^3.5.43"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
-    "@types/three": "0.186.0",
     "@vitejs/plugin-vue": "^6.0.9",
+    "three": "^0.170.0",
     "tsx": "^4.23.15",
     "typescript": "^5.6.3",
     "vite": "^5.4.21",

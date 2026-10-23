@@ -1,62 +1,80 @@
-# 项目现状（唯一说明文档）
+# 项目现状与操作说明
 
-只写当前有效的事实。设计以 `plan.txt` 为准（未经用户同意不改），公式以 `src/numeric/` 为准。
+> 更新：2026-10-23。此文档记录当前有效的操作与约束；版本号以 `package.json` 为准。
 
-## 1. 项目
+## 1. 项目范围
 
-GTNH 主题增量游戏：ULV 起步沿 14 级电压做到 MAX。Vue 3 + TypeScript + Vite + Pinia + Three.js，
-构建为单个离线 HTML。只支持桌面浏览器（不做手机布局）。版本号读 `package.json` 的 `version`，
-非 master 分支构建自动加 `-dev`。日常开发在 dev，master 只在用户明确要求时合并。
+GTNH 主题的本地增量 / 放置游戏，从 ULV 沿 15 级电压发展到 MAX。
+使用 Vue 3、TypeScript、Pinia、decimal.js 与 Vite，仅面向桌面浏览器。
+不自动上传游戏进度、素材、日志或其他本地数据。
 
-## 2. 命令
+当前包含：
 
-| 命令 | 作用 |
+- 手动开采与三条镐子升级线，多矿种自动采矿，矿石 / GT 币建造与出售。
+- 发电、按需燃料消耗、储能、超频、维护、手动停机、污染与电网取舍。
+- LuV 起的算力研究，后期逐机型研究门控。
+- 裂缝 / MAX 转生、永久星图、工业 / 奥术 / 深渊 / 硅基宇宙、挑战与转生履历。
+- 成就、累计统计、音效、主题、开发者工具、离线补算、本地存档与 JSON 导入导出。
+- LV 方块 3D 主厂区，含六种工业机器、蓝图地板、自由相机及演示 / 实际数量切换；具体约束见 `architecture.md`。
+
+## 2. 运行与产物
+
+| 命令 / 路径 | 用途 |
 | --- | --- |
-| `npm test` | vitest 全部测试 |
-| `npx vue-tsc --noEmit` | 类型检查 |
-| `npm run build` | 类型检查 + `vite build` + `scripts/inline-dist.ts` 内联成单文件 |
-| `npm run dev` | 开发服务器 |
-| `npm run balance` | 重算 `docs/balance.md`（生成物，不手改） |
-| `python scripts/build-*.py` | 重新生成贴图（需本机 GTNH 开发包与 1.7.10 `client.jar`，缺失时脚本报错） |
+| `npm run dev` | 启动本地开发服务器 |
+| `npm run check:content` | 检查内容定义、引用关系与素材是否齐全 |
+| `npm test` | 运行单元和集成测试 |
+| `npm run build` | 类型检查、Web 构建及便携打包 |
+| `npm run preview` | 在本地预览 Web 构建 |
+| `node scripts/verify-factory3d.mjs [HTML路径]` | 独立 Chrome 验证 LV 场景、购买 / 停机联动、相机、导航及离线入口 |
+| `node scripts/verify-page-cache.mjs [HTML路径]` | 独立 Chrome 验证四页缓存、星图位置、日志筛选与未读、实时数据及重置 |
+| `node scripts/verify-logs.mjs [HTML路径]` | 独立 Chrome 验证日志操作、筛选、分页、导出内容、刷新恢复及错误提示；更新 `docs/log-panel.png` |
+| `npm run balance` | 重新生成平衡报告 |
+| `dist/GTNH增量.html` | 自包含便携游戏，双击打开 |
+| `dist/index.html` | 同内容的便携入口 |
+| `dist/web/index.html` | 常规 Web 入口，通过本地服务器打开 |
 
-## 3. 架构
+存档版本以 `src/game/constants.ts` 为准；旧档迁移后，新档按电压标识恢复资源和等级；扩展约束见 `custom-content.md`。
 
-- `src/game/core.ts`：纯逻辑与经济（Decimal 40 位精度）；`save.ts` 存档清洗与版本迁移。
-- `src/game/store.ts`：Pinia 门面，产出 `snap` 快照给界面；成功操作在 `fx.ts` 总线上 emit
-  （`mine`/`build`/`sell`/`repair`/`pickaxe-upgrade`/`research-done`/`voltage-unlock`）。
-- `src/rendering/*` + `components/FactoryScene.vue`：Three.js 工业基地与 `ParticleOverlay` 粒子池。
-  场景自己读 store，接口 `v-model:selected`（机型 id），带 `data-mode="ready|fallback"`、
-  `data-total-machines`、`data-shown-units`、`data-selected`；WebGL 不可用时显示文字摘要。
-- 界面外壳 `App.vue`：64px 横向顶栏（`Sidebar.vue`：品牌/电压、三页导航、电网四读数与研究进度，
-  电力明细为浮层）+ 占满视口的内容区。键盘 1/2/3 换页（输入框、输入法组合、contenteditable、
-  组合键、三维视图内不触发）。
-- 工厂页 `pages/FactoryPage.vue`：顶部横向资源带（`ResourceBar.vue`，悬停/聚焦看产入耗出与净变化，
-  离线收益横幅，奥术宇宙灵气详情展开）；下方左侧 3D 基地，左下角叠开采 dock（`VeinPanel.vue`，
-  固定 DOM，M 键开采），底部污染状态条（`PollutionPanel.vue`，点开看全部机制）；右侧机器控制台
-  （`MachinePanel.vue`，自身纵向滚动，只渲染当前类别；与场景双向联动选中机型）。
-- `FxLayer.vue`：全屏反馈层。提示文字订阅常驻、最多 5 条、连续挖矿合并为一条；粒子统一用
-  `ParticleOverlay`，系统 reduced-motion 实时开关（开启时销毁画布，文字照常）。
-- 样式：`style.css`（主题变量、三套皮肤、通用控件）、`style-shell.css`（外壳/顶栏）、
-  `style-factory.css`（工厂页）、`style-fx.css`（反馈层）。
+浏览器存档按入口的存储范围隔离；切换文件路径、端口或 Web / 便携入口时，用界面中的 JSON 导入导出迁移进度。
+构建不会删除 `dist/web/`。`dist/GTNH增量.html` 是入库产物，其余构建文件按 `.gitignore` 忽略。
 
-## 4. 离线产物
+素材工具使用用户本机 GTNH 客户端、材质包或开发包；来源与操作见 `scripts/texture-sources.md`。
+机器图标使用 `scripts/export-machine-icons.ps1` 从启用 Modernity 的客户端原生导出。其他常用工具：`scripts/build-veins.py`、
+`build-pickaxe-icons.py`、`build-scene-casings.py`、`build-texture-gallery.py`。
+3D 机器素材使用 `python -B scripts/extract-factory3d.py --pack "<Modernity-GTNH.zip>"` 提取；逐张来源见生成的 `src/assets/factory3d/manifest.json`。渲染复用项目已有的 `three` 依赖。
 
-- `dist/GTNH增量.html` 入库，单文件、全部资源内联；`dist/index.html`、`dist/assets` 不入库。
-  构建时间戳每次都变，构建后该文件总显示为改动。
-- `inline-dist.ts` 会删 `dist/assets`，贴图必须内联为 data URL（`vite.config.ts` 的
-  `assetsInlineLimit` 为 4 MB）。
+## 3. 权威来源
 
-## 5. 约定
+| 内容 | 唯一来源 |
+| --- | --- |
+| 现行游戏规则与阶段 | `plan.txt` |
+| 后续重规划需求与执行顺序 | `docs/redesign-plan.md` |
+| 模块边界、界面与生命周期约束 | `docs/architecture.md` |
+| 公式 | `src/numeric/` |
+| 电压、资源与机型内容 | `src/content/`；自定义操作见 `docs/custom-content.md` |
+| 当前数值参数与存档键 / 版本 | `src/game/constants.ts` |
+| 转生星图 / 挑战 / 宇宙定义 | `src/game/rebirth.ts`、`challenges.ts`、`universes.ts` |
+| 当前版本 | `package.json`；非 master 构建自动加 `-dev` |
+| 平衡计算 | `scripts/balance.ts` 生成的 `docs/balance.md`，不要手改产物 |
+| 诊断与日志 | `src/game/diagnostics.ts`、`log.ts` |
+| 素材来源 | `scripts/texture-sources.md` |
+| 厂区预览 | `outputs/factory3d-lv/`，由独立测试上下文生成，不使用用户存档 |
 
-- 存档数值存十进制字符串，读档逐字段清洗，越界退默认值。
-- 动画贴图为竖排帧条带，容器必须 `overflow: hidden`；贴图文件名必须等于机型 id / `vein-meta` 键。
-- 机器类别顺序与按 id 查机型共用 `store.ts` 的 `COLUMN_ORDER`。
-- 面向用户文字一律简体中文；脚本需支持中文路径。
+## 4. 本地数据与操作约束
 
-## 6. 验证与限制
+- 累计资源使用 Decimal，存档中的大数值保存为十进制字符串；场景坐标和动画不能反向写入资源。
+- 导入与本地读档共用逐字段清洗和版本校验；导入成功后整体替换，不部分应用。
+- 重开一局清除进度，主题和界面偏好保留。设置页中的开发者操作由核心开关控制。
+- 矿脉动画使用竖排帧条带，容器必须裁剪；贴图文件通过内容定义的素材键关联，可供多个机型或电压复用。
+- 界面、动画和存档的其他约束不在此重复，见 `architecture.md`。
 
-- 当前工厂界面预览：[1366×768](ui-preview.png) / [1920×1080](ui-preview-2.png)。
-- 单元测试覆盖 core/存档/数值/基地布局模型；界面与 3D 场景没有自动化 UI 测试，
-  布局、性能与 WebGL 行为需在桌面浏览器（1366×768 与 1920×1080）人工或 Playwright 验收。
-- 无头环境可能没有 WebGL，此时场景走 fallback、粒子不创建，这是预期行为。
-- 待定的数值手感题见 `plan.txt` 第二十一章。
+## 5. 开发与后续
+
+- 日常工作在 dev 分支；未经用户明确指示，不自行合并 master、发布或上传项目。
+- Git 提交需用户同意；提交前按改动范围验证。高风险改动的回滚点也遵守此规则。
+- `plan.txt` 的玩法规则不随视觉调整改变；用户授权的界面 / 架构改造同步更新对应章节。
+- 后续玩法与画面重规划的执行顺序、已确认边界和待确认项见 `redesign-plan.md`；仍在规划阶段，不作为已经实现的功能。
+- 跨周目继承蓝图玩法不采用；升压等待真正的配方系统；自定义内容通过本地 JSON 配置并重新构建生效，操作见 `custom-content.md`。
+
+视觉验证先在独立浏览器上下文完成，再保存必要的预览图。临时测试脚本、下载和抓帧文件使用完后清理。

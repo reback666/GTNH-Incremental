@@ -11,10 +11,12 @@
 from __future__ import annotations
 
 import base64
+import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gtnh_tiers import MAX_TIER, VOLTAGE_DEFINITIONS, load_models, texture_key
 
 ROOT = Path(__file__).resolve().parent.parent
 VEINS = ROOT / "src" / "assets" / "veins"
@@ -24,46 +26,13 @@ FX = VEINS / "fx"
 
 TILE = 64  # 展示尺寸（px）
 
-# 矿脉：等级 →（材料名，帧数，帧长 ms，特殊渲染标注）
-VEIN_LIST: list[tuple[int, str, int, int, str]] = [
-    (0, "锻铁", 1, 0, ""),
-    (1, "铜", 1, 0, ""),
-    (2, "铝", 1, 0, ""),
-    (3, "不锈钢", 1, 0, ""),
-    (4, "钛", 1, 0, ""),
-    (5, "钨钢", 1, 0, ""),
-    (6, "钯", 1, 0, ""),
-    (7, "硅岩", 1, 0, ""),
-    (8, "中子素", 1, 0, ""),
-    (9, "宇宙中子素", 3, 150, "毛边白雾"),
-    (10, "无尽", 31, 150, "方形暗晕 + 脉动重影"),
-    (11, "龙芯", 18, 200, ""),
-    (12, "海珀珍", 119, 50, "能量流"),
-    (13, "时空", 113, 150, ""),
-]
+VEIN_META = json.loads((VEINS / "meta.json").read_text(encoding="utf-8"))
 
 # 镐子：线 →（显示名，帧数，帧长 ms，静态等级集合）
 PICKAXE_LINES: list[tuple[str, str, int, int]] = [
     ("vajra", "金刚杵", 33, 50),
     ("drill", "连锁采集", 0, 150),  # 帧数按等级查文件高度
     ("blast", "连锁爆破", 31, 150),
-]
-PICKAXE_STATIC_DRILL = {t for t in range(1, 11)} | {t for t in range(0, 10)}
-
-# 机器图标分组：前缀 → 显示名
-MACHINE_GROUPS: list[tuple[str, str]] = [
-    ("m", "采矿机"),
-    ("c", "制造机"),
-    ("b", "发电机"),
-    ("n", "灵气节点"),
-    ("s", "腐蚀抑制器"),
-    ("p", "净化器"),
-    ("x", "计算机"),
-    ("r", "研究站"),
-    ("mm", "魔法采矿机"),
-    ("mg", "魔法发电机"),
-    ("mc", "魔法制造机"),
-    ("g", "多方块发电机"),
 ]
 
 
@@ -99,16 +68,18 @@ def main() -> None:
 
     # ── 矿脉 ─────────────────────────────────────────────
     items = []
-    for tier, name, frames, frame_ms, note in VEIN_LIST:
-        url = data_url(VEINS / f"t{tier}.png")
-        items.append(tile(url, frames, frame_ms, f"T{tier} {name}", note))
-    parts.append(section("矿脉贴图（T0 ~ T13）", items))
+    for tier, voltage in enumerate(VOLTAGE_DEFINITIONS):
+        ore = voltage["ore"]
+        meta = VEIN_META["tiers"].get(ore["texture"], {"frames": 1, "frameDurationsMs": [0]})
+        url = data_url(VEINS / f"{ore['texture']}.png")
+        items.append(tile(url, meta["frames"], meta["frameDurationsMs"][0], f"T{tier} {ore['material']}", ore["fx"]))
+    parts.append(section(f"矿脉贴图（T0 ~ T{MAX_TIER - 1}）", items))
 
     # ── 镐子 ─────────────────────────────────────────────
     items = []
     for line, cname, frames, frame_ms in PICKAXE_LINES:
-        for tier in range(1, 15):
-            path = PICKAXE / f"{line}-{tier}.png"
+        for tier in range(1, MAX_TIER + 1):
+            path = PICKAXE / f"{line}-{texture_key(tier)}.png"
             image = _png_size(path)
             file_frames = image[1] // image[0]
             url = data_url(path)
@@ -116,24 +87,12 @@ def main() -> None:
     parts.append(section("镐子三条升级线", items))
 
     # ── 机器图标 ─────────────────────────────────────────
-    def sort_key(path: Path):
-        # 前缀字母序 + 数字后缀按数值排（避免 m-10 排在 m-2 前面）
-        import re
-        match = re.match(r"([a-z-]+)-(\d+)$", path.stem)
-        if match:
-            return (match.group(1), int(match.group(2)), "")
-        return (path.stem, 0, "")
-
-    all_files = sorted(MACHINES.glob("*.png"), key=sort_key)
-    for prefix, cname in MACHINE_GROUPS:
-        files = [f for f in all_files if f.name.startswith(prefix + "-") or (prefix == "g" and f.name.startswith("g-"))]
-        if not files:
-            continue
-        items = []
-        for f in files:
-            url = data_url(f)
-            items.append(tile(url, 1, 0, f.stem))
-        parts.append(section(f"机器图标 · {cname}（{prefix}-*）", items))
+    groups = {}
+    for model in load_models():
+        groups.setdefault(model["category"], []).append(model)
+    for category, models in groups.items():
+        items = [tile(data_url(MACHINES / f"{model['icon']}.png"), 1, 0, model["name"]) for model in models]
+        parts.append(section(f"机器图标 · {category}", items))
 
     # ── 特效贴图 ─────────────────────────────────────────
     items = []

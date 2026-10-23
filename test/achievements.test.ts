@@ -1,3 +1,4 @@
+import { MAX_TIER } from '../src/numeric/voltage';
 import { describe, expect, it } from 'vitest';
 import { GameCore } from '../src/game/core';
 import { deserialize, serialize } from '../src/game/save';
@@ -78,8 +79,8 @@ describe('成就', () => {
     core.counts['b-3'] = 1; // 容量 256000
     core.storedEU = dec('128000');
     core.pollution = dec('55');
-    core.maxTier = 14;
-    core.peakTier = 14;
+    core.maxTier = MAX_TIER;
+    core.peakTier = MAX_TIER;
     core.tick(1);
 
     expect(core.achieved['battery-half']).toBeDefined();
@@ -96,11 +97,11 @@ describe('成就', () => {
   it('累计统计跨转生保留，成就也跟着留在记录里', () => {
     const core = new GameCore();
     core.setDevMode(true);
-    core.devGrantResources('1e12'); // MAX 机器单价 3.4e10（时空币），要给够
-    core.devUnlockTo(14);
+    core.devGrantResources('1e12'); // MAX 机器单价 1.34e11（时空币），要给够
+    core.devUnlockTo(MAX_TIER);
     // devUnlockTo 是测试工具，不会顺手抬高履历统计；这里按玩家的真实路径补上
     core.peakTier = core.maxTier;
-    expect(core.buy(modelOf('c-14'), 1)).toBe(1);
+    expect(core.buy(modelOf(`c-${MAX_TIER}`), 1)).toBe(1);
     core.totalCoins = dec('1e12');
     core.totalEU = dec('1e20');
     core.runEU = dec('1e24');
@@ -111,7 +112,7 @@ describe('成就', () => {
 
     core.rebirth('max');
     expect(core.rebirthCount).toBe(1);
-    expect(core.peakTier).toBe(14); // 转生不清最高电压
+    expect(core.peakTier).toBe(MAX_TIER); // 转生不清最高电压
     expect(core.builtMachines).toBe(1);
     expect(Object.keys(core.achieved).length).toBeGreaterThanOrEqual(before);
     expect(core.totalCables.gt(0)).toBe(true);
@@ -155,18 +156,18 @@ describe('成就', () => {
     core.counts['b-3'] = 1; // 基础容量 16000
     core.counts['g-lv-steam'] = 1; // 蒸汽轮机
     core.counts['g-ev-plasma'] = 1; // 等离子发电机
-    core.counts['g-uiv-mb-dyson'] = 1; // 戴森云地面单元
-    core.counts['g-max-mb-blackhole'] = 1; // 黑洞发电机
+    core.counts['g-uiv-mb-dyson'] = 1;
+    core.counts['g-max-mb-blackhole'] = 1;
     core.counts['g-hv-mb-steam'] = 8; // 再凑 8 台多方块
     core.counts['n-2'] = 2; // 灵气节点：不算魔法机器
     core.counts['mm-2'] = 12; // 魔法机器
     core.counts['s-2'] = 5; // 腐蚀抑制器
     core.coins[6] = dec('1'); // 硅岩币（tier 7）
     core.coins[9] = dec('1'); // 无尽币（tier 10）
-    core.coins[13] = dec('1'); // 普朗克币（tier 14）
-    core.pickaxeVajra = 13;
+    core.coins[MAX_TIER - 1] = dec('1'); // 普朗克币（MAX）
+    core.pickaxeVajra = MAX_TIER - 1;
     core.pickaxeCollect = 7;
-    core.pickaxeBlast = 28;
+    core.pickaxeBlast = MAX_TIER * 2;
     core.setOverclock('m-1', 3);
     core.researchedModels = MACHINE_MODELS.filter((model) => model.tier >= 8).map(
       (model) => model.id,

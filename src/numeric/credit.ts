@@ -1,27 +1,13 @@
 import { Decimal, ONE, dec, pow, type DecimalInput } from './decimal';
 import { assertTier } from './voltage';
+import { CONTENT, VOLTAGES } from '../content';
 
-// 计划书第七章：GT 币共 14 种，与电压等级一一对应，4 合 1 向上合成。
-export const COIN_FACTOR = 4;
+// 计划书第七章：GT 币与电压等级一一对应，4 合 1 向上合成。
+export const COIN_FACTOR = CONTENT.rules.coinStep;
 
-// 币种名称。前 8 种沿用既有体系；后 6 种（UV 及以后）沿用矿脉材料的名字，
+// 币种名称。前 8 种沿用既有体系；UV 及以后沿用矿脉材料的名字，
 // MAX 用「普朗克币」呼应计划书里的普朗克电路。
-export const COIN_NAMES = [
-  '铜币',
-  '白铜币',
-  '银币',
-  '金币',
-  '铂币',
-  '锇币',
-  '硅岩币',
-  '中子素币',
-  '宇宙中子素币',
-  '无尽币',
-  '龙芯币',
-  '海珀珍币',
-  '时空币',
-  '普朗克币',
-] as const;
+export const COIN_NAMES = VOLTAGES.map((voltage) => voltage.coin);
 
 // 币值：1 枚 tier 级币 = 4^(tier-1) 枚 tier-1 币。
 export function coinValueInTier1(tier: number): Decimal {

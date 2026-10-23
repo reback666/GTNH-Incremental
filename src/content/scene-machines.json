@@ -1,0 +1,50 @@
+{
+  "voltage": "LV",
+  "sourceVersion": "GT5-Unofficial 5.09.51.482",
+  "visiblePerModel": 12,
+  "machines": [
+    {
+      "modelId": "g-lv-steam",
+      "prototype": "MTESteamTurbine",
+      "textureType": "generator",
+      "texturePrefix": "STEAM_TURBINE",
+      "accent": "#cfaa55"
+    },
+    {
+      "modelId": "g-lv-comb",
+      "prototype": "MTEDieselGenerator",
+      "textureType": "generator",
+      "texturePrefix": "DIESEL_GENERATOR",
+      "accent": "#db8a55"
+    },
+    {
+      "modelId": "g-lv-gas",
+      "prototype": "MTEGasTurbine",
+      "textureType": "generator",
+      "texturePrefix": "GAS_TURBINE",
+      "accent": "#9dc5bd"
+    },
+    {
+      "modelId": "m-2",
+      "prototype": "MTEMiner",
+      "textureType": "basic",
+      "texturePrefix": "miner",
+      "faces": ["front", "side", "top"],
+      "accent": "#c4b791"
+    },
+    {
+      "modelId": "c-2",
+      "prototype": "MTEBasicMachineWithRecipe",
+      "textureType": "basic",
+      "texturePrefix": "assembler",
+      "faces": ["front", "side", "top", "bottom"],
+      "accent": "#a9c88c"
+    },
+    {
+      "modelId": "p-2",
+      "prototype": "MTEAtmosphericReconditioner",
+      "textureType": "scrubber",
+      "accent": "#9fcbbf"
+    }
+  ]
+}

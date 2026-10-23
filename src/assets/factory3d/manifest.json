@@ -1,0 +1,1385 @@
+{
+  "pack": "Modernity-GTNH-9ebdeed-pre.zip",
+  "version": "GT5-Unofficial 5.09.51.482",
+  "textures": {
+    "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/MACHINE_LV_SIDE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--MACHINE_LV_TOP": {
+      "path": "assets/gregtech/textures/blocks/iconsets/MACHINE_LV_TOP.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--MACHINE_LV_BOTTOM": {
+      "path": "assets/gregtech/textures/blocks/iconsets/MACHINE_LV_BOTTOM.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_FRONT": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_FRONT.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_FRONT_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_FRONT_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--OVERLAY_ENERGY_OUT_LV": {
+      "path": "assets/gregtech/textures/blocks/iconsets/OVERLAY_ENERGY_OUT_LV.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_FRONT_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_FRONT_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_FRONT_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_FRONT_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BACK": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_BACK.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BACK_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_BACK_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BACK_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_BACK_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BACK_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_BACK_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_SIDE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_SIDE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_SIDE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_SIDE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_SIDE_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_SIDE_ACTIVE.png",
+      "width": 16,
+      "height": 64,
+      "frameTime": 1,
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_SIDE_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_SIDE_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_TOP": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_TOP.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_TOP_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_TOP_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_TOP_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_TOP_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_TOP_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_TOP_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BOTTOM": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_BOTTOM.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BOTTOM_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_BOTTOM_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BOTTOM_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_BOTTOM_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BOTTOM_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/STEAM_TURBINE_BOTTOM_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_FRONT": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_FRONT.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_FRONT_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_FRONT_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_FRONT_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_FRONT_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_FRONT_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_FRONT_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BACK": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_BACK.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BACK_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_BACK_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BACK_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_BACK_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BACK_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_BACK_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_SIDE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_SIDE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_SIDE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_SIDE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_SIDE_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_SIDE_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_SIDE_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_SIDE_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_TOP": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_TOP.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_TOP_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_TOP_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_TOP_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_TOP_ACTIVE.png",
+      "width": 16,
+      "height": 32,
+      "frameTime": 4,
+      "frames": [
+        0,
+        1
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_TOP_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_TOP_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BOTTOM": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_BOTTOM.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BOTTOM_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_BOTTOM_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BOTTOM_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_BOTTOM_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BOTTOM_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/DIESEL_GENERATOR_BOTTOM_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_FRONT": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_FRONT.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_FRONT_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_FRONT_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_FRONT_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_FRONT_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_FRONT_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_FRONT_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_BACK": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_BACK.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_BACK_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_BACK_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_BACK_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_BACK_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_BACK_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_BACK_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_SIDE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_SIDE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_SIDE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_SIDE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_SIDE_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_SIDE_ACTIVE.png",
+      "width": 16,
+      "height": 64,
+      "frameTime": 1,
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_SIDE_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_SIDE_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_TOP": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_TOP.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_TOP_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_TOP_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_TOP_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_TOP_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_TOP_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_TOP_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_BOTTOM": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_BOTTOM.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_BOTTOM_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_BOTTOM_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_BOTTOM_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_BOTTOM_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--GAS_TURBINE_BOTTOM_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/GAS_TURBINE_BOTTOM_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--miner--OVERLAY_FRONT": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/miner/OVERLAY_FRONT.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--miner--OVERLAY_FRONT_GLOW": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/miner/OVERLAY_FRONT_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--miner--OVERLAY_FRONT_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/miner/OVERLAY_FRONT_ACTIVE.png",
+      "width": 16,
+      "height": 128,
+      "frameTime": 2,
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--miner--OVERLAY_FRONT_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/miner/OVERLAY_FRONT_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--miner--OVERLAY_SIDE": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/miner/OVERLAY_SIDE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--miner--OVERLAY_SIDE_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/miner/OVERLAY_SIDE_ACTIVE.png",
+      "width": 16,
+      "height": 128,
+      "frameTime": 2,
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--miner--OVERLAY_TOP": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/miner/OVERLAY_TOP.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--miner--OVERLAY_TOP_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/miner/OVERLAY_TOP_ACTIVE.png",
+      "width": 16,
+      "height": 64,
+      "frameTime": 2,
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--miner--OVERLAY_TOP_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/miner/OVERLAY_TOP_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 64,
+      "frameTime": 2,
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_FRONT": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_FRONT.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_FRONT_GLOW": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_FRONT_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_FRONT_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_FRONT_ACTIVE.png",
+      "width": 16,
+      "height": 304,
+      "frameTime": 2,
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_FRONT_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_FRONT_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 304,
+      "frameTime": 2,
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_SIDE": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_SIDE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_SIDE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_SIDE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_SIDE_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_SIDE_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_SIDE_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_SIDE_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_TOP": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_TOP.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_TOP_GLOW": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_TOP_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_TOP_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_TOP_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_TOP_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_TOP_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_BOTTOM": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_BOTTOM.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_BOTTOM_GLOW": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_BOTTOM_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_BOTTOM_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_BOTTOM_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_BOTTOM_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/basicmachines/assembler/OVERLAY_BOTTOM_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "miscutils--textures--blocks--TileEntities--adv_machine_matterfab": {
+      "path": "assets/miscutils/textures/blocks/TileEntities/adv_machine_matterfab.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "miscutils--textures--blocks--TileEntities--adv_machine_matterfab_glow": {
+      "path": "assets/miscutils/textures/blocks/TileEntities/adv_machine_matterfab_glow.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "miscutils--textures--blocks--TileEntities--adv_machine_matterfab_active": {
+      "path": "assets/miscutils/textures/blocks/TileEntities/adv_machine_matterfab_active.png",
+      "width": 16,
+      "height": 128,
+      "frameTime": 8,
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    "miscutils--textures--blocks--TileEntities--adv_machine_matterfab_active_glow": {
+      "path": "assets/miscutils/textures/blocks/TileEntities/adv_machine_matterfab_active_glow.png",
+      "width": 16,
+      "height": 128,
+      "frameTime": 8,
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--OVERLAY_SIDE_MASSFAB": {
+      "path": "assets/gregtech/textures/blocks/iconsets/OVERLAY_SIDE_MASSFAB.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--OVERLAY_SIDE_MASSFAB_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/OVERLAY_SIDE_MASSFAB_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--OVERLAY_SIDE_MASSFAB_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/OVERLAY_SIDE_MASSFAB_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--OVERLAY_SIDE_MASSFAB_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/OVERLAY_SIDE_MASSFAB_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "miscutils--textures--blocks--TileEntities--machine_top_vent_rotating": {
+      "path": "assets/miscutils/textures/blocks/TileEntities/machine_top_vent_rotating.png",
+      "width": 16,
+      "height": 64,
+      "frameTime": 8,
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "miscutils--textures--blocks--TileEntities--machine_top_vent_rotating_fast": {
+      "path": "assets/miscutils/textures/blocks/TileEntities/machine_top_vent_rotating_fast.png",
+      "width": 16,
+      "height": 64,
+      "frameTime": 1,
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--OVERLAY_BOTTOM_MASSFAB": {
+      "path": "assets/gregtech/textures/blocks/iconsets/OVERLAY_BOTTOM_MASSFAB.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--OVERLAY_BOTTOM_MASSFAB_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/OVERLAY_BOTTOM_MASSFAB_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--OVERLAY_BOTTOM_MASSFAB_ACTIVE": {
+      "path": "assets/gregtech/textures/blocks/iconsets/OVERLAY_BOTTOM_MASSFAB_ACTIVE.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    },
+    "gregtech--textures--blocks--iconsets--OVERLAY_BOTTOM_MASSFAB_ACTIVE_GLOW": {
+      "path": "assets/gregtech/textures/blocks/iconsets/OVERLAY_BOTTOM_MASSFAB_ACTIVE_GLOW.png",
+      "width": 16,
+      "height": 16,
+      "frameTime": 1,
+      "frames": [
+        0
+      ]
+    }
+  },
+  "profiles": {
+    "g-lv-steam": {
+      "front": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_FRONT",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_FRONT_GLOW",
+          "gregtech--textures--blocks--iconsets--OVERLAY_ENERGY_OUT_LV"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_FRONT_ACTIVE",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_FRONT_ACTIVE_GLOW",
+          "gregtech--textures--blocks--iconsets--OVERLAY_ENERGY_OUT_LV"
+        ]
+      },
+      "back": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BACK",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BACK_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BACK_ACTIVE",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BACK_ACTIVE_GLOW"
+        ]
+      },
+      "side": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_SIDE",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_SIDE_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_SIDE_ACTIVE",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_SIDE_ACTIVE_GLOW"
+        ]
+      },
+      "top": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_TOP",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_TOP",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_TOP_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_TOP",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_TOP_ACTIVE",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_TOP_ACTIVE_GLOW"
+        ]
+      },
+      "bottom": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_BOTTOM",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BOTTOM",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BOTTOM_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_BOTTOM",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BOTTOM_ACTIVE",
+          "gregtech--textures--blocks--iconsets--STEAM_TURBINE_BOTTOM_ACTIVE_GLOW"
+        ]
+      }
+    },
+    "g-lv-comb": {
+      "front": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_FRONT",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_FRONT_GLOW",
+          "gregtech--textures--blocks--iconsets--OVERLAY_ENERGY_OUT_LV"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_FRONT_ACTIVE",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_FRONT_ACTIVE_GLOW",
+          "gregtech--textures--blocks--iconsets--OVERLAY_ENERGY_OUT_LV"
+        ]
+      },
+      "back": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BACK",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BACK_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BACK_ACTIVE",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BACK_ACTIVE_GLOW"
+        ]
+      },
+      "side": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_SIDE",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_SIDE_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_SIDE_ACTIVE",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_SIDE_ACTIVE_GLOW"
+        ]
+      },
+      "top": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_TOP",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_TOP",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_TOP_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_TOP",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_TOP_ACTIVE",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_TOP_ACTIVE_GLOW"
+        ]
+      },
+      "bottom": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_BOTTOM",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BOTTOM",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BOTTOM_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_BOTTOM",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BOTTOM_ACTIVE",
+          "gregtech--textures--blocks--iconsets--DIESEL_GENERATOR_BOTTOM_ACTIVE_GLOW"
+        ]
+      }
+    },
+    "g-lv-gas": {
+      "front": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_FRONT",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_FRONT_GLOW",
+          "gregtech--textures--blocks--iconsets--OVERLAY_ENERGY_OUT_LV"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_FRONT_ACTIVE",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_FRONT_ACTIVE_GLOW",
+          "gregtech--textures--blocks--iconsets--OVERLAY_ENERGY_OUT_LV"
+        ]
+      },
+      "back": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_BACK",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_BACK_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_BACK_ACTIVE",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_BACK_ACTIVE_GLOW"
+        ]
+      },
+      "side": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_SIDE",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_SIDE_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_SIDE_ACTIVE",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_SIDE_ACTIVE_GLOW"
+        ]
+      },
+      "top": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_TOP",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_TOP",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_TOP_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_TOP",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_TOP_ACTIVE",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_TOP_ACTIVE_GLOW"
+        ]
+      },
+      "bottom": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_BOTTOM",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_BOTTOM",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_BOTTOM_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_BOTTOM",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_BOTTOM_ACTIVE",
+          "gregtech--textures--blocks--iconsets--GAS_TURBINE_BOTTOM_ACTIVE_GLOW"
+        ]
+      }
+    },
+    "m-2": {
+      "front": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--basicmachines--miner--OVERLAY_FRONT",
+          "gregtech--textures--blocks--basicmachines--miner--OVERLAY_FRONT_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--basicmachines--miner--OVERLAY_FRONT_ACTIVE",
+          "gregtech--textures--blocks--basicmachines--miner--OVERLAY_FRONT_ACTIVE_GLOW"
+        ]
+      },
+      "back": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--basicmachines--miner--OVERLAY_SIDE"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--basicmachines--miner--OVERLAY_SIDE_ACTIVE"
+        ]
+      },
+      "side": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--basicmachines--miner--OVERLAY_SIDE"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--basicmachines--miner--OVERLAY_SIDE_ACTIVE"
+        ]
+      },
+      "top": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_TOP",
+          "gregtech--textures--blocks--basicmachines--miner--OVERLAY_TOP"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_TOP",
+          "gregtech--textures--blocks--basicmachines--miner--OVERLAY_TOP_ACTIVE",
+          "gregtech--textures--blocks--basicmachines--miner--OVERLAY_TOP_ACTIVE_GLOW"
+        ]
+      },
+      "bottom": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_BOTTOM"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_BOTTOM"
+        ]
+      }
+    },
+    "c-2": {
+      "front": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_FRONT",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_FRONT_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_FRONT_ACTIVE",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_FRONT_ACTIVE_GLOW"
+        ]
+      },
+      "back": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_SIDE",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_SIDE_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_SIDE_ACTIVE",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_SIDE_ACTIVE_GLOW"
+        ]
+      },
+      "side": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_SIDE",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_SIDE_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_SIDE_ACTIVE",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_SIDE_ACTIVE_GLOW"
+        ]
+      },
+      "top": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_TOP",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_TOP",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_TOP_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_TOP",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_TOP_ACTIVE",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_TOP_ACTIVE_GLOW"
+        ]
+      },
+      "bottom": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_BOTTOM",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_BOTTOM",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_BOTTOM_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_BOTTOM",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_BOTTOM_ACTIVE",
+          "gregtech--textures--blocks--basicmachines--assembler--OVERLAY_BOTTOM_ACTIVE_GLOW"
+        ]
+      }
+    },
+    "p-2": {
+      "front": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "miscutils--textures--blocks--TileEntities--adv_machine_matterfab",
+          "miscutils--textures--blocks--TileEntities--adv_machine_matterfab_glow"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "miscutils--textures--blocks--TileEntities--adv_machine_matterfab_active",
+          "miscutils--textures--blocks--TileEntities--adv_machine_matterfab_active_glow"
+        ]
+      },
+      "back": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--OVERLAY_SIDE_MASSFAB",
+          "gregtech--textures--blocks--iconsets--OVERLAY_SIDE_MASSFAB_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--OVERLAY_SIDE_MASSFAB_ACTIVE",
+          "gregtech--textures--blocks--iconsets--OVERLAY_SIDE_MASSFAB_ACTIVE_GLOW"
+        ]
+      },
+      "side": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--OVERLAY_SIDE_MASSFAB",
+          "gregtech--textures--blocks--iconsets--OVERLAY_SIDE_MASSFAB_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_SIDE",
+          "gregtech--textures--blocks--iconsets--OVERLAY_SIDE_MASSFAB_ACTIVE",
+          "gregtech--textures--blocks--iconsets--OVERLAY_SIDE_MASSFAB_ACTIVE_GLOW"
+        ]
+      },
+      "top": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_TOP",
+          "miscutils--textures--blocks--TileEntities--machine_top_vent_rotating"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_TOP",
+          "miscutils--textures--blocks--TileEntities--machine_top_vent_rotating_fast"
+        ]
+      },
+      "bottom": {
+        "idle": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_BOTTOM",
+          "gregtech--textures--blocks--iconsets--OVERLAY_BOTTOM_MASSFAB",
+          "gregtech--textures--blocks--iconsets--OVERLAY_BOTTOM_MASSFAB_GLOW"
+        ],
+        "active": [
+          "gregtech--textures--blocks--iconsets--MACHINE_LV_BOTTOM",
+          "gregtech--textures--blocks--iconsets--OVERLAY_BOTTOM_MASSFAB_ACTIVE",
+          "gregtech--textures--blocks--iconsets--OVERLAY_BOTTOM_MASSFAB_ACTIVE_GLOW"
+        ]
+      }
+    }
+  }
+}

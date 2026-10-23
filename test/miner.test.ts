@@ -1,3 +1,4 @@
+import { MAX_TIER } from '../src/numeric/voltage';
 import { describe, expect, it } from 'vitest';
 import {
   MINER_OUTPUT_FACTOR,
@@ -38,6 +39,6 @@ describe('采矿机', () => {
 
   it('越界等级直接报错', () => {
     expect(() => minerEnergyEU(0)).toThrow(RangeError);
-    expect(() => minerSecondsPerOre(15)).toThrow(RangeError);
+    expect(() => minerSecondsPerOre(MAX_TIER + 1)).toThrow(RangeError);
   });
 });

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useGameStore, type AchievementRow } from '../game/store';
+import { useGameStore } from '../game/store';
+import type { AchievementRow } from '../game/presentation/types';
 import AchievementIcon from './AchievementIcon.vue';
 
 // 成就清单：一张小方块一条，一行摆多个；达成的排在前面并点亮
