@@ -27,7 +27,7 @@ export function riskStats(core: GameCore): RiskStats {
       ? `${
           core.pollution.gte(70) ? '重度污染' : core.pollution.gte(30) ? '中度污染' : '清洁'
         }：产出 ${driveText}（30% 是中性点）${
-          core.pollution.gte(70) ? '，随时可能工厂崩溃' : ''
+          core.pollution.gte(70) ? '，可能故障停机，可维护恢复' : ''
         }`
       : pollutionBandName(core.pollution);
   return {
@@ -216,6 +216,12 @@ export function powerStats(core: GameCore): PowerStats {
   }
 
   // 存电装置：每台容量 × 台数，合起来是一个池子
+  const arcaneDemand = core.arcaneExpedition.energyDemand(core.arcaneContext()).times(core.energyFactor()).times(gridMul);
+  if (arcaneDemand.gt(0)) {
+    const amount = shedKinds.has('research') ? ZERO : arcaneDemand;
+    consumed.push({ tier: 2, voltage: '奥术', modelId: '', kind: 'research', name: '调查、培养与魔导研究', count: 1, amount: `${formatNumber(amount)} EU/t`, running: shedKinds.has('research') ? 0 : 1, stopped: shedKinds.has('research') ? 1 : 0 });
+    demand = demand.plus(amount);
+  }
   const stored: PowerDetailRow[] = [];
   let capacity = ZERO;
   for (const model of core.unlockedModels('storage')) {

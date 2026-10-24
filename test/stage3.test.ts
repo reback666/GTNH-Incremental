@@ -53,6 +53,7 @@ describe('第三阶段：研究硬墙', () => {
     core.storedEU = dec('100000000'); // 拿存电顶住耗电，便于单独验证研究
     // 普通电网每 5 分钟有 5% 概率断电，断电那一拍算力为 0；这里固定成不会触发
     core.random = () => 0.999;
+    core.coins[6] = dec('1000000000');
     expect(core.setResearchTarget('c-8')).toBe(true);
     const required = core.researchRequiredFor(modelById('c-8'));
 
@@ -164,6 +165,8 @@ describe('第三阶段：研究硬墙', () => {
 
     // 列出来的是一台台机器：同级的不同机型各是一张研究单
     const options = core.researchOptions();
+    core.coins[6] = dec('1e30');
+    core.coins[12] = dec('1e30');
     expect(options.length).toBeGreaterThan(8);
     expect(options.map((model) => model.id)).toContain('c-8');
     expect(options.map((model) => model.id)).toContain('m-8');

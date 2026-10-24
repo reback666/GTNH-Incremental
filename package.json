@@ -1,7 +1,7 @@
 {
   "name": "gtnh-incremental",
   "private": true,
-  "version": "0.9.0",
+  "version": "0.9.1",
   "type": "module",
   "description": "GTNH 本地增量游戏：数值模拟、工业控制台与实时厂区",
   "scripts": {
@@ -9,7 +9,9 @@
     "test:watch": "vitest",
     "balance": "tsx scripts/balance.ts",
     "dev": "vite",
-    "build": "npm run check:content && vue-tsc --noEmit && vite build && tsx scripts/inline-dist.ts",
+    "dev:demo": "vite --open /demo.html",
+    "build:demo": "vue-tsc --noEmit && tsx scripts/build-game.ts --demo",
+    "build": "npm run check:content && vue-tsc --noEmit && tsx scripts/build-game.ts",
     "preview": "vite preview",
     "build:3d": "node gtnh3d/build.mjs",
     "check:3d": "node gtnh3d/tools/check-bundle.mjs && node gtnh3d/tools/smoke.mjs",

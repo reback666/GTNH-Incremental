@@ -1,4 +1,5 @@
 import { PICKAXE_LINE_META, pickaxeEffectNow } from './pickaxe-effects';
+import type { ArcaneNetwork } from '../arcane-expedition';
 import type { MachineTierGroup, MachineColumn, ModifierRow } from './types';
 import { Decimal, ZERO, dec, decInt } from '../../numeric/decimal';
 import { MAX_TIER, VOLTAGE_TIERS } from '../../numeric/voltage';
@@ -230,8 +231,10 @@ export function modifierRows(core: GameCore, kind: MachineKind | 'pickaxe'): Mod
 }
 
 // 镐子三条升级线的固定信息。清单、面板、悬停提示都读这一份。
-export function machineColumn(core: GameCore, kind: MachineKind): MachineColumn {
+export function machineColumn(core: GameCore, kind: MachineKind, network?: ArcaneNetwork): MachineColumn {
   const meta = COLUMN_META[kind];
+  const arcaneContext = core.arcaneContext();
+  const arcaneNetwork = network ?? core.arcaneExpedition.network(arcaneContext);
   // 上一拍被硅基 AI 整组停机的类别：这些类别的机器这一拍全都不干活
   const shedKinds = new Set<MachineKind>(core.lastReport.sheddedKinds as MachineKind[]);
   // 先按等级分桶（一次遍历），再逐级取：比每个等级都去品类清单里筛一遍便宜
@@ -261,11 +264,31 @@ export function machineColumn(core: GameCore, kind: MachineKind): MachineColumn 
         const level = overclockable ? core.overclockOf(model.id) : 0;
         return {
           id: model.id,
+          ...(model.id === C.HIGH_RISK_REACTOR_MODEL ? { reactorRisk: {
+            armed: core.reactorRiskArmed,
+            factor: C.REACTOR_RISK_OUTPUT_FACTOR,
+            chance: `${C.REACTOR_RISK_CHANCE * 100}%`,
+            exposure: `${Math.floor(core.reactorRiskExposure)} / ${C.REACTOR_RISK_CHECK_SECONDS} 秒`,
+          } } : {}),
           name: model.name,
           block: model.block,
           researched: core.isModelResearched(model),
           unlocked: core.isModelUnlocked(model),
           visPowered: model.visPowered === true,
+          ...(arcaneContext.active && (model.visPowered || core.enchantments[model.id]) ? { visControl: {
+            priority: core.visPriorityOf(model.id),
+            demand: `${formatNumber(core.magicVisDemandOf(model, arcaneNetwork).plus(core.enchantmentVisDemandOf(model, arcaneNetwork)))}/秒`,
+            allocated: `${formatNumber((core.lastVisRatios.get(model.id) ?? ZERO).times(100))}%`,
+            note: '先高后低，同档按需求分配；缺矿、缺电或停机浪费的份额本拍不再分配。',
+          } } : {}),
+          ...(arcaneContext.active && kind === 'machine' && !model.visPowered && arcaneNetwork.enchantmentLevel > 0 ? { enchantment: {
+            summary: (core.enchantments[model.id] ?? [0, 0, 0]).map((n, i) => `${['I', 'II', 'III'][i]}：${n}台`).join(' · '),
+            options: Array.from({ length: arcaneNetwork.enchantmentLevel }, (_, i) => {
+              const quote = core.enchantmentQuote(model, i + 1);
+              return { level: i + 1, count: quote.count, cost: `${formatNumber(quote.cost)} ${payment}`,
+                enabled: tier <= core.maxTier && quote.count > 0 && arcaneContext.canPay(tier, quote.cost) };
+            }),
+          } } : {}),
           single: singleStats(model, level),
           count,
           // 真正干活的台数与停机台数（手动停机 + 故障 + 被 AI 调度停机）

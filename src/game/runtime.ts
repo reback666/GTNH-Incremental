@@ -1,4 +1,4 @@
-export const MAX_CATCH_UP_SECONDS = 24 * 60 * 60;
+export const MAX_CATCH_UP_SECONDS = 72 * 60 * 60;
 
 export class ElapsedClock {
   private last: number;

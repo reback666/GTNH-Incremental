@@ -25,7 +25,7 @@ export function universeRows(core: GameCore): UniverseRow[] {
 export function arcaneStats(core: GameCore): ArcaneStats {
   const active = core.hasUniverse('arcane');
   const report = core.lastReport;
-  const nodes = modelsOf('arcane').reduce((sum, model) => sum + core.countOf(model.id), 0);
+  const nodes = modelsOf('arcane').reduce((sum, model) => sum + core.countOf(model.id), 0) + core.arcaneExpedition.state.nodes.filter(node => node.location === 'installed').length;
   const demand = core.nodeEssentiaDemandRated();
   const produced = core.hasUniverse('arcane')
     ? essentiaFromPurify(core.purifyPerSecond())
@@ -42,9 +42,9 @@ export function arcaneStats(core: GameCore): ArcaneStats {
   let note: string;
   if (!active) {
     note = '没有奥术宇宙：灵气节点与魔法机器都造不了，机器照常吃电。';
-  } else if (magicCount === 0) {
+  } else if (magicCount === 0 && Object.keys(core.enchantments).length === 0) {
     note = '还没有魔法机器：灵气没人用，也就没有灵气加成。建几台魔法机器（LV~LuV 的采矿机 / 发电机 / 制造机）才吃得上。';
-  } else if (nodes === 0) {
+  } else if (report.visProduced.lte(0)) {
     note = '魔法机器没有灵气可用，全部停摆：先建一台灵气节点。';
   } else if (plenty.gte(1)) {
     note = '灵气喂满了：普通机器 +10% 产量、魔法机器 +30%。';

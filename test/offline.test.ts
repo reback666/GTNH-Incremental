@@ -6,8 +6,10 @@ import { GameCore } from '../src/game/core';
 import { clearStorage, deserialize, saveToStorage, secondsSinceLastSave, serialize } from '../src/game/save';
 import { SAVE_TIME_KEY } from '../src/game/constants';
 import { dec } from '../src/numeric/decimal';
+import { REBIRTH_NODES } from '../src/game/rebirth';
+import { MAX_CATCH_UP_SECONDS } from '../src/game/runtime';
 
-// 离线收益：关掉页面期间按同样的规则继续跑，最多补 24 小时。
+// 离线收益与在线共用逐秒结算，最多补 72 小时。
 // 时间戳单独存在 SAVE_TIME_KEY 里，所以这里要临时装一个假的 localStorage。
 
 interface FakeStorage {
@@ -61,13 +63,42 @@ describe('离线收益', () => {
     expect(store.offlineNote).toContain('离线 1 小时');
   });
 
-  it('最多补 24 小时，超出的部分不计', async () => {
+  it('保留原离线上限与星图加成，补算不能超过 72 小时', async () => {
     const store = useGameStore();
-    await store.catchUp(48 * 3600);
-    expect(getCore().playSeconds).toBe(24 * 3600);
-    expect(store.offlineNote).toContain('24 小时');
-    expect(store.offlineNote).toContain('超过 24 小时的部分不计');
-  }, 15000);
+    const core = getCore();
+    expect(core.offlineCapSeconds()).toBe(24 * 3600);
+    core.rebirthNodes = REBIRTH_NODES.filter(node => node.effect === 'offlineHours').map(node => node.id);
+    const cap = core.offlineCapSeconds();
+    expect(cap).toBeGreaterThan(24 * 3600);
+    expect(cap).toBeLessThanOrEqual(MAX_CATCH_UP_SECONDS);
+    await store.catchUp(96 * 3600);
+    expect(core.playSeconds).toBe(cap);
+    expect(store.offlineNote).toContain('超过当前上限');
+  }, 30000);
+
+  it('奥术离线摘要对应真实发现、作业和节点供能变化', async () => {
+    const core = getCore();
+    core.maxTier = 3;
+    core.universes = ['arcane'];
+    core.coins = core.coins.map(() => dec('1e8'));
+    core.ores = core.ores.map(() => dec('1e8'));
+    core.counts['g-lv-steam'] = 4;
+    core.random = () => 0.999;
+    const expedition = core.arcaneExpedition;
+    const context = core.arcaneContext();
+    expect(expedition.act({ type: 'research', id: 'A0' }, context)).toBe(true);
+    expedition.state.research = 1;
+    expect(expedition.act({ type: 'build-survey', tier: 2 }, context)).toBe(true);
+    expect(expedition.act({ type: 'build-bench', tier: 2 }, context)).toBe(true);
+    expect(expedition.act({ type: 'enqueue', benchId: expedition.state.benches[0]!.id, nodeId: expedition.state.nodes[0]!.id, task: { kind: 'cultivate' } }, context)).toBe(true);
+    const store = useGameStore();
+    await store.catchUp(2000);
+    expect(expedition.state.discoveries).toBeGreaterThan(0);
+    expect(expedition.state.completedJobs).toBe(1);
+    expect(store.offlineNote).toContain(`奥术调查新增 ${expedition.state.discoveries} 颗、完成 1 项作业`);
+    expect(store.offlineNote).toContain('实体节点供能');
+    expect(store.offlineNote).toContain(`${expedition.state.surveys[0]!.candidates.length} 颗`);
+  });
 
   it('与逐秒在线推进得到相同的状态，包括燃料、储能与污染', async () => {
     const core = getCore();

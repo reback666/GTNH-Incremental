@@ -79,6 +79,9 @@ export interface RiskStats {
 }
 
 export interface MachineModelRow {
+  visControl?: { priority: number; demand: string; allocated: string; note: string };
+  enchantment?: { summary: string; options: { level: number; count: number; cost: string; enabled: boolean }[] };
+  reactorRisk?: { armed: boolean; factor: string; chance: string; exposure: string };
   id: string;
   name: string;
   block: BlockKind;
@@ -197,6 +200,10 @@ export interface ResearchOptionRow {
   tierName: string;
   // 电压够不够：不够也能先研究，只是这一级还不能建造
   voltageReady: boolean;
+  invested: boolean;
+  investment: string;
+  coinName: string;
+  canInvest: boolean;
   // 这一项已经攒下的进度（没动过就是 0）
   progress: string;
   required: string;
@@ -393,6 +400,7 @@ export interface FactoryOverview {
 }
 
 export interface Snapshot {
+  arcaneExpedition: import('../arcane-expedition').ArcaneView;
   factory: FactoryOverview;
   ores: ResourceRow[];
   coins: ResourceRow[];

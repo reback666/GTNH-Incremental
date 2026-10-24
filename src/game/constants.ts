@@ -1,5 +1,6 @@
 import { Decimal } from '../numeric/decimal';
 import { machineCost } from '../numeric/cost';
+import { storageKey } from './storage-key';
 
 // 第一阶段的参数。计划书未定义这些数，集中在这里便于后续调参。
 // 标「计划书」的是文档已定的值，标「暂定」的是为了能跑通而选的值。
@@ -23,6 +24,14 @@ export const UNLOCK_COST_IN_MACHINES = 10;
 
 // 电网解锁价 = 该等级第一台机器价格的这个倍数，用该等级的 GT 币支付（计划书第六章）。
 export const GRID_UNLOCK_COST_MACHINES = 16;
+
+// 净化器开放前仅产生完整排放的 5%，避免开局在没有治理工具时积累重污染。
+export const EARLY_POLLUTION_FACTOR = '0.05';
+
+export const HIGH_RISK_REACTOR_MODEL = 'g-uhv-mb-naquadah';
+export const REACTOR_RISK_OUTPUT_FACTOR = '1.5';
+export const REACTOR_RISK_CHECK_SECONDS = 600;
+export const REACTOR_RISK_CHANCE = 0.01;
 
 // 模拟步长（计划书第十四章：运算 1 Hz 或更低）。
 // 界面跟着模拟拍与玩家操作刷新，数字的平滑过渡由 AnimatedNumber 负责。
@@ -55,20 +64,22 @@ export const SIM_STEP_MS = 1000;
 // v24：加了界面主题（设置页：暗钢 / 原版亮灰，GT GUI 重设计的两套皮肤）
 // v25：在 UIV 与 UXV 之间插入 UMV，旧档的 UXV / MAX 等级与资源位置顺移。
 // v26：记录稳定的电压标识，配置增减或调整顺序时按标识恢复资源与进度。
-export const SAVE_VERSION = 26;
+// v27：记录已投资研究项目，切换、存读档不重复付费；原有研究进度免补缴。
+// v28：奥术实体、附魔、灵气调度与反应堆风险运行状态；原资源和机型字段保留。
+export const SAVE_VERSION = 28;
 
 // 自动存档间隔（秒）：存档框滑条的范围，默认沿用写死的 10 秒
 export const AUTOSAVE_SECONDS_DEFAULT = 10;
 export const AUTOSAVE_SECONDS_MIN = 5;
 export const AUTOSAVE_SECONDS_MAX = 60;
-export const SAVE_KEY = 'gtnh-incremental-save';
+export const SAVE_KEY = storageKey('gtnh-incremental-save');
 // 上次写档的墙上时间单独存一个键：存档本体保持纯状态（还能逐字节比较），
 // 离线收益按这个时间戳算（见 save.ts 的 secondsSinceLastSave）
-export const SAVE_TIME_KEY = 'gtnh-incremental-save-time';
+export const SAVE_TIME_KEY = storageKey('gtnh-incremental-save-time');
 // 界面主题单独存一个键：纯界面偏好，重开一局（清存档）不该把主题也重置掉
-export const THEME_KEY = 'gtnh-incremental-theme';
+export const THEME_KEY = storageKey('gtnh-incremental-theme');
 // 设置页的界面状态（折叠开关、离线横幅关闭态、开发者模式）也单独存：同上，重开不清
-export const UI_KEY = 'gtnh-incremental-ui';
+export const UI_KEY = storageKey('gtnh-incremental-ui');
 
 // 终局装置「普朗克锚」（大纲 C2 轻方案）：花 300 条线缆买一次（永久），
 // 之后 MAX 路线转生的线缆结算 ×1.5（裂缝不受影响）

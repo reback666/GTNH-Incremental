@@ -65,7 +65,7 @@ try {
 
   const clickText = async (selector, text) => {
     for (const button of await page.$$(selector)) {
-      if ((await button.evaluate(element => element.textContent.trim())) === text) { await button.click(); return; }
+      if ((await button.evaluate(element => element.getAttribute('aria-label') ?? element.textContent.trim())) === text) { await button.click(); return; }
     }
     throw new Error('Button not found: ' + text);
   };
@@ -78,7 +78,7 @@ try {
   await page.goto(pathToFileURL(html).href, { waitUntil: 'load' });
   await page.waitForSelector('[data-model-id="m-2"]');
   await page.click('[data-model-id="m-2"]');
-  await clickText('.factory-footer-3d button', '打开工作台');
+  await clickText('.factory-footer-3d button', '管理设备 · 打开工作台');
   let minerRow;
   for (const row of await page.$$('.tier-bar')) {
     if ((await row.$eval('.model-label', element => element.textContent)) === '基础采矿机') minerRow = row;

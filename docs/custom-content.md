@@ -71,7 +71,7 @@
 
 `src/content/scene-machines.json` 定义当前演示电压、机型 ID、原型类、贴图配方和可见台数。机型的名称与类别自动读取同一个内容注册器，修改显示名称不需要在场景再改一份。
 
-增加已有配方支持的单方块机型后，运行 `python -B scripts/extract-factory3d.py --pack "<Modernity-GTNH.zip>"`，再执行 `npm run build`。提取器生成原始贴图与 `src/assets/factory3d/manifest.json`；必需面片缺失会报错。新增贴图族需先在提取器中实现其真实各面配方。当前尚未实现多方块场景，不得将多方块按单方块配方代替。
+增加已有配方支持的 GT 单方块机型后，在运行中的本地客户端执行 `scripts/native-models/capture.py` 导出真实六面材质，再执行 `scripts/native-models/build-models.py` 和 `npm run build`。新增多方块机型必须将原 StructureLib 结构、控制器偏移、仓口和朝向登记到 `scripts/native-models/structures.json`，由构建器逐格生成；不得以相似单方块或物品图标代替结构。非 GT 设备应按原模组模型导出流程更新 `custom-models.py` 与 `custom-manifest.json`。
 
 ## 存档与内容身份
 
