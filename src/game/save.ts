@@ -22,9 +22,12 @@ import {
   SAVE_KEY,
   SAVE_TIME_KEY,
   SAVE_VERSION,
+  HIGH_RISK_REACTOR_MODEL,
+  REACTOR_RISK_CHECK_SECONDS,
   THEME_KEY,
 } from './constants';
 import { errorText, logEvent, setLogGameSeconds } from './log';
+import { ArcaneExpedition, type ArcaneState } from './arcane-expedition';
 
 // 计划书第十四章：存档 = 状态序列化成 JSON，带版本号；
 // 大数值一律以字符串存储 —— JSON.parse 只有 double 一种数字类型，超过 2^53 会在解析阶段丢精度。
@@ -57,6 +60,12 @@ export interface SaveData {
   researchedModels?: string[];
   researchTargetModel?: string | null;
   researchProgressByModel?: Record<string, string>;
+  researchInvestments?: string[];
+  arcaneExpedition?: ArcaneState;
+  enchantments?: Record<string, [number, number, number]>;
+  visPriorities?: Record<string, number>;
+  reactorRiskArmed?: boolean;
+  reactorRiskExposure?: number;
   // v7：转生：时空线缆、永久加成节点、转生次数、本周目累计 EU
   cables?: string;
   rebirthCount?: number;
@@ -144,6 +153,12 @@ export function serialize(core: GameCore): SaveData {
     grid: core.grid,
     grids: [...core.grids],
     researchTargetModel: core.researchTarget,
+    reactorRiskArmed: core.reactorRiskArmed,
+    reactorRiskExposure: core.reactorRiskExposure,
+    researchInvestments: [...new Set([...core.researchInvestments, ...Object.keys(core.researchProgress)])],
+    arcaneExpedition: JSON.parse(JSON.stringify(core.arcaneExpedition.state)) as ArcaneState,
+    enchantments: Object.fromEntries(Object.entries(core.enchantments).map(([id, counts]) => [id, [...counts] as [number, number, number]])),
+    visPriorities: { ...core.visPriorities },
     researchProgressByModel: Object.fromEntries(
       Object.entries(core.researchProgress).map(([id, amount]) => [id, toSaveString(amount)]),
     ),
@@ -278,6 +293,26 @@ export function deserialize(data: SaveData): GameCore {
       }
     }
   }
+  core.researchInvestments = cleanModelIds(data.researchInvestments, (model) => needsResearch(model.tier));
+  core.arcaneExpedition = new ArcaneExpedition(data.arcaneExpedition);
+  for (const model of MACHINE_MODELS) {
+    const raw = data.enchantments?.[model.id];
+    if (model.category === 'machine' && !model.visPowered && Array.isArray(raw)) {
+      let remaining = core.countOf(model.id);
+      const counts: [number, number, number] = [0, 0, 0];
+      for (let i = 2; i >= 0; i--) { counts[i] = Math.min(remaining, nonNegativeInt(raw[i])); remaining -= counts[i]!; }
+      if (counts.some(n => n > 0)) core.enchantments[model.id] = counts;
+    }
+    const priority = data.visPriorities?.[model.id];
+    if ((model.visPowered || core.enchantments[model.id]) && typeof priority === 'number' && [0, 1, 2].includes(priority)) core.visPriorities[model.id] = priority;
+  }
+  core.reactorRiskArmed = data.reactorRiskArmed === true && core.countOf(HIGH_RISK_REACTOR_MODEL) > 0;
+  core.reactorRiskExposure = typeof data.reactorRiskExposure === 'number' && Number.isFinite(data.reactorRiskExposure)
+    ? Math.max(0, Math.min(REACTOR_RISK_CHECK_SECONDS, data.reactorRiskExposure)) : 0;
+  if (data.version < 27 && core.researchTarget !== null && !core.researchInvestments.includes(core.researchTarget)) {
+    core.researchInvestments.push(core.researchTarget);
+  }
+  if (core.researchTarget !== null && !core.researchInvestmentPaid(core.researchTarget)) core.researchTarget = null;
   core.cables = safeDec(data.cables);
   core.rebirthCount = nonNegativeInt(data.rebirthCount);
   core.rebirthNodes = cleanRebirthNodes(data.rebirthNodes);

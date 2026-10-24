@@ -56,11 +56,11 @@ try {
   await page.goto(pathToFileURL(html).href, { waitUntil: 'load' });
   await page.waitForSelector('canvas[data-scene-ready="true"]', { timeout: 90000 });
 
-  const selectors = { '工厂总览': '.factory-workspace', '科技与电网': '.technology-workspace', '时空星图': '.starmap', '设置与存档': '.settings-workspace' };
+  const selectors = { '工厂总览': '.factory-workspace', '工程科技': '.technology-workspace', '时空星图': '.starmap', '设置与存档': '.settings-workspace' };
   async function visit(name) {
     const start = await page.evaluate(name => {
       const start = performance.now();
-      [...document.querySelectorAll('.rail-nav button')].find(button => button.textContent.trim() === name).click();
+      [...document.querySelectorAll('.rail-nav button')].find(button => button.getAttribute('aria-label') === name).click();
       return start;
     }, name);
     await page.waitForSelector(selectors[name]);
@@ -111,7 +111,7 @@ try {
   await page.waitForFunction(() => document.querySelectorAll('.log-item').length === 60);
   await clickText('.log-more button', '加载更早记录');
   await page.click('.log-detail summary');
-  await visit('科技与电网');
+  await visit('工程科技');
   await page.evaluate(() => window.dispatchEvent(new ErrorEvent('error', { message: '缓存验证错误', error: new Error('缓存验证错误') })));
   await page.waitForSelector('.nav-badge');
   await visit('时空星图');
@@ -140,7 +140,7 @@ try {
   await visit('设置与存档');
   await page.select('.dev-tools > .row:first-child select', '3');
   await clickText('.dev-tools > .row:first-child button', '解锁');
-  await visit('科技与电网');
+  await visit('工程科技');
   assert.equal(await page.$eval('.tags .tag:nth-child(3) b', element => element.textContent), '已解锁');
 
   await visit('设置与存档');
@@ -149,7 +149,7 @@ try {
   await visit('时空星图');
   assert.equal(await page.$eval('.hud-cables', element => element.textContent.trim()), '0');
   assert.equal(await page.$('.quest-node.is-owned'), null, 'A reset must clear old ownership in cached pages');
-  await visit('科技与电网');
+  await visit('工程科技');
   assert.equal(await page.$eval('.tags .tag:nth-child(3) b', element => element.textContent), '未解锁');
   assert.deepEqual(errors, []);
   assert.deepEqual(external, []);

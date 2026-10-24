@@ -1,6 +1,7 @@
 import type { ResearchStats, RebirthStats, AchievementStats } from './types';
 import { ZERO, dec } from '../../numeric/decimal';
 import { VOLTAGE_TIERS } from '../../numeric/voltage';
+import { coinName, paymentTier } from '../../numeric/credit';
 import { formatNumber, getDefaultDisplayMode } from '../../numeric/format';
 import { formatDuration } from '../../numeric/time';
 import { ACHIEVEMENTS } from '../achievements';
@@ -41,7 +42,7 @@ export function researchStats(core: GameCore): ResearchStats {
   if (target === null && pending.length === 0) {
     note = '';
   } else if (target === null) {
-    note = '还没选研究项目：从下面的列表里挑一台机器，算力才会往它上面投。';
+    note = '选择机型并投入一次 GT 币，再由计算机和研究站推进研究；切换项目保留投资与进度。';
   } else {
     note = `正在研究 ${targetName}：工程进度 ${formatNumber(progress)} / ${formatNumber(required)}。`;
   }
@@ -54,7 +55,7 @@ export function researchStats(core: GameCore): ResearchStats {
     progress: formatNumber(progress),
     required: target === null ? '—' : formatNumber(required),
     percent,
-    eta: target !== null && used.gt(0) ? formatDuration(remaining.div(used).toNumber()) : '—',
+    eta: target !== null && used.gt(0) ? formatDuration(remaining.div(used.times(core.researchSpeedBonus())).toNumber()) : '—',
     note,
     pending: pending.map((model) => {
       const need = core.researchRequiredFor(model);
@@ -64,6 +65,10 @@ export function researchStats(core: GameCore): ResearchStats {
         name: model.name,
         tierName: VOLTAGE_TIERS[model.tier - 1] ?? `T${model.tier}`,
         voltageReady: model.tier <= core.maxTier,
+        invested: core.researchInvestmentPaid(model.id),
+        investment: formatNumber(core.researchInvestmentFor(model)),
+        coinName: coinName(paymentTier(model.tier)),
+        canInvest: core.canInvestResearch(model),
         progress: formatNumber(have),
         required: formatNumber(need),
         percent: need.gt(0) ? Math.min(100, have.div(need).times(100).toNumber()) : 0,

@@ -4,7 +4,7 @@
 // 只有真正在跑的机器才算 —— 停电、停机调度、没燃料、没灵气的机器不产生污染，
 // 降载时按降载比例少产生（负载由 core 每拍采样）。
 // 三档效果：<30% 无影响；30-70% 产出 -20% 但可能"变异"爆一笔；>70% 产出 -40%
-// 且每 10 分钟有 10% 概率"工厂崩溃"，随机摧毁一台机器。
+// 且每 10 分钟有 10% 概率使一台运行机器故障，可通过维护恢复。
 // 净化器可以往下压；设置里可以整套关掉（关掉后不涨、也不产生任何影响）。
 import { Decimal, ONE, ZERO, dec, decInt } from './decimal';
 
@@ -51,7 +51,7 @@ export function pollutionOutputMultiplier(value: Decimal): Decimal {
 
 export function pollutionBandName(value: Decimal): string {
   const band = pollutionBand(value);
-  if (band === 'critical') return '重度污染：产出 -40%，随时可能工厂崩溃';
+  if (band === 'critical') return '重度污染：产出 -40%，可能故障停机，可维护恢复';
   if (band === 'mutating') return '中度污染：产出 -20%，偶发变异奖励';
   return '清洁：无影响';
 }

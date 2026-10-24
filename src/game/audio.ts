@@ -1,5 +1,4 @@
-// 音效：WebAudio 现场合成（计划书第二十一章 #10）。单文件构建不能外挂音频文件，
-// 所以全部用振荡器 + 噪声现场合成，零资产体积；用户听过满意后再考虑换短采样。
+// 便携单文件不依赖外部音频：多数音效由 WebAudio 合成，开关声使用内嵌采样。
 // 浏览器要求首次交互后才能出声：交互类音效（挖矿、购买…）天然满足，
 // 启动阶段的事件音效会被 AudioContext 创建失败/挂起挡掉，属于预期行为。
 
@@ -51,7 +50,7 @@ export const SOUNDS: readonly SoundDef[] = [
   { id: 'restore', name: '供电恢复', group: '事件', desc: '供电率回到 100%' },
   { id: 'steal', name: '黑市窃取', group: '事件', desc: '黑市电网薅走一笔 GT 币' },
   { id: 'mutation', name: '变异奖励', group: '事件', desc: '中度污染随机变异给了奖励' },
-  { id: 'collapse', name: '工厂崩溃', group: '事件', desc: '重度污染摧毁了一台机器' },
+  { id: 'collapse', name: '污染故障', group: '事件', desc: '重度污染导致机器停机，可维护恢复' },
   { id: 'pollution', name: '污染升级', group: '事件', desc: '污染进入中度 / 重度' },
 ];
 

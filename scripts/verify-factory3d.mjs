@@ -71,13 +71,14 @@ try {
   }, seed);
   await page.goto(pathToFileURL(html).href, { waitUntil: 'load' });
   await page.waitForSelector('canvas[data-scene-ready="true"]', { timeout: 90000 });
+  await clickText('.factory-mode button', 'LV 演示');
   await page.waitForFunction(() => document.querySelectorAll('.factory-number').length === 6);
   assert.equal(await page.$$eval('.factory-machine-list > button', elements => elements.length), names.length);
   for (const name of names) assert.ok(await page.$eval('.factory-machine-list', (element, name) => element.textContent.includes(name), name));
 
   async function clickText(selector, text) {
     const handle = (await page.$$(selector));
-    for (const item of handle) if ((await item.evaluate(element => element.textContent.trim())) === text) { await item.click(); return; }
+    for (const item of handle) if ((await item.evaluate(element => element.getAttribute('aria-label') ?? element.textContent.trim())) === text) { await item.click(); return; }
     throw new Error(`Button not found: ${text}`);
   }
   assert.ok(await page.evaluate(() => document.body.classList.contains('motion-off')));
@@ -103,6 +104,11 @@ try {
   await page.waitForFunction(() => !document.querySelector('.mining-effects .spark'));
   await page.$eval('.factory-scene-3d', element => element.scrollIntoView({ block: 'start' }));
   await new Promise(resolve => setTimeout(resolve, 400));
+  const stageBox = await (await page.$('.factory-stage-3d')).boundingBox();
+  const pageScrollBeforeWheel = await page.$eval('.page-body', element => element.scrollTop);
+  await page.mouse.move(stageBox.x + stageBox.width * 0.5, stageBox.y + stageBox.height * 0.75);
+  await page.mouse.wheel({ deltaY: 240 });
+  await page.waitForFunction(before => document.querySelector('.page-body')?.scrollTop > before, {}, pageScrollBeforeWheel);
   await (await page.$('.factory-scene-3d')).screenshot({ path: join(output, 'lv-factory.png') });
   const firstLabel = await (await page.$('.factory-number')).boundingBox();
   await page.mouse.click(firstLabel.x + firstLabel.width / 2, firstLabel.y + firstLabel.height + 26);
@@ -115,7 +121,7 @@ try {
   }
   await new Promise(resolve => setTimeout(resolve, 300));
   await (await page.$('.factory-stage-3d')).screenshot({ path: join(output, 'lv-scrubber.png') });
-  await clickText('.factory-view-actions button', '设备全景');
+  await clickText('.factory-view-actions button', '复位全景');
   const canvas = await page.$('.factory-stage-3d canvas');
   const rect = await canvas.boundingBox();
   const before = await canvas.screenshot();
@@ -124,19 +130,28 @@ try {
   await page.mouse.move(rect.x + rect.width * 0.6, rect.y + rect.height * 0.5, { steps: 10 });
   await page.mouse.up();
   await new Promise(resolve => setTimeout(resolve, 400));
-  assert.notDeepEqual(await canvas.screenshot(), before, 'Dragging must rotate the camera');
-  await page.mouse.wheel({ deltaY: -240 });
-  await page.keyboard.press('w');
+  const afterLook = await canvas.screenshot();
+  assert.notDeepEqual(afterLook, before, 'Left drag must change the free-flight view direction');
+  await page.focus('.factory-stage-3d canvas');
+  await page.keyboard.down('w');
+  await new Promise(resolve => setTimeout(resolve, 300));
+  await page.keyboard.up('w');
+  await new Promise(resolve => setTimeout(resolve, 100));
+  assert.notDeepEqual(await canvas.screenshot(), afterLook, 'Holding W must move the free-flight camera');
+  await clickText('.factory-view-actions button', '全屏');
+  await page.waitForFunction(() => !!document.fullscreenElement);
   await clickText('.factory-view-actions button', '地板全景');
-  await page.waitForFunction(() => document.querySelectorAll('.factory-number').length === 0);
   await page.$eval('.factory-stage-3d', element => element.scrollIntoView({ block: 'center' }));
   await new Promise(resolve => setTimeout(resolve, 300));
   await (await page.$('.factory-stage-3d')).screenshot({ path: join(output, 'blueprint-floor.png') });
-  await clickText('.factory-view-actions button', '设备全景');
+  assert.notDeepEqual(await canvas.screenshot(), before, 'Floor overview must show a different view from the device overview');
+  await page.evaluate(() => document.exitFullscreen());
+  await page.waitForFunction(() => !document.fullscreenElement);
+  await clickText('.factory-view-actions button', '复位全景');
   await clickText('.factory-mode button', '实际厂区');
   await page.waitForFunction(() => document.querySelector('.factory-view-toolbar')?.textContent.includes('已建造 6 台'));
   await page.click('[data-model-id="m-2"]');
-  await clickText('.factory-footer-3d button', '打开工作台');
+  await clickText('.factory-footer-3d button', '管理设备 · 打开工作台');
   const rows = await page.$$('.tier-bar');
   let minerRow;
   for (const row of rows) if ((await row.$eval('.model-label', element => element.textContent)) === '基础采矿机') minerRow = row;
@@ -150,10 +165,12 @@ try {
   await page.waitForFunction(() => document.querySelector('[data-model-id="m-2"] .factory-machine-state')?.textContent.trim() === '运行中');
   await page.$eval('.factory-stage-3d', element => element.scrollIntoView({ block: 'center' }));
   await new Promise(resolve => setTimeout(resolve, 200));
-  const cameraBeforeNavigation = await canvas.screenshot();
+  const projectedLabels = () => page.$$eval('.factory-number', elements => elements.map(element => ({ name: element.getAttribute('aria-label'), left: element.style.left, top: element.style.top })));
+  const cameraBeforeNavigation = await projectedLabels();
+  assert.ok(cameraBeforeNavigation.length > 0, 'Camera retention needs visible projected anchors');
   await page.evaluate(() => { window.__factoryCanvas = document.querySelector('.factory-stage-3d canvas'); });
   const returns = [];
-  for (const destination of ['科技与电网', '时空星图', '设置与存档']) {
+  for (const destination of ['工程科技', '时空星图', '设置与存档']) {
     await page.evaluate(() => window.scrollTo(0, 0));
     await clickText('.rail-nav button', destination);
     await page.waitForFunction(() => !document.querySelector('.factory-stage-3d canvas'));
@@ -162,7 +179,7 @@ try {
     assert.equal(await page.evaluate(() => window.__factoryMetrics.draws), draws, 'Cached factory must not draw while another page is open');
     const start = await page.evaluate(() => {
       const start = performance.now();
-      [...document.querySelectorAll('.rail-nav button')].find(button => button.textContent.trim() === '工厂总览').click();
+      [...document.querySelectorAll('.rail-nav button')].find(button => button.getAttribute('aria-label') === '工厂总览').click();
       return start;
     });
     await page.waitForSelector('canvas[data-scene-ready="true"]');
@@ -173,16 +190,24 @@ try {
     assert.equal(await page.$eval('[data-model-id="m-2"]', button => button.getAttribute('aria-pressed')), 'true', 'Machine selection must be retained');
     await page.$eval('.factory-stage-3d', element => element.scrollIntoView({ block: 'center' }));
     await page.waitForFunction(draws => window.__factoryMetrics.draws > draws, {}, draws);
-    assert.deepEqual(await canvas.screenshot(), cameraBeforeNavigation, 'Camera view must survive navigation');
+    assert.deepEqual(await projectedLabels(), cameraBeforeNavigation, 'Projected camera anchors must survive navigation');
   }
   await clickText('.factory-mode button', 'LV 演示');
   assert.ok(await page.$$eval('.factory-machine-state', elements => elements.every(element => element.textContent.trim() === '待机')), 'Paused demo must remain paused after navigation');
+  // 文案表示当前状态：初始为“动态：关”，点击后才开启动画。
   await clickText('.factory-view-actions button', '动态：关');
   await clickText('.factory-view-actions button', '运行演示');
   const animatedDraws = await page.evaluate(() => window.__factoryMetrics.draws);
   await page.waitForFunction(draws => window.__factoryMetrics.draws > draws, {}, animatedDraws);
+  await clickText('.factory-view-actions button', '动态：开');
+  const stoppedDraws = await page.evaluate(() => window.__factoryMetrics.draws);
+  await new Promise(resolve => setTimeout(resolve, 500));
+  assert.equal(await page.evaluate(() => window.__factoryMetrics.draws), stoppedDraws, 'Dynamic off must stop machine animation and particles');
+  await clickText('.factory-view-actions button', '动态：关');
+  const resumedDraws = await page.evaluate(() => window.__factoryMetrics.draws);
+  await page.waitForFunction(draws => window.__factoryMetrics.draws > draws, {}, resumedDraws);
   await page.evaluate(() => window.scrollTo(0, 0));
-  await clickText('.rail-nav button', '科技与电网');
+  await clickText('.rail-nav button', '工程科技');
   await page.waitForFunction(() => !document.querySelector('.factory-stage-3d canvas'));
   const pausedDraws = await page.evaluate(() => window.__factoryMetrics.draws);
   await new Promise(resolve => setTimeout(resolve, 1100));

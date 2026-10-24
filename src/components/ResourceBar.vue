@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, nextTick, onDeactivated, onMounted, onUnmounted, ref } from 'vue';
 import { useGameStore } from '../game/store';
 import AnimatedNumber from './AnimatedNumber.vue';
 import UiIcon from './UiIcon.vue';
@@ -12,9 +12,31 @@ const groups = computed(() => [
 const activeRow = computed(() => selected.value
   ? groups.value.find(group => group.kind === selected.value!.kind)?.rows.find(row => row.tier === selected.value!.tier)
   : null);
-function inspect(kind: 'ore' | 'coin', tier: number) {
-  selected.value = selected.value?.kind === kind && selected.value.tier === tier ? null : { kind, tier };
+const trigger = ref<HTMLButtonElement | null>(null);
+const closeButton = ref<HTMLButtonElement | null>(null);
+function closeDetails(restoreFocus = true) {
+  selected.value = null;
+  if (restoreFocus) trigger.value?.focus({ preventScroll: true });
 }
+async function inspect(event: MouseEvent, kind: 'ore' | 'coin', tier: number) {
+  if (selected.value?.kind === kind && selected.value.tier === tier) {
+    closeDetails();
+    return;
+  }
+  trigger.value = event.currentTarget as HTMLButtonElement;
+  selected.value = { kind, tier };
+  await nextTick();
+  closeButton.value?.focus({ preventScroll: true });
+}
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && selected.value) {
+    event.preventDefault();
+    closeDetails();
+  }
+}
+onMounted(() => window.addEventListener('keydown', onKeydown));
+onUnmounted(() => window.removeEventListener('keydown', onKeydown));
+onDeactivated(() => closeDetails(false));
 </script>
 
 <template>
@@ -29,16 +51,13 @@ function inspect(kind: 'ore' | 'coin', tier: number) {
         <button v-for="row in group.rows" :key="row.tier" type="button" class="inventory-slot"
           :class="{ active: selected?.kind === group.kind && selected?.tier === row.tier }"
           :aria-expanded="selected?.kind === group.kind && selected?.tier === row.tier"
-          :aria-label="`${row.name}，${row.amount}，查看收支`" @click="inspect(group.kind, row.tier)">
+          aria-controls="resource-detail"
+          :aria-label="`${row.name}，${row.amount}，查看收支`" @click="inspect($event, group.kind, row.tier)">
           <span>{{ row.name }}</span><AnimatedNumber :value="row.value" :display="row.amount" />
         </button>
       </div>
     </div>
-    <div v-if="activeRow" class="inventory-detail" role="region" :aria-label="`${activeRow.name}收支明细`">
-      <strong>{{ activeRow.name }}</strong>
-      <dl><div v-for="line in activeRow.detail" :key="line.label"><dt>{{ line.label }}</dt><dd>{{ line.value }}</dd></div></dl>
-      <button type="button" aria-label="关闭资源明细" @click="selected = null">×</button>
-    </div>
+
     <section v-if="store.snap.arcane.active" class="inventory-arcane">
       <h2>灵气与源质</h2>
       <dl class="stats stats-loose">
@@ -50,4 +69,10 @@ function inspect(kind: 'ore' | 'coin', tier: number) {
       </dl>
     </section>
   </section>
+  <Teleport to="body">
+    <section v-if="activeRow" id="resource-detail" class="panel inventory-detail" role="region" aria-labelledby="resource-detail-title">
+      <div class="inventory-detail-heading"><h2 id="resource-detail-title">{{ activeRow.name }}收支</h2><button ref="closeButton" type="button" aria-label="关闭资源明细" @click="closeDetails()">×</button></div>
+      <dl><div v-for="line in activeRow.detail" :key="line.label"><dt>{{ line.label }}</dt><dd>{{ line.value }}</dd></div></dl>
+    </section>
+  </Teleport>
 </template>

@@ -1,5 +1,6 @@
 import { formatDuration, formatStamp } from '../numeric/time';
 import { appVersion, buildStamp } from './build-info';
+import { storageKey } from './storage-key';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export const LOG_CATEGORIES = ['system', 'save', 'machine', 'progress', 'simulation', 'settings', 'developer'] as const;
@@ -27,7 +28,7 @@ export interface LogEntry {
 }
 
 export const LOG_LIMIT = 300;
-export const LOG_STORAGE_KEY = 'gtnh-incremental-log';
+export const LOG_STORAGE_KEY = storageKey('gtnh-incremental-log');
 const DETAIL_LIMIT = 1600;
 const FLUSH_DELAY_MS = 500;
 const REPEAT_WINDOW_MS = 5000;

@@ -141,15 +141,25 @@ blast 1~14 级：原图本身是彩色的，机器那套淡染（`TINT_STRENGTH 
 
 ## 打包约定
 
-图标和矿脉条带一律内联进单个 HTML（`vite.config.ts` 把 `assetsInlineLimit` 提到 4 MB），
-因为 `scripts/inline-dist.ts` 打包后会删掉 `assets/` 目录 —— 超过阈值的贴图会变成打不开的外部文件。
+图标和矿脉条带一律内联进便携 HTML（`vite.config.ts` 把 `assetsInlineLimit` 提到 4 MB），
+`scripts/inline-dist.ts` 内联脚本与样式并保留 Web 目录；新素材必须确认便携入口没有外部文件依赖。
 
 
-## LV 3D 主厂区
+## 原生 3D 主厂区
 
-六种机器的机壳、五类功能面、运行覆盖层与发光覆盖层全部提取自本机 `Modernity-GTNH-9ebdeed-pre.zip`，没有原版 jar 回退或电压色重绘。名称与原型配置位于 `src/content/scene-machines.json`；每张原始路径、尺寸、动画帧及各面图层的权威清单为 `src/assets/factory3d/manifest.json`。
+151 个 GT 机型的六面材质、运行覆盖层和发光覆盖层从本机运行中的客户端导出，原始材质由已启用资源包与模组 jar 提供；多方块结构由原 StructureLib 定义逐格展开，含控制器、机壳和仓口。可复现导出源为 `scripts/native-models/ModelProbe.java`、`capture.py`、`capture.json`、`structures.json` 与 `build-models.py`，生成清单为 `src/assets/factory3d/native-manifest.json`。
 
-生成命令：`python -B scripts/extract-factory3d.py --pack "<Modernity-GTNH.zip>"`。输出保留原始 PNG 条带，运行时按 mcmeta 合成机壳与覆盖层。地板复用独立演示的素材与蓝图，来源见 `gtnh3d/ASSETS.md`，不经过机器提取器。
+奥术钻机、奥术装配器和通量洗涤器使用原模组 Java/OBJ 网格；灵气节点使用原生节点动态图集和加法混合光效。导出脚本为 `scripts/native-models/custom-models.py`，运行时清单为 `src/assets/factory3d/custom-manifest.json`。
+
+生成命令：`python -B scripts/extract-factory3d.py --pack "<Modernity-GTNH.zip>"`。输出保留原始 PNG 条带，运行时按 mcmeta 合成机壳与覆盖层。厂区地板的原三层蓝图与材质来源见 `gtnh3d/ASSETS.md`，铺设约束见 `gtnh3d/README.md`。
+
+## 奥术实体与辅助设施
+
+新增实体节点复用已有完整原生物品图标 `src/assets/machines/n-1.png`，其登记身份为 `Thaumcraft:blockAiry`、元数据 `0`，以 `scripts/native-icons/manifest.json` 为依据。该图标只表示灵气节点，不冒充节点稳定器或其他辅助设施。
+
+支架、培养台、花园和祭坛当前使用文字及真实状态展示，尚缺确切物品映射与启用 Modernity 后的完整原生渲染图标。已有机器图标、模组原始面贴图或相近方块不能当作四项素材已经完成；补齐时沿用 `export-machine-icons.ps1` 的客户端物品渲染流程，不拼贴、不重绘。
+
+本机已核对的实例为 `D:\Prism\PrismLauncher\instances\GT_New_Horizons_2.8.4_Java_17-25\.minecraft`，Modernity 包位于其 `resourcepacks/Modernity-GTNH-9ebdeed-pre.zip`。路径是本地提取来源，不是游戏运行依赖；游戏所需已导出素材仍内联至便携 HTML。
 
 ## 旧等距场景机壳素材
 
