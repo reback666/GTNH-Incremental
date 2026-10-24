@@ -152,10 +152,10 @@ describe('时空星图：加成生效', () => {
       return core;
     }
     // 采矿机（1 级 × 1 台）的额定污染 = 1 × 0.0008 = 0.0008 %/秒；
-    // 缓冲把产出比例从 0 抬到 0.5，所以污染速率是 0.0004。
+    // 缓冲抬到 50% 负载，再乘 ULV 起步低排放系数 0.05。
     expect(rig([], true).pollutionPerSecond().gt(0)).toBe(true); // 有电时确实在干活
     expect(rig([]).pollutionPerSecond().toString()).toBe('0'); // 缺电无缓冲：不干活
-    expect(rig(['power-4']).pollutionPerSecond().toString()).toBe('0.0004'); // 缓冲后按 50% 负载干活
+    expect(rig(['power-4']).pollutionPerSecond().toString()).toBe('0.00002'); // 缓冲后按 50% 负载干活
     expect(rig(['power-4'], false, true).pollutionPerSecond().toString()).toBe('0'); // 停电不受缓冲
     expect(rig(['power-4']).lastReport.powerRatio).toBe(0); // 供电率读数保持真实
   });

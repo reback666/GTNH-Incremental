@@ -1,339 +1,138 @@
-// 数值平衡推算脚本。直接用 src/numeric 里的公式，避免分析和实现两边漂移。
-// 运行：npx tsx scripts/balance.ts
-import { writeFileSync } from 'node:fs';
-import { Decimal, ONE, ZERO, dec, pow } from '../src/numeric/decimal';
-import { machineCost } from '../src/numeric/cost';
-import { machineEnergy, machineOutput } from '../src/numeric/output';
-import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../src/numeric/generator';
-import { MINER_OUTPUT_FACTOR, minerOrePerSecond } from '../src/numeric/miner';
-import {
-  blastChances,
-  collectChances,
-  pickaxeOutputPerClick,
-  vajraChances,
-} from '../src/numeric/pickaxe';
-import { VOLTAGE_TIERS, MAX_TIER } from '../src/numeric/voltage';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { BASE_MACHINE_COST, BASE_MACHINE_ENERGY, BASE_MACHINE_OUTPUT, COINS_PER_ORE, EARLY_POLLUTION_FACTOR, UNLOCK_COST_IN_MACHINES } from '../src/game/constants';
+import { machineCost, MARGINAL_COST_GROWTH } from '../src/numeric/cost';
+import { dec, type Decimal } from '../src/numeric/decimal';
+import { machineOutput } from '../src/numeric/output';
+import { MAX_TIER, VOLTAGE_TIERS } from '../src/numeric/voltage';
+import { runArcaneBalance, renderArcaneBalance, type ArcaneBalanceReport } from './arcane-balance';
+import { tierOreBudget, verifyProgression, type ProgressionCheckpoint } from './progression';
 
-// ── 模型参数（计划书未定义的量，集中在这里，方便对照） ──────────────────
-const BASE_COST = '500'; // tier-1 机器第 1 台的成本，单位 tier-1 币（作者定）
-const BASE_OUTPUT = '1'; // tier-1 机器每秒产出的 tier-1 币（作者定）
-// 成本/产出比 = 500，单机回本 = 500 ÷ 4 = 125 秒。作者定的节奏杠杆。
-const BASE_ENERGY = '8'; // tier-1 制造机的耗电，EU/t（1A × ULV）
-const COIN_FACTOR = 4; // 币值 4 合 1
-const MACHINES_PER_TIER = 50; // 作者定：每级买满 50 台再进下一级
+type Verification = ReturnType<typeof verifyProgression>;
+const fmt = (value: string | number | Decimal) => dec(String(value)).toSignificantDigits(7).toString();
+const hours = (seconds: number) => fmt(dec(String(seconds)).div(3600));
 
-// 币值：1 枚 tier-n 币 = 4^(n-1) 枚 tier-1 币
-const coinValue = (tier: number): Decimal => pow(String(COIN_FACTOR), tier - 1);
-
-// S(K) = Σ_{k=0}^{K-1} 1.07^k（无量纲，边际成本倍数的累加）
-const marginalSum = (count: number): Decimal => {
-  let sum = ZERO;
-  for (let k = 0; k < count; k += 1) {
-    sum = sum.plus(machineCost({ baseCost: '1', tier: 1, purchased: k }));
+// 免费首台、满负载、仅制造机币价的敏感性算式；不是可执行推进模型。
+export function estimateManufacturing(count: number) {
+  let bootstrap = dec('0');
+  let later = dec('0');
+  for (let purchased = 0; purchased < count; purchased++) {
+    if (purchased > 0) bootstrap = bootstrap.plus(machineCost({ baseCost: BASE_MACHINE_COST, tier: 1, purchased })
+      .div(dec(BASE_MACHINE_OUTPUT).times(purchased)));
+    later = later.plus(machineCost({ baseCost: BASE_MACHINE_COST, tier: 2, purchased }));
   }
-  return sum;
-};
+  later = later.div(machineOutput({ baseOutput: BASE_MACHINE_OUTPUT, tier: 1 }).times(count));
+  return { count, bootstrap, later, total: bootstrap.plus(later.times(MAX_TIER - 1)) };
+}
 
-// 第 1 级：自举。开局给 1 台机器，之后边赚边买。
-function bootstrapSeconds(count: number): Decimal {
-  let seconds = ZERO;
-  for (let k = 2; k <= count; k += 1) {
-    const cost = machineCost({ baseCost: BASE_COST, tier: 1, purchased: k - 1 });
-    const income = dec(BASE_OUTPUT).times(k - 1);
-    seconds = seconds.plus(cost.div(income));
+export function renderBalance(result?: Verification, arcane?: ArcaneBalanceReport) {
+  const lines = [
+    '# 数值估算与真实推进核验', '',
+    '由 `scripts/balance.ts` 生成。参数以 `src/game/constants.ts`、`src/numeric` 和实际机型目录为准。只分析本地新开档，不读取用户存档。', '',
+    '## 运行方式', '',
+    '- 快速估算（只输出终端，不覆盖本页已记录的实证）：`npm run balance`。',
+    '- 真实核验并重生成本页：`npm run balance -- --verify --arcane --wall-seconds=60 --segments=12 --days=7`。',
+    '- 跨进程续跑：`npm run balance -- --verify --resume=outputs/progression-checkpoint.json --arcane-report=outputs/arcane-balance-mv-lv-seed-20261024-4h.json --wall-seconds=60 --segments=20 --days=7`。每段更新真实 checkpoint，`--checkpoint=路径` 可指定保存位置。模拟预算按累计时间计算；若已到 7 天，需要增大 `--days` 才会继续。',
+    '- 可选 `--tier=15`、`--seed=20261024`、`--segments=6`（同进程分段续跑，不重开档）。等待期间约每两秒墙钟输出当前阶段；预算停止保留实证，不等于游戏死锁。', '',
+    '## 当前基准', '',
+    '| 基准 | 当前值 |', '| --- | --- |',
+    `| 首台 ULV 制造机币价 | ${BASE_MACHINE_COST} |`,
+    `| ULV 制造机额定币/秒 | ${BASE_MACHINE_OUTPUT} |`,
+    `| ULV 制造机耗电（核心口径） | ${BASE_MACHINE_ENERGY} |`,
+    `| 每枚矿对应制造币数 | ${COINS_PER_ORE} |`,
+    `| 突破费用/目标级首台制造机价 | ${UNLOCK_COST_IN_MACHINES} |`,
+    `| 同机型边际成本增长 | ${MARGINAL_COST_GROWTH} |`,
+    `| 净化开放前排放倍率 | ${EARLY_POLLUTION_FACTOR} |`, '',
+    '## 简化敏感性估算', '',
+    '以下是假设免费获得首台制造机、之后永远满负载、每级固定 K 台制造机的币价累加。它忽略手动开局、矿脉分流、直接制造矿耗、采矿及供电设备成本、燃料、污染、故障、研究投资与算力、突破费和币种隔离；不是玩家可执行的流程，也不能解释为全通耗时或上下界。', '',
+    '| 假设每级制造机 K | 简化 ULV 小时 | 简化后续单级小时 | 简化累计小时（非通关） |',
+    '| --- | --- | --- | --- |',
+  ];
+  for (const row of [5, 10, 20, 50, 80, 100].map(estimateManufacturing)) {
+    lines.push(`| ${row.count} | ${fmt(row.bootstrap.div(3600))} | ${fmt(row.later.div(3600))} | ${fmt(row.total.div(3600))} |`);
   }
-  return seconds;
+  lines.push('', '不得由此反解“买多少台就满足 3–7 天”，也不能把不同等级 GT 币当作新档可随意兑换的同一种币。', '',
+    '## ULV–MAX 额定矿耗诊断', '',
+    '同级基础矿机总产矿均分到当前及所有低级矿种；制造机直接烧本级矿。表中旧配置固定两矿、两制造、四台基础发电机，燃料按其额定负载需求计算；不含净化、算力、污染及旧矿跨级电网。负数表示该同级配置无法维持额定满负载，不代表整个游戏不可推进。最低矿机数只计制造直接矿耗，忽略供电，是供给需求的诊断值而非实际建设建议。', '',
+    '| 电压 | 单矿机本级矿/秒 | 单制造机矿/秒 | 旧配置燃料/秒 | 旧配置净矿/秒 | 单制造最低矿机数（不计燃料） |',
+    '| --- | --- | --- | --- | --- | --- |');
+  for (let tier = 1; tier <= MAX_TIER; tier++) {
+    const b = tierOreBudget(tier);
+    lines.push(`| ${b.voltage} | ${fmt(b.oreShare)} | ${fmt(b.manufacturingPerMachine)} | ${fmt(b.fuelForTwoMinersTwoMachines)} | ${fmt(b.netForTwoMinersTwoMachines)} | ${b.minersForOneMachineIgnoringFuel} |`);
+  }
+  lines.push('', '只比较“总采矿量/发电燃料”会漏掉矿种均分和制造直接矿耗，不能得出“矿石始终宽裕”的结论。', '',
+    '## 真实 GameCore 核验', '',
+    '策略只调用手动挖矿、正常购买、正常突破、研究投资、维修、停机和存读档接口。每拍 `tick(1)`，不注资、不调用开发者解锁、不修改经济、不关闭随机事件；种子默认 20261024。起步每秒两次点击，最多十六次，够费用即建设；之后每五游戏秒检查扩建和维修。矿石优先付款，保留上级币；按矿脉分流、制造耗矿和燃料估计增加矿机，目标四台本级制造；缺电时利用有燃料库存的已解锁旧级发电机，按需建净化器，付币投资后等待真实算力研究；突破后停掉更早的制造线，保留前一级及本级制造。', '',
+    '每个矿机、发电机、净化器机型最多买 64 台是本验证策略的搜索边界，游戏没有这个上限。核验返回包含真实核心存档、随机数状态、累计秒数和阶段的 checkpoint，可通过 `verifyProgression(tier, { resume: previous.checkpoint })` 继续，墙钟预算每段单独计算，模拟预算按累计时间计算。验证不使用镐子升级、电网切换、宇宙或转生加成，因此未证明最优路线，也未验证转生后的循环。阶段“就绪”仅表示必需机型已买到至少一台，不能等同满负载、稳定产线或 MAX 转生完成。', '');
+  if (!result) {
+    lines.push('本次仅生成估算，未运行真实推进；ULV–MAX 实证和 3–7 天目标均未核验。');
+    return lines.join('\n').trimEnd() + '\n';
+  }
+  lines.push(`本次状态：**${result.status}**；实际计算 ${fmt(result.wallSeconds)} 秒，推进 ${result.seconds} 游戏秒（${hours(result.seconds)} 小时），到达 **${VOLTAGE_TIERS[result.maxTier - 1]}**。`, '',
+    `手动总点击 ${result.starterClicks} 次；首次自动矿发生在第 ${result.firstAutomationSeconds ?? '未发生'} 秒，累计 ${result.firstAutomationClicks ?? '未发生'} 次点击。`, '',
+    '| 电压 | 到达游戏秒 | 必需机型就绪秒 | 阶段末设备数 | 阶段末污染 | 已研究机型数 |',
+    '| --- | --- | --- | --- | --- | --- |');
+  for (const voltage of VOLTAGE_TIERS) {
+    const stage = result.stages.find(item => item.voltage === voltage);
+    lines.push(stage ? `| ${voltage} | ${stage.reachedSeconds} | ${stage.readySeconds ?? '未就绪'} | ${stage.machines} | ${stage.pollution} | ${stage.researches} |`
+      : `| ${voltage} | 未核验 | 未核验 | — | — | — |`);
+  }
+  lines.push('', '设备数、污染、研究数为离开该阶段或本次停止时的快照；到达和就绪时间单独记录。', '',
+    `本次购买 ${result.purchases} 台、维修 ${result.repairs} 台次、经历停电 ${result.outages} 拍；MAX 转生资格：${result.canMaxRebirth ? '已具备（未执行转生）' : '未具备'}。`, '',
+    '### 停止现场', '', '```json', JSON.stringify(result.blocker, null, 2), '```', '',
+    '### 目标差距', '');
+  if (result.firstAutomationSeconds !== null) {
+    lines.push(`- 首次自动矿目标约 300 秒，实测 ${result.firstAutomationSeconds} 秒，提前 ${300 - result.firstAutomationSeconds} 秒；当前开局比该目标快，不能称“约五分钟”已匹配。`);
+  }
+  lines.push(result.status === 'complete'
+    ? `- 本次目标电压机型就绪耗时 ${hours(result.seconds)} 小时；3–7 天窗口为 72–168 小时。此状态不包含执行 MAX 转生或全研究/全宇宙完成，不能据此宣称完整终局目标满足。`
+    : `- 3–7 天目标为 259200–604800 游戏秒。本次仅核验至 ${result.seconds} 秒；${result.maxTier === MAX_TIER ? 'MAX 尚未就绪' : `${VOLTAGE_TIERS[result.maxTier]}–MAX 尚未核验完成`}，无法给出可靠全程耗时或断言目标满足。`,
+    '- `wall-limit` 是真实计算时间预算到期，`simulation-limit` 是游戏时间预算到期；都不等于经济永远卡死。停止现场的价格、库存、研究和供电应结合策略上限判断，不能外推未执行的部分。', '',
+    '奥术宇宙同预算对照由 `scripts/arcane-balance.ts` 独立核验；该对照使用明确列出的预设实验资产，不是无注资的新档推进证据。');
+  if (arcane) lines.push('', renderArcaneBalance(arcane));
+  else lines.push('本次未合并奥术对照实测；运行时加 `--arcane` 才会实际执行并附上其结果。');
+  return lines.join('\n').trimEnd() + '\n';
 }
 
-// 第 n≥2 级：钱来自第 n-1 级的 K 台机器，收入恒定。
-// 总价（tier-(n-1) 币） ÷ 上一级收入（tier-(n-1) 币/秒）
-function perTierSeconds(count: number): Decimal {
-  // 第 n≥2 级：总价（tier-(n-1) 币）= 基础成本 × 4^(n-1) × S(K)
-  //            收入（tier-(n-1) 币/秒）= 基础产出 × 4^(n-2) × K
-  // 第 2 级代入即可，结果对所有 n≥2 相同。
-  const totalCost = machineCost({ baseCost: BASE_COST, tier: 2, purchased: 0 }).times(
-    marginalSum(count),
-  );
-  const income = machineOutput({ baseOutput: BASE_OUTPUT, tier: 1 }).times(count);
-  return totalCost.div(income);
-}
-
-interface RunResult {
-  machinesPerTier: number;
-  bootstrap: Decimal;
-  perTier: Decimal;
-  totalSeconds: Decimal;
-  totalHours: Decimal;
-  totalMachines: number;
-  peakEnergyPerTier: Decimal; // 每级 K 台制造机的总耗电
-  generatorsPerTier: Decimal; // 需要多少台同级发电机
-  orePerSecondPerTier: Decimal; // 每级发电机的烧矿速率
-  unlockCost: Decimal; // 第 n 级 K 台的累计成本（折 tier-1 币）
-}
-
-function run(machinesPerTier: number): RunResult {
-  const bootstrap = bootstrapSeconds(machinesPerTier);
-  const perTier = perTierSeconds(machinesPerTier);
-  const totalSeconds = bootstrap.plus(perTier.times(MAX_TIER - 1));
-
-  // 最高一级（MAX）的电力与矿石需求
-  // 电网不参与：开局接的是普通电网，耗电不打折也不加价（计划书第六章）
-  const perMachineEnergy = machineEnergy({ baseEnergy: BASE_ENERGY, tier: MAX_TIER });
-  const peakEnergyPerTier = perMachineEnergy.times(machinesPerTier);
-  const genOutput = generatorOutputEU(MAX_TIER);
-  const generatorsPerTier = peakEnergyPerTier.div(genOutput);
-  const orePerSecondPerTier = generatorFuelRate(MAX_TIER).times(generatorsPerTier);
-
-  const unlockCost = machineCost({ baseCost: BASE_COST, tier: MAX_TIER, purchased: 0 })
-    .times(marginalSum(machinesPerTier))
-    .times(coinValue(MAX_TIER - 1));
-
-  return {
-    machinesPerTier,
-    bootstrap,
-    perTier,
-    totalSeconds,
-    totalHours: totalSeconds.div(3600),
-    totalMachines: MAX_TIER * machinesPerTier,
-    peakEnergyPerTier,
-    generatorsPerTier,
-    orePerSecondPerTier,
-    unlockCost,
+function main() {
+  const args = process.argv.slice(2);
+  const numberOption = (name: string, fallback: number) => {
+    const arg = args.find(value => value.startsWith(`--${name}=`));
+    const value = arg ? Number(arg.slice(name.length + 3)) : fallback;
+    if (!Number.isFinite(value) || value <= 0) throw new RangeError(`Invalid --${name}`);
+    return value;
   };
-}
-
-const fmtH = (s: Decimal): string => s.div(3600).toSignificantDigits(3).toString();
-// 大数用科学计数法，小数保留 3 位有效数字
-const fmt = (d: Decimal, digits = 3): string =>
-  d.abs().gte(100000) ? d.toExponential(digits - 1).replace('e+', 'e') : d.toSignificantDigits(digits).toString();
-// 时长：超过 90 分钟就换算成小时
-const fmtDur = (seconds: Decimal): string => {
-  const minutes = seconds.div(60);
-  return minutes.gte(90) ? `${fmt(minutes.div(60))} 小时` : `${fmt(minutes)} 分钟`;
-};
-
-const rows = [5, 10, 20, 40, 60, 80, 90, 100, 120, 150, 200].map(run);
-
-// 扫描 K，解出各个目标时长对应的台数
-const scan: RunResult[] = [];
-for (let k = 1; k <= 300; k += 1) scan.push(run(k));
-const solveK = (goalHours: number): number => {
-  const goal = dec(String(goalHours));
-  let best = scan[0]!;
-  for (const r of scan) {
-    if (r.totalHours.minus(goal).abs().lt(best.totalHours.minus(goal).abs())) best = r;
+  if (!args.includes('--verify')) {
+    console.log(renderBalance());
+    console.log('仅估算；未覆盖 docs/balance.md。运行 --verify 才执行真实核验并记录实证。');
+    return;
   }
-  return best.machinesPerTier;
-};
-const target = run(MACHINES_PER_TIER);
-
-const lines: string[] = [];
-lines.push('# 数值平衡推算');
-lines.push('');
-lines.push('本文回答两件事：**在已定的参数下全通需要多久**，以及**每个参数各占多少权重**。');
-lines.push('');
-lines.push('所有数字都由 `scripts/balance.ts` 生成，直接调用 `src/numeric` 里的公式，可复现。');
-lines.push('');
-lines.push('## 一、模型');
-lines.push('');
-lines.push('### 1.1 已定的规则');
-lines.push('');
-lines.push('| 项 | 规则 | 来源 |');
-lines.push('| --- | --- | --- |');
-lines.push(`| 电压 | ${MAX_TIER} 级 ULV→MAX，每级 4 倍 | 计划书第二章 |`);
-lines.push('| 机器成本 | 基础 × 4^(tier-1) × 1.07^已购，单位是**上一级**的币 | 计划书第七章、第八章 |');
-lines.push('| 机器产出 | 基础 × 4^(tier-1)，单位是**本级**的币 | 计划书第八章 |');
-lines.push('| 币值 | 4 合 1：1 枚 tier-n 币 = 4^(n-1) 枚 tier-1 币 | 计划书第七章 |');
-lines.push('| 发行层级 | 制造机只产本级的币，买本级机器用上一级的币 | 计划书第七章 |');
-lines.push('| 发电机输出 | 8 × 4^(tier-1) EU/t | GTNH wiki |');
-lines.push('| 矿石能量值 | 128 × 4^(tier-1) EU/枚 | 作者定 |');
-lines.push('');
-lines.push('### 1.2 假设的量（计划书未定义）');
-lines.push('');
-lines.push('| 参数 | 取值 | 说明 |');
-lines.push('| --- | --- | --- |');
-lines.push(`| tier-1 机器第 1 台成本 | ${BASE_COST} 枚 tier-1 币 | 作者定 |`);
-lines.push(`| tier-1 机器产出 | ${BASE_OUTPUT} 枚 tier-1 币/秒 | 作者定 |`);
-lines.push(`| 成本/产出比 | ${dec(BASE_COST).div(BASE_OUTPUT)} | 回本时间 = 比值 ÷ 4 = ${dec(BASE_COST).div(BASE_OUTPUT).div(4)} 秒 |`);
-lines.push(`| tier-1 制造机耗电 | ${BASE_ENERGY} EU/t | 按「本级 1A」取 |`);
-lines.push('| 推进策略 | 每级买满 K 台，再进下一级 | 简化策略，便于对照 |');
-lines.push('| 开局 | 直接给 1 台 tier-1 机器 | 手动挖矿阶段不计入模型 |');
-lines.push('');
-lines.push('### 1.3 关键结构：币值递增正好抵消回本时间');
-lines.push('');
-lines.push('把成本与产出都折成 tier-1 币价值：');
-lines.push('');
-lines.push('```');
-lines.push('tier-n 机器成本价值 = 基础成本 × 4^(n-1) × 4^(n-2) = 基础成本 × 4^(2n-3)');
-lines.push('tier-n 机器产出价值 = 基础产出 × 4^(n-1) × 4^(n-1) = 基础产出 × 4^(2n-2)');
-lines.push('');
-lines.push('回本时间 = 成本 ÷ 产出 = (基础成本 ÷ 基础产出) ÷ 4   —— 与等级无关');
-lines.push('```');
-lines.push('');
-lines.push(`也就是说，**升级电压不改变回本速度**。以基础成本 ${BASE_COST}、基础产出 ${BASE_OUTPUT} 计，单机回本恒为 **${fmt(dec(BASE_COST).div(BASE_OUTPUT).div(4))} 秒**。`);
-lines.push('');
-lines.push('升级真正买到的是「同样的产能用更少的机器」——省机器台数、省电力、省界面格子，而不是更快回本。');
-lines.push('');
-lines.push('### 1.4 推进公式');
-lines.push('');
-lines.push('第 1 级是自举（自己赚自己的币），时间靠逐台累加：');
-lines.push('');
-lines.push('```');
-lines.push('T₁ = Σ_{k=2..K} 成本(k) ÷ ((k-1) × 基础产出)');
-lines.push('```');
-lines.push('');
-lines.push('第 n≥2 级的钱来自上一级的 K 台机器，收入恒定：');
-lines.push('');
-lines.push('```');
-lines.push('Tₙ = [基础成本 × 4^(n-1) × S(K)] ÷ [K × 基础产出 × 4^(n-2)]');
-lines.push('   = 4 × (基础成本 ÷ 基础产出) × S(K) ÷ K          S(K) = Σ 1.07^k');
-lines.push('```');
-lines.push('');
-lines.push('**Tₙ 与 n 无关**，所以 13 个等级各花一样长的时间。');
-lines.push('');
-lines.push('## 二、结果');
-lines.push('');
-lines.push('| 每级台数 K | 第 1 级耗时 | 每级耗时 | 全通总耗时 | 总机器数 |');
-lines.push('| --- | --- | --- | --- | --- |');
-for (const r of rows) {
-  lines.push(`| ${r.machinesPerTier} | ${fmtDur(dec(r.bootstrap))} | ${fmtDur(dec(r.perTier))} | **${fmtH(r.totalSeconds)} 小时** | ${r.totalMachines} |`);
+  const pathOption = (name: string) => args.find(value => value.startsWith(`--${name}=`))?.slice(name.length + 3);
+  const checkpointPath = pathOption('checkpoint') ?? 'outputs/progression-checkpoint.json';
+  const resumePath = pathOption('resume');
+  const resumed: ProgressionCheckpoint | undefined = resumePath ? JSON.parse(readFileSync(resumePath, 'utf8')) : undefined;
+  const arcanePath = pathOption('arcane-report');
+  const tier = numberOption('tier', MAX_TIER);
+  const segments = numberOption('segments', 1);
+  if (!Number.isInteger(segments)) throw new RangeError('Invalid --segments');
+  const arcane: ArcaneBalanceReport | undefined = arcanePath ? JSON.parse(readFileSync(arcanePath, 'utf8')) : args.includes('--arcane') ? runArcaneBalance({ onProgress: event => console.log(`奥术 ${event.scenario}/${event.arm} ${event.second}/${event.totalSeconds}s`) }) : undefined;
+  let result: Verification | undefined;
+  for (let segment = 1; segment <= segments; segment++) {
+    result = verifyProgression(tier, {
+      ...((result?.checkpoint ?? resumed) ? { resume: (result?.checkpoint ?? resumed)! } : {}),
+      maxWallMs: numberOption('wall-seconds', 120) * 1000,
+      maxSeconds: numberOption('days', 7) * 86400,
+      seed: numberOption('seed', 20261024),
+      onProgress: event => console.log(`[${event.wallSeconds.toFixed(1)}s] ${event.phase} ${event.voltage} 游戏=${event.seconds}s ${event.action} 矿=${fmt(event.ore)} 币=${fmt(event.coin)} 币/秒=${fmt(event.coinPerSecond)} 供电=${event.powerRatio} 污染=${event.pollution}`),
+    });
+    mkdirSync(dirname(checkpointPath), { recursive: true });
+    writeFileSync(checkpointPath, JSON.stringify(result.checkpoint, null, 2) + '\n', 'utf8');
+    writeFileSync(new URL('../docs/balance.md', import.meta.url), renderBalance(result, arcane), 'utf8');
+    console.log(`已记录 docs/balance.md：${result.status}，${result.seconds} 游戏秒，${result.wallSeconds.toFixed(2)} 计算秒。`);
+    console.log(`可恢复存档：${checkpointPath}`);
+    console.log(JSON.stringify(result.blocker));
+    if (result.status !== 'wall-limit') break;
+  }
 }
-lines.push('');
-lines.push('### 2.1 各目标时长所需的每级台数');
-lines.push('');
-lines.push(`作者定下 **每级 ${MACHINES_PER_TIER} 台**与**成本/产出比 500**，两者共同决定全通 **${fmtH(target.totalSeconds)} 小时**。`);
-lines.push('这也是计划书第十七章「游戏内一周」所对应的等效游玩时长。各目标时长所需的台数：');
-lines.push('');
-lines.push('| 目标 | 对应每级台数 |');
-lines.push('| --- | --- |');
-for (const goal of [10, 20, 40, 80, 100, 200]) {
-  lines.push(`| ${goal} 小时 | 约 ${solveK(goal)} 台 |`);
-}
-lines.push('');
-lines.push('这张表也说明一件事：**总时长对 K 极其敏感**。K 从 80 加到 90（+12.5%），');
-lines.push('总时长从 58 小时跳到 103 小时（+76%）。因为 1.07^K 是指数项，累加和 S(K) 增长得比 K 快得多。');
-lines.push('调参时这一点要留意：K 只要挪几台，节奏就会成倍变化。');
-lines.push('');
-lines.push('### 2.2 这个规模带来的电力与矿石需求');
-lines.push('');
-lines.push(`按每级 ${target.machinesPerTier} 台算，最高一级（MAX）的制造机会消耗：`);
-lines.push('');
-lines.push(
-  `- 单台 MAX 制造机耗电 **${fmt(machineEnergy({ baseEnergy: BASE_ENERGY, tier: MAX_TIER }))} EU/t**`,
-);
-lines.push(`- ${target.machinesPerTier} 台合计 **${fmt(target.peakEnergyPerTier)} EU/t**`);
-lines.push(`- 需要 **${fmt(target.generatorsPerTier)} 台 MAX 发电机**（单台 ${fmt(generatorOutputEU(MAX_TIER))} EU/t）`);
-lines.push(`- 这些发电机合计烧矿 **${fmt(target.orePerSecondPerTier)} 枚/秒**`);
-lines.push('');
-lines.push('注意：同级制造机耗电与同级发电机输出**都是 4^(tier-1) 倍**，所以「1 台发电机养 1 台制造机」这个比例**与等级无关**。');
-lines.push('');
-lines.push('### 2.3 采矿机：矿石是宽裕资源，不是瓶颈');
-lines.push('');
-lines.push('采矿机的 GTNH 实测值（wiki「采矿机」条目）：');
-lines.push('');
-lines.push('| 等级 | 耗电 | 耗时 | 时运 | 采掘范围 |');
-lines.push('| --- | --- | --- | --- | --- |');
-lines.push('| LV（基础采矿机） | 8 EU/t | 8 秒/方块 | I | 17×17 |');
-lines.push('| MV（优良采矿机） | 32 EU/t | 4 秒 | II | 33×33 |');
-lines.push('| HV（进阶采矿机） | 128 EU/t | 2 秒 | III | 49×49 |');
-lines.push('');
-lines.push('规律是**耗电 ×4、耗时 ÷2**，与 wiki 实测值完全一致。GTNH 只做到 HV，再往上都是外推。');
-lines.push('');
-lines.push(`本作在这个规律上叠加**整体产矿倍率 ×${MINER_OUTPUT_FACTOR}**（耗时 ÷${MINER_OUTPUT_FACTOR}，耗电不变），`);
-lines.push('下面的实际产矿速率已经含这个倍率：');
-lines.push('');
-lines.push('| 等级 | 产矿（枚/秒） | 烧矿（枚/秒/台） | 一台采矿机养几台发电机 |');
-lines.push('| --- | --- | --- | --- |');
-for (let tier = 1; tier <= MAX_TIER; tier += 1) {
-  const ore = minerOrePerSecond(tier);
-  const burn = generatorFuelRate(tier);
-  lines.push(`| ${VOLTAGE_TIERS[tier - 1]} | ${fmt(ore)} | ${fmt(burn)} | ${fmt(ore.div(burn))} |`);
-}
-lines.push('');
-lines.push('**关键结论：矿石从头到尾都很宽裕，而且宽裕程度稳定。** 采矿机产矿与发电机烧矿同比放大，比例恒定，');
-lines.push('每台采矿机始终能养约 5.2-6.8 台同级发电机（燃料效率 85% 时 6.8 台，降到 65% 后 5.2 台）。');
-lines.push('');
-lines.push('上表里「一台采矿机养几台发电机」这一列从 ULV 的 6.8 平滑降到 MAX 的 5.2，变化只来自燃料效率，');
-lines.push('不再有量级上的漂移——这正是 s × k = 4 的结果。');
-lines.push('');
-lines.push('### 2.4 矿石供需之比取决于两个倍数的乘积');
-lines.push('');
-lines.push('设采矿机每级提速 s 倍、矿石能量值每级递增 k 倍，则');
-lines.push('');
-lines.push('```');
-lines.push('采矿机产矿 ÷ 发电机烧矿 ∝ (s × k ÷ 4)^(tier-1)');
-lines.push('```');
-lines.push('');
-lines.push('**只有 s × k = 4 时比例才恒定。** 当前 s = 2、k = 2，乘积正好是 4，所以比例恒定。');
-lines.push('其他取值的对照（下表按 s = 2 固定，只改 k）：');
-lines.push('');
-lines.push('| 矿石能量递增 k | s×k | MAX 时一台采矿机能养几台发电机 | MAX 每台发电机需要几台采矿机 |');
-lines.push('| --- | --- | --- | --- |');
-for (const kStr of ['1.2', '1.5', '1.8', '2']) {
-  const k = dec(kStr);
-  const grow = dec('2').times(k).div(4);
-  const eff = generatorFuelEfficiency(MAX_TIER);
-  const ratio = dec(MINER_OUTPUT_FACTOR).times(eff).times(grow.pow(MAX_TIER - 1));
-  lines.push(
-    `| ${kStr} | ${fmt(dec('2').times(k))} | ${fmt(ratio)} | ${ratio.gt(0) ? fmt(ONE.div(ratio)) : '—'} |`,
-  );
-}
-lines.push('');
-lines.push('k < 2 会让矿石逐级收紧（k = 1.2 时 MAX 每台发电机仍要上百台采矿机，等于卡死）；');
-lines.push('k > 2 则逐级放宽。k = 2 是唯一让矿石约束强度恒定的取值。');
-
-// ── 2.5 镐子（手动开采）的强度 ──────────────────────────────
-lines.push('');
-lines.push('### 2.5 镐子（手动开采）的强度');
-lines.push('');
-lines.push('三条线的升级机会随电压发放，下表按「全部机会都用掉」算。');
-lines.push('产出 =（基础 1 枚 + 连锁爆破加值）× 连锁采集倍率，产出按矿脉规则均分给各矿种。');
-lines.push('连锁爆破的每笔加值在机会产生的那一刻就按当时的电压定死（2^(n/2)），');
-lines.push('所以逐级点掉、还是攒到最后点掉，最终总和完全一样。');
-lines.push('');
-lines.push('| 等级 | 机会（金刚杵 / 采集 / 爆破） | 单次点击产出 | 同级采矿机 | 折合秒数 |');
-lines.push('| --- | --- | --- | --- | --- |');
-for (let tier = 1; tier <= MAX_TIER; tier += 1) {
-  const collect = collectChances(tier);
-  const blast = blastChances(tier);
-  const click = pickaxeOutputPerClick({ tier, blastUsed: blast, collectLevel: collect });
-  const miner = minerOrePerSecond(tier);
-  lines.push(
-    `| ${VOLTAGE_TIERS[tier - 1]} | ${vajraChances(tier)} / ${collect} / ${blast} | ${fmt(click)} | ${fmt(miner)} 枚/秒 | ${fmt(click.div(miner))} 秒 |`,
-  );
-}
-lines.push('');
-lines.push('「折合秒数」= 一次点击等于同级一台采矿机跑多少秒。全等级都落在 13~27 秒之间，');
-lines.push('也就是「有空点一下挺划算、不点也不会卡住」的量级，从头到尾都不会盖过挂机产线。');
-lines.push('底数取 2 而不是 n 就是为了这个：n^(n/2) 会让 MAX 一笔就上亿，手点直接压掉整条自动化。');
-lines.push('');
-lines.push('顺带一个电力比例：同级采矿机耗电只有同级发电机输出的 1/4，所以「1 台发电机 : 4 台采矿机」');
-lines.push('（若制造机按 1 台吃满 1 台发电机的电，则「1 发电机 : 1 制造机 : 4 采矿机」）。');
-lines.push('');
-lines.push('## 三、结论');
-lines.push('');
-lines.push('1. **节奏能成立，但靠的是「每级买满约 90 台」而不是公式里任何指数项。**');
-lines.push('   1.07^K 的边际成本是唯一的规模闸门，K 直接决定总时长。');
-lines.push('2. **升级不加快回本。** 币值 4 合 1 与产出 4 倍递增完全抵消，回本时间恒定。');
-lines.push('   这不算问题，但意味着「升级」的收益必须来自别处——目前看是省机器、省电力。');
-lines.push('3. **电力是等比放大的约束。** 同级制造机耗电与发电机输出同倍率，所以发电机∶制造机恒为 1∶1。');
-lines.push('   想让电力成为真正的资源，需要让发电机的倍数低于制造机，或让矿石供给卡住。');
-lines.push('4. **矿石不是瓶颈。** 采矿机提速 ×2 与矿石能量递增 ×2 相乘等于 4，比例本就恒定；');
-lines.push(`   再叠加整体产矿 ×${MINER_OUTPUT_FACTOR} 后，每台采矿机能养约 5-7 台同级发电机，矿石只进不出。`);
-lines.push('');
-lines.push('## 四、待定');
-lines.push('');
-lines.push('| 问题 | 影响 |');
-lines.push('| --- | --- |');
-lines.push(
-  `| 每级台数 K 定多少 | 直接决定总时长：${solveK(20)} 台 ≈ 20 小时，${solveK(80)} 台 ≈ 80 小时，${solveK(200)} 台 ≈ 200 小时 |`,
-);
-lines.push('| tier-1 机器的基础成本与产出比值 | 回本时间 = 比值 ÷ 4，改变它会等比改变所有等待时间 |');
-lines.push('| 制造机的基础耗电 | 决定发电机∶制造机的比例，当前是 1∶1 |');
-
-writeFileSync('docs/balance.md', lines.join('\n') + '\n', 'utf8');
-console.log(`已写入 docs/balance.md，共 ${lines.length} 行`);
-console.log(`关键结果：K=${target.machinesPerTier} 台/级 -> 全通 ${fmtH(target.totalSeconds)} 小时`);
-for (const r of rows) {
-  console.log(`K=${String(r.machinesPerTier).padStart(3)}  全通 ${fmtH(r.totalSeconds).padStart(10)} 小时   总机器 ${r.totalMachines}`);
-}
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

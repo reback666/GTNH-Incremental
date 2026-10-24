@@ -10,9 +10,22 @@ import VeinPanel from './VeinPanel.vue';
 import PollutionPanel from './PollutionPanel.vue';
 import EnergyPanel from './EnergyPanel.vue';
 import UiIcon from './UiIcon.vue';
+import { modelIconUrl } from '../game/icons';
+import { formatNumber } from '../numeric/format';
 const store = useGameStore();
+const emit = defineEmits<{ technology: [] }>();
 const selectedKind = ref<MachineKind | 'pickaxe' | null>('miner');
 const workshop = ref<HTMLElement | null>(null);
+const goalVisible = ref(true);
+const nodePage = ref(0);
+const selectedNodeId = ref('');
+const installedNodes = computed(() => store.snap.arcaneExpedition.nodes.filter(node => node.location === 'installed'));
+const selectedNode = computed(() => installedNodes.value.find(node => node.id === selectedNodeId.value));
+const visibleNodes = computed(() => installedNodes.value.slice(nodePage.value * 12, (nodePage.value + 1) * 12));
+const sceneExpanded = ref(!window.matchMedia('(max-width: 700px), (max-height: 1000px)').matches);
+function toggleScene(event: Event) {
+  sceneExpanded.value = (event.currentTarget as HTMLDetailsElement).open;
+}
 const goal = computed(() => {
   const facilities = store.snap.factory.facilities;
   for (const [kind, title, text] of [
@@ -22,6 +35,16 @@ const goal = computed(() => {
   ] as const) {
     if (!facilities.find(item => item.kind === kind)?.count) return { kind, title, text };
   }
+  const tier = store.snap.maxTier;
+  const voltage = VOLTAGE_TIERS[tier - 1];
+  for (const [kind, purpose] of [['miner', '开采本级矿脉，为本级发电与制造补充库存。'], ['generator', '让新设备获得足够供电；先检查燃料，再增加装机。'], ['machine', '将本级矿石加工成突破下一电压所需的 GT 币。']] as const) {
+    const group = store.snap.columns.find(column => column.kind === kind)?.tiers.find(group => group.tier === tier);
+    if (group && !group.models.some(model => model.count > 0)) return { kind, title: `建立 ${voltage} ${kind === 'miner' ? '采矿' : kind === 'generator' ? '发电' : '制造'}工程`, text: purpose };
+  }
+  const faulty = facilities.find(facility => facility.faulty > 0);
+  if (faulty) return { kind: faulty.kind, title: '恢复故障设备', text: '故障设备仍然保留，进入对应类别维护即可恢复生产。' };
+  if (store.snap.research.pending.some(model => model.voltageReady)) return { kind: 'research' as const, title: '推进本级机型研究', text: '选择需要的机型支付一次投资，再由计算机与研究站完成研究。' };
+  if (tier >= 2 && store.snap.factory.pollution > 30 && store.snap.risk.netPositive) return { kind: 'purifier' as const, title: '稳定污染治理', text: '污染正在上升。为净化器留出电力，可减少产出损失和故障。' };
   return null;
 });
 const nextName = computed(() => store.snap.nextTier ? VOLTAGE_TIERS[store.snap.nextTier - 1] : 'MAX');
@@ -41,8 +64,18 @@ function goToWorkshop(kind: MachineKind) {
       <VeinPanel />
       <EnergyPanel />
       <PollutionPanel />
-      <section class="panel expansion-card">
-        <span class="eyebrow">{{ goal ? '启动你的工厂' : '下一次跃迁' }}</span>
+      <section class="panel expansion-card voltage-unlock" aria-label="电压突破">
+        <span class="eyebrow">电压突破</span>
+        <h2>{{ store.snap.nextTier ? `解锁 ${nextName} 时代` : '已抵达 MAX 时代' }}</h2>
+        <p>{{ store.snap.nextTier ? `需要 ${store.snap.unlockCost} 枚上一级 GT 币。` : '继续积累，探索转生与平行宇宙。' }}</p>
+        <div class="expansion-progress" role="progressbar" :aria-valuenow="Math.round(store.snap.factory.nextTierProgress * 100)" aria-valuemin="0" aria-valuemax="100" aria-label="电压突破进度"><span :style="{ width: store.snap.factory.nextTierProgress * 100 + '%' }" /></div>
+        <button v-if="store.snap.nextTier" type="button" class="primary" :disabled="!store.snap.canUnlock" @click="store.unlock()">解锁 {{ nextName }} <UiIcon name="arrow" :size="16" /></button>
+      </section>
+    </aside>
+    <div class="production-workspace">
+      <section v-if="goalVisible" class="panel expansion-card factory-goal" aria-label="当前目标">
+        <button type="button" class="goal-close" aria-label="关闭当前目标" @click="goalVisible = false">×</button>
+        <span class="eyebrow">{{ goal ? '当前工程' : '下一次跃迁' }}</span>
         <template v-if="goal">
           <h2>{{ goal.title }}</h2><p>{{ goal.text }}</p>
           <button type="button" class="primary" @click="goToWorkshop(goal.kind)">管理设备 <UiIcon name="arrow" :size="16" /></button>
@@ -54,14 +87,34 @@ function goToWorkshop(kind: MachineKind) {
           <button v-if="store.snap.nextTier" type="button" class="primary" :disabled="!store.snap.canUnlock" @click="store.unlock()">解锁 {{ nextName }} <UiIcon name="arrow" :size="16" /></button>
         </template>
       </section>
-    </aside>
-    <div class="production-workspace">
-    <FactoryScene :selected-kind="selectedKind" @select="select" @manage="goToWorkshop" />
+    <details class="factory-preview" :open="sceneExpanded" @toggle="toggleScene">
+      <summary><span>厂区概览 <span class="muted small">{{ store.snap.factory.machineCount }} 台设备</span></span><span class="muted small">{{ sceneExpanded ? '收起厂区' : '展开厂区' }}</span></summary>
+      <FactoryScene :selected-kind="selectedKind" @select="select" @manage="goToWorkshop" />
+    </details>
+    <section v-if="store.snap.arcaneExpedition.active" class="panel arcane-factory" aria-label="奥术节点设施区">
+      <div class="section-heading"><h2>奥术设施区</h2><button type="button" @click="emit('technology')">打开魔导手册</button></div>
+      <p class="muted small">已安装 {{ installedNodes.length }} 颗节点 · 支架 {{ store.snap.arcaneExpedition.stands.length }} 座 · 调查点 {{ store.snap.arcaneExpedition.surveys.length }} 座 · 培养台 {{ store.snap.arcaneExpedition.benches.length }} 座</p>
+      <div class="arcane-node-list"><button v-for="node in visibleNodes" :key="node.id" type="button" :aria-pressed="selectedNodeId === node.id" @click="selectedNodeId = node.id"><img :src="modelIconUrl('n-1')" width="36" height="36" alt="" /><span>{{ node.id }} · {{ node.tierName }}<small>{{ node.typeName }} / {{ node.qualityName }} · {{ formatNumber(node.output) }} 灵气/秒</small></span></button></div>
+      <div v-if="installedNodes.length > 12" class="arcane-pages"><button type="button" :disabled="nodePage === 0" @click="nodePage--">上一页</button><span>{{ nodePage + 1 }} / {{ Math.ceil(installedNodes.length / 12) }}</span><button type="button" :disabled="(nodePage + 1) * 12 >= installedNodes.length" @click="nodePage++">下一页</button></div>
+      <p v-if="selectedNode" class="small">{{ selectedNode.id }} · {{ selectedNode.aspectsText }}；灵气按工作台的优先级分配给魔法设备和附魔设备。</p>
+      <p v-if="store.snap.arcaneExpedition.researchOptions.some(option => option.id === 'garden' && option.completed)" class="small">花园共生已建立，满足水与地倾向时减少培养工时。</p>
+      <p v-if="store.snap.arcaneExpedition.researchOptions.some(option => option.id === 'blood' && option.completed)" class="small">血仪式设施已建立，可为丰饶培养支付额外费用增加成长。</p>
+    </section>
     <section ref="workshop" class="workshop" aria-labelledby="workshop-title">
-      <div class="section-heading"><div><span class="eyebrow">建造 · 超频 · 维护</span><h2 id="workshop-title">设备工作台</h2></div><span class="muted small">{{ store.snap.factory.machineCount }} 台设备已部署</span></div>
+      <div class="section-heading"><div><span class="eyebrow">建造 · 超频 · 维护</span><h2 id="workshop-title">设备工作台</h2></div><button v-if="!goalVisible" type="button" class="goal-restore" @click="goalVisible = true">显示目标</button><span v-else class="muted small">{{ store.snap.factory.machineCount }} 台设备已部署</span></div>
       <MachinePanel v-model:active-kind="selectedKind" :columns="store.snap.columns" />
     </section>
     </div>
   </div>
   </div>
 </template>
+
+<style scoped>
+.arcane-factory { padding: 14px; }
+.arcane-node-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 6px; }
+.arcane-node-list button { display: flex; align-items: center; gap: 8px; min-height: 48px; text-align: left; }
+.arcane-node-list button[aria-pressed="true"] { outline: 2px solid var(--accent); }
+.arcane-node-list img { image-rendering: pixelated; }
+.arcane-node-list small { display: block; margin-top: 4px; color: var(--muted); }
+.arcane-pages { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+</style>

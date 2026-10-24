@@ -22,6 +22,7 @@ import { batchLogEvents, flushLog, logEntries, logEvent, onLogChange, setLogGame
 import { buildSnapshot } from './presentation/snapshot';
 import type { Snapshot } from './presentation/types';
 import { advanceSimulation, ElapsedClock } from './runtime';
+import type { ArcaneCommand } from './arcane-expedition';
 
 const CRASH_STREAK_LIMIT = 5;
 
@@ -140,6 +141,14 @@ export const useGameStore = defineStore('game', {
       catchUpController = controller;
       const oreBefore = core.totalOre;
       const coinsBefore = core.totalCoins;
+      const arcaneBefore = core.hasUniverse('arcane') && core.arcaneExpedition.state.research >= 0 ? {
+        discoveries: core.arcaneExpedition.state.discoveries,
+        jobs: core.arcaneExpedition.state.completedJobs,
+        research: core.arcaneExpedition.state.research,
+        garden: core.arcaneExpedition.state.garden,
+        blood: core.arcaneExpedition.state.blood,
+        vis: core.arcaneExpedition.visOutput(core.arcaneContext()),
+      } : null;
       const away = formatDuration(total);
       const baseTime = Date.now() - total * 1000;
       let advanced = 0;
@@ -185,7 +194,20 @@ export const useGameStore = defineStore('game', {
       this.offlineNote = failed
         ? `离线补算已暂停，已完成 ${formatDuration(advanced)}；刷新后可继续补算剩余时间。`
         : `离线 ${away}，已补算：矿石 +${formatNumber(gainedOre)}、GT 币 +${formatNumber(gainedCoins)}` +
-          (total < seconds ? '（超过 24 小时的部分不计）' : '');
+          (total < seconds ? `（超过当前上限 ${formatDuration(cap)} 的部分不计）` : '');
+      if (arcaneBefore) {
+        const state = this.snap.arcaneExpedition;
+        const completedResearch = state.research - arcaneBefore.research +
+          Number(core.arcaneExpedition.state.garden && !arcaneBefore.garden) +
+          Number(core.arcaneExpedition.state.blood && !arcaneBefore.blood);
+        const pending = state.nodes.filter(node => node.location === 'candidate').length;
+        const full = state.surveys.filter(survey => survey.candidates.length >= survey.capacity).length;
+        const paused = state.surveys.filter(survey => survey.paused).length + state.benches.filter(bench => bench.paused).length + Number(state.researchJob?.paused === true);
+        const reasons = [full ? `${full} 处候选已满` : '', paused ? `${paused} 处人工暂停` : '',
+          core.lastReport.sheddedKinds.includes('research') ? '魔导设施已被电网停机' : Number(state.energy) > 0 && core.lastReport.powerRatio < 1 ? `供电 ${(core.lastReport.powerRatio * 100).toFixed(0)}%` : ''].filter(Boolean);
+        this.offlineNote += `；奥术调查新增 ${state.discoveries - arcaneBefore.discoveries} 颗、完成 ${state.completedJobs - arcaneBefore.jobs} 项作业与 ${completedResearch} 项研究、待处理 ${pending} 颗；实体节点供能 ${formatNumber(arcaneBefore.vis)} → ${formatNumber(state.vis)} 灵气/秒` +
+          (reasons.length ? `；当前：${reasons.join('、')}` : '');
+      }
       logEvent('info', 'offline.catchup', failed ? '离线补算部分完成' : `离线补算完成 ${away}`, this.offlineNote, {
         advanced, remaining: total - advanced, durationMs: Math.round(performance.now() - startedAt),
         oreGained: gainedOre.toString(), coinsGained: gainedCoins.toString(), failed,
@@ -334,6 +356,33 @@ export const useGameStore = defineStore('game', {
         this.save();
       }
       return ok;
+    },
+    setReactorRisk(enabled: boolean, confirmed = false): boolean {
+      const core = getCore();
+      if (!core.setReactorRisk(enabled, confirmed)) return false;
+      logEvent(enabled ? 'warn' : 'info', 'reactor.risk', enabled ? '确认启用硅岩反应堆高风险模式' : '关闭硅岩反应堆高风险模式');
+      this.refresh();
+      this.save();
+      return true;
+    },
+    arcaneAction(command: ArcaneCommand): boolean {
+      const core = getCore();
+      if (!core.arcaneExpedition.act(command, core.arcaneContext())) return false;
+      logEvent('info', 'arcane.action', '奥术操作已执行', undefined, { action: command.type });
+      this.refresh();
+      this.save();
+      return true;
+    },
+    enchant(modelId: string, level: number): boolean {
+      if (!getCore().enchant(modelId, level)) return false;
+      logEvent('info', 'arcane.enchant', `${findModel(modelId)?.name ?? modelId}：安装 ${level} 级附魔`);
+      this.refresh(); this.save();
+      return true;
+    },
+    setVisPriority(modelId: string, priority: number): boolean {
+      if (!getCore().setVisPriority(modelId, priority)) return false;
+      this.refresh(); this.save();
+      return true;
     },
     // 换电网 / 开关污染机制：都属于设置，改完立刻生效并存档
     setGrid(mode: GridMode): void {
@@ -809,8 +858,12 @@ export const useGameStore = defineStore('game', {
         { increased: report.autoOverclockUp, decreased: report.autoOverclockDown });
       if (report.sheddedKinds.length > 0) logEvent('warn', 'silicon.shedding', '自动停机以降低负载', undefined, { models: report.sheddedKinds.join(',') });
       if (report.collapses > 0) {
-        logEvent('warn', 'pollution.collapse', `工厂崩溃：污染摧毁了 ${report.collapses} 台机器`, undefined,
+        logEvent('warn', 'pollution.collapse', `污染导致 ${report.collapses} 台机器故障停机，可维护恢复`, undefined,
           { count: report.collapses, pollution: core.pollution.toString() });
+        if (!offline) sound('collapse');
+      }
+      if (report.reactorAccidents > 0) {
+        logEvent('warn', 'reactor.accident', `硅岩反应堆事故：损失 ${report.reactorAccidents} 台同机型设备，其他设备不受影响`);
         if (!offline) sound('collapse');
       }
       const rift = core.riftPending();

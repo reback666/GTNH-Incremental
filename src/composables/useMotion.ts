@@ -1,6 +1,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { storageKey } from '../game/storage-key';
 
-const KEY = 'gtnh-incremental-motion';
+const KEY = storageKey('gtnh-incremental-motion');
 const enabled = ref(true);
 let loaded = false;
 

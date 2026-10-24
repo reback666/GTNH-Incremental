@@ -15,6 +15,8 @@ import { universeRows, arcaneStats, siliconStats, abyssStats } from './universes
 import { factoryOverview } from './factory';
 
 export function buildSnapshot(core: GameCore): Snapshot {
+  const arcaneContext = core.arcaneContext();
+  const arcaneNetwork = core.arcaneExpedition.network(arcaneContext);
   const nextTier = core.maxTier < MAX_TIER ? core.maxTier + 1 : null;
   const oreRate = oreRates(core);
   const coinRate = coinRates(core);
@@ -22,7 +24,7 @@ export function buildSnapshot(core: GameCore): Snapshot {
     kind => (kind !== 'arcane' || core.hasUniverse('arcane')) &&
       (kind !== 'abyss' || core.hasUniverse('abyss')) &&
       (kind !== 'research' || core.maxTier >= RESEARCH_FROM_TIER),
-  ).map(kind => machineColumn(core, kind));
+  ).map(kind => machineColumn(core, kind, arcaneNetwork));
   return {
     // 资源条从高等级排到低等级：最新解锁的矿与币排在最前面
     ores: core.ores
@@ -66,6 +68,7 @@ export function buildSnapshot(core: GameCore): Snapshot {
     achievements: achievementStats(core),
     universes: universeRows(core),
     arcane: arcaneStats(core),
+    arcaneExpedition: core.arcaneExpedition.view(arcaneContext, arcaneNetwork),
     abyss: abyssStats(core),
     silicon: siliconStats(core),
     stats: statRows(core),

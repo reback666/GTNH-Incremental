@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useGameStore } from '../game/store';
+import { PURIFIER_FROM_TIER } from '../game/models';
+import { VOLTAGE_TIERS } from '../numeric/voltage';
 
 // 污染开关由设置页控制，这里只读取核心快照。
 const store = useGameStore();
@@ -26,6 +28,7 @@ const snap = computed(() => store.snap);
         <span class="pollution-mark" style="left: 70%">70%</span>
       </div>
       <p class="muted small" style="margin: 6px 0 0">{{ risk.bandName }}</p>
+      <p v-if="snap.maxTier < PURIFIER_FROM_TIER" class="muted small">起步阶段排放降低；{{ VOLTAGE_TIERS[PURIFIER_FROM_TIER - 1] }} 开放净化器后恢复完整排放。</p>
 
       <dl class="stats stats-loose">
         <div class="stat">
@@ -46,13 +49,13 @@ const snap = computed(() => store.snap);
       <p class="muted small" style="margin: 0">
         <template v-if="risk.boosted">
           污染在这个存档里是燃料：30% 是中性点，比它脏就增产、比它干净就减产。
-          重度污染仍然会工厂崩溃（{{ risk.collapseChance }}）
+          重度污染仍可能故障停机（{{ risk.collapseChance }}，可维护恢复）
           <template v-if="snap.abyss.active">，而且会腐蚀机器</template>。
         </template>
         <template v-else>
-          中度污染会变异（{{ risk.mutationChance }}），重度污染会工厂崩溃（{{
+          中度污染会变异（{{ risk.mutationChance }}），重度污染可能故障停机（{{
             risk.collapseChance
-          }}）。建净化器把污染压回 30% 以下。
+          }}，可维护恢复）。建净化器把污染压回 30% 以下。
         </template>
       </p>
 

@@ -19,6 +19,23 @@ const ULV_GENERATOR = 'g-ulv';
 const ULV_MACHINE = 'c-1';
 
 describe('净化器的覆盖能力', () => {
+  it('治理开放前低排放，LV 开放净化器后完整排放且生产公式不变', () => {
+    const early = new GameCore();
+    early.counts = { 'm-1': 1, 'g-ulv': 1, 'c-1': 1 };
+    early.ores[0] = dec('1000');
+    early.random = () => 0.999;
+    const industrial = new GameCore();
+    industrial.maxTier = 2;
+    industrial.counts = { ...early.counts };
+    industrial.ores[0] = dec('1000');
+    industrial.random = () => 0.999;
+    const earlyReport = early.tick(1);
+    const fullReport = industrial.tick(1);
+    expect(early.pollutionPerSecond().times(20).eq(industrial.pollutionPerSecond())).toBe(true);
+    expect(earlyReport.coinsGained[0]!.eq(fullReport.coinsGained[0]!)).toBe(true);
+    expect(early.ores[0]!.eq(industrial.ores[0]!)).toBe(true);
+    expect(industrial.isModelUnlocked(modelById('p-2'))).toBe(true);
+  });
   it('一台净化器压得住 8 台同级机器，这个比值与等级无关', () => {
     // 污染按「等级 × 台数 × 0.0008」涨、净化按「等级 × 台数 × 0.0064」降，
     // 两边都随等级线性放大，所以配比恒定（每 8 台机器配 1 台净化器）。
@@ -166,16 +183,20 @@ describe('污染在模拟里的效果', () => {
     expect(core.purifyPerSecond().toString()).toBe('0');
   });
 
-  it('重度污染会工厂崩溃：随机摧毁一台机器', () => {
+  it('重度污染只产生可修复停机，不永久摧毁普通设备', () => {
     const core = factory('80');
     core.random = () => 0; // 判定必中
-    const before = core.counts['c-3']!;
+    const before = { ...core.counts };
     core.tick(600);
     expect(core.lastReport.collapses).toBe(1);
     const totalAfter = Object.values(core.counts).reduce((sum, n) => sum + n, 0);
     const totalBefore = 40 + 20 + 20;
-    expect(totalAfter).toBe(totalBefore - 1);
-    expect(core.counts['c-3'] ?? 0).toBeLessThanOrEqual(before);
+    expect(totalAfter).toBe(totalBefore);
+    expect(core.counts).toEqual(before);
+    const victim = Object.keys(core.faults).find(id => core.faultyCountOf(id) > 0)!;
+    expect(core.faultyCountOf(victim)).toBe(1);
+    expect(core.repair(victim)).toBe(1);
+    expect(core.faultyCountOf(victim)).toBe(0);
   });
 
   it('中度污染会变异：给一笔额外奖励', () => {

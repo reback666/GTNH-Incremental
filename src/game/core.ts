@@ -1,4 +1,5 @@
 import { Decimal, ONE, ZERO, dec } from '../numeric/decimal';
+import { ArcaneExpedition, type ArcaneContext, type ArcaneNetwork } from './arcane-expedition';
 import { MAX_TIER, VOLTAGE_TIERS, isValidTier } from '../numeric/voltage';
 import { MARGINAL_COST_GROWTH, SELL_REFUND_RATE, machineCost } from '../numeric/cost';
 import { machineEnergy, machineOutput } from '../numeric/output';
@@ -76,6 +77,7 @@ import {
 } from '../numeric/grid';
 import {
   MACHINE_MODELS,
+  PURIFIER_FROM_TIER,
   canOverclock,
   modelsOf,
   type MachineCategory,
@@ -100,6 +102,13 @@ import {
   type ChallengeId,
 } from './challenges';
 import * as C from './constants';
+import { MAX_CATCH_UP_SECONDS } from './runtime';
+
+const INACTIVE_ARCANE_CONTEXT: ArcaneContext = {
+  active: false, maxTier: 1, firstMachineCost: () => ZERO, energyEU: () => ZERO,
+  canPay: () => false, pay: () => false,
+};
+const INACTIVE_ARCANE_NETWORK = new ArcaneExpedition().network(INACTIVE_ARCANE_CONTEXT);
 
 // 机型 → 数值：出力带上机型倍率，烧矿速率带上机型的燃料效率。
 // 这两个包装放在这里而不是数值层，是为了让数值层保持不依赖游戏数据。
@@ -194,6 +203,7 @@ export interface TickReport {
   outage: boolean;
   mutations: number;
   collapses: number;
+  reactorAccidents: number;
   // 这一拍新达成的成就数（音效用），以及黑市窃取发生的次数
   achievementsGained: number;
   siphons: number;
@@ -306,6 +316,13 @@ export class GameCore {
   // 每台机器各记自己的进度，中途换项目不会把已攒的进度丢掉
   researchTarget: string | null = null;
   researchProgress: Record<string, Decimal> = {};
+  researchInvestments: string[] = [];
+  arcaneExpedition = new ArcaneExpedition();
+  enchantments: Record<string, [number, number, number]> = {};
+  visPriorities: Record<string, number> = {};
+  lastVisRatios = new Map<string, Decimal>();
+  reactorRiskArmed = false;
+  reactorRiskExposure = 0;
   // 已经研究出来、可以建造的机型 id。LuV 及以前的机型不用研究，不在这个名单里
   researchedModels: string[] = [];
   playSeconds = 0;
@@ -729,6 +746,7 @@ export class GameCore {
     ).map((model) => model.id);
     this.researchTarget = null;
     this.researchProgress = {};
+    this.researchInvestments = [];
     return true;
   }
 
@@ -859,7 +877,7 @@ export class GameCore {
   offlineCapSeconds(): number {
     const base = 24 * 3600;
     const bonus = effectTotal(this.rebirthNodes, 'offlineHours').toNumber() * 3600;
-    return base + bonus;
+    return Math.min(MAX_CATCH_UP_SECONDS, base + bonus);
   }
   pollutionProductionFactor(): Decimal {
     return ONE.minus(effectTotal(this.rebirthNodes, 'pollutionReduction'));
@@ -930,6 +948,10 @@ export class GameCore {
 
   // 把本周目的一切推回开局，只留跨周目的东西
   private resetRun(): void {
+    this.arcaneExpedition.resetRun();
+    this.enchantments = {};
+    this.visPriorities = {};
+    this.lastVisRatios.clear();
     this.ores = Array.from({ length: MAX_TIER }, () => ZERO);
     this.coins = Array.from({ length: MAX_TIER }, () => ZERO);
     this.counts = {};
@@ -953,7 +975,10 @@ export class GameCore {
     this.pickaxeBlast = 0;
     this.researchTarget = null;
     this.researchProgress = {};
+    this.researchInvestments = [];
     this.researchedModels = [];
+    this.reactorRiskArmed = false;
+    this.reactorRiskExposure = 0;
     this.runEU = ZERO;
     this.riftOffered = false;
     this.challengeViolated = false;
@@ -1001,10 +1026,45 @@ export class GameCore {
   setResearchTarget(modelId: string): boolean {
     const model = MACHINE_MODELS.find((item) => item.id === modelId);
     if (!model || !needsResearch(model.tier)) return false;
+    if (this.maxTier < RESEARCH_FROM_TIER) return false;
     if (!this.universeSatisfied(model)) return false;
     if (this.researchedModels.includes(model.id)) return false;
+    if (!this.researchInvestmentPaid(model.id)) {
+      const price = this.researchInvestmentFor(model);
+      const tier = paymentTier(model.tier);
+      if (this.hasUniverse('industry')) {
+        if (!this.payAcrossTiers(price, tier)) return false;
+      } else {
+        if (this.coins[tier - 1]!.lt(price)) return false;
+        this.coins[tier - 1] = this.coins[tier - 1]!.minus(price);
+      }
+      this.researchInvestments.push(model.id);
+    }
     this.researchTarget = model.id;
     return true;
+  }
+
+  researchInvestmentPaid(modelId: string): boolean {
+    return this.researchInvestments.includes(modelId) || this.researchProgressOf(modelId).gt(0);
+  }
+
+  researchInvestmentFor(model: MachineModel): Decimal {
+    return machineCost({ baseCost: C.BASE_MACHINE_COST, tier: model.tier, purchased: 0 })
+      .times(model.costFactor).times(this.researchCostFactor()).floor();
+  }
+
+  canInvestResearch(model: MachineModel): boolean {
+    if (this.maxTier < RESEARCH_FROM_TIER || !needsResearch(model.tier) ||
+        !this.universeSatisfied(model) || this.researchedModels.includes(model.id)) return false;
+    if (this.researchInvestmentPaid(model.id)) return true;
+    const tier = paymentTier(model.tier);
+    const price = this.researchInvestmentFor(model);
+    if (!this.hasUniverse('industry')) return this.coins[tier - 1]!.gte(price);
+    let available = ZERO;
+    for (let index = 1; index <= tier; index += 1) {
+      available = available.plus(this.coins[index - 1]!.times(coinValueInTier1(index)));
+    }
+    return available.gte(price.times(coinValueInTier1(tier)));
   }
 
   // 当前选中的机型（没选、已经研究完、宇宙不支持时返回 null）。
@@ -1068,6 +1128,105 @@ export class GameCore {
 
   // ── 奥术宇宙：灵气与源质 ───────────────────────────────────
 
+  arcaneContext(): ArcaneContext {
+    return {
+      active: this.hasUniverse('arcane'), maxTier: this.maxTier,
+      firstMachineCost: tier => machineCost({ baseCost: C.BASE_MACHINE_COST, tier, purchased: 0 }),
+      energyEU: tier => machineEnergy({ baseEnergy: C.BASE_MACHINE_ENERGY, tier }),
+      canPay: (tier, amount) => {
+        const paying = paymentTier(tier);
+        if (!this.hasUniverse('industry')) return this.coins[paying - 1]!.gte(amount);
+        let value = ZERO;
+        for (let t = 1; t <= paying; t++) value = value.plus(this.coins[t - 1]!.times(coinValueInTier1(t)));
+        return value.gte(amount.times(coinValueInTier1(paying)));
+      },
+      pay: (tier, amount) => {
+        if (amount.lt(0)) return false;
+        const paying = paymentTier(tier);
+        if (this.hasUniverse('industry')) return this.payAcrossTiers(amount, paying);
+        if (this.coins[paying - 1]!.lt(amount)) return false;
+        this.coins[paying - 1] = this.coins[paying - 1]!.minus(amount);
+        return true;
+      },
+      refund: (tier, amount) => {
+        const paying = paymentTier(tier);
+        this.coins[paying - 1] = this.coins[paying - 1]!.plus(amount);
+      },
+    };
+  }
+
+  visPriorityOf(id: string): number { return this.visPriorities[id] ?? 1; }
+
+  setVisPriority(id: string, priority: number): boolean {
+    const model = MACHINE_MODELS.find(m => m.id === id);
+    if (!this.hasUniverse('arcane') || !model || (!model.visPowered && !this.enchantments[id]) || ![0, 1, 2].includes(priority)) return false;
+    this.visPriorities[id] = priority;
+    return true;
+  }
+
+  enchantmentQuote(model: MachineModel, level: number): { count: number; cost: Decimal } {
+    if (![1, 2, 3].includes(level) || model.category !== 'machine' || model.visPowered) return { count: 0, cost: ZERO };
+    const counts = this.enchantments[model.id] ?? [0, 0, 0];
+    const plain = Math.max(0, this.countOf(model.id) - counts.reduce((sum, n) => sum + n, 0));
+    let count = plain, weighted = dec(String(plain * level));
+    for (let i = 1; i < level; i++) {
+      count += counts[i - 1]!;
+      weighted = weighted.plus(dec(String(counts[i - 1]! * (level - i))));
+    }
+    return { count, cost: this.arcaneContext().firstMachineCost(model.tier).times('0.1').times(weighted) };
+  }
+
+  enchant(modelId: string, level: number): boolean {
+    const model = MACHINE_MODELS.find(m => m.id === modelId);
+    const context = this.arcaneContext();
+    if (!context.active || !model || model.tier > this.maxTier || this.arcaneExpedition.network(context).enchantmentLevel < level) return false;
+    const quote = this.enchantmentQuote(model, level);
+    if (quote.count <= 0 || !context.pay(model.tier, quote.cost)) return false;
+    const counts = this.enchantments[modelId] ?? [0, 0, 0];
+    for (let i = 0; i < level - 1; i++) counts[i] = 0;
+    counts[level - 1] = counts[level - 1]! + quote.count;
+    this.enchantments[modelId] = counts;
+    return true;
+  }
+
+  magicVisDemandOf(model: MachineModel, network?: ArcaneNetwork): Decimal {
+    if (!model.visPowered || model.tier > this.maxTier || !this.universeSatisfied(model)) return ZERO;
+    const base = model.category === 'miner' ? minerEnergyEU(model.tier) : visPerMachine(model.tier);
+    return base.times(overclockEnergyMultiplier(this.overclockOf(model.id))).times(this.workingCountOf(model.id))
+      .times(network?.demandMultiplier ?? ONE);
+  }
+
+  enchantmentVisDemandOf(model: MachineModel, network?: ArcaneNetwork): Decimal {
+    const counts = this.enchantments[model.id];
+    if (!counts || !this.hasUniverse('arcane') || this.countOf(model.id) === 0) return ZERO;
+    let demand = ZERO;
+    for (let i = 0; i < 3; i++) demand = demand.plus(dec(['0.04', '0.06', '0.08'][i]!).times(counts[i]!));
+    return demand.times(dec('4').pow(model.tier - 2)).times(dec('2').pow(this.overclockOf(model.id)))
+      .times(this.workingCountOf(model.id)).div(this.countOf(model.id)).times(network?.demandMultiplier ?? ONE);
+  }
+
+  enchantmentBonusOf(model: MachineModel): Decimal {
+    const counts = this.enchantments[model.id];
+    if (!counts || this.countOf(model.id) === 0) return ZERO;
+    return counts.reduce((sum, n, i) => sum.plus(dec(['0.04', '0.07', '0.10'][i]!).times(n)), ZERO).div(this.countOf(model.id));
+  }
+
+  private allocateVis(active: MachineModel[], supply: Decimal, network: ArcaneNetwork): Decimal {
+    const demands = active.map(model => ({ model, demand: this.magicVisDemandOf(model, network).plus(this.enchantmentVisDemandOf(model, network)) }));
+    this.lastVisRatios = new Map();
+    let remaining = supply, used = ZERO;
+    for (let priority = 0; priority <= 2; priority++) {
+      const group = demands.filter(row => this.visPriorityOf(row.model.id) === priority);
+      const total = group.reduce((sum, row) => sum.plus(row.demand), ZERO);
+      const allocated = Decimal.min(remaining, total);
+      const ratio = total.gt(0) ? allocated.div(total) : ONE;
+      for (const row of group) this.lastVisRatios.set(row.model.id, ratio);
+      remaining = Decimal.max(ZERO, remaining.minus(allocated));
+      used = used.plus(allocated);
+    }
+    return used;
+  }
+
   // 灵气节点的额定灵气产量（灵气/秒）
   nodeVisRated(): Decimal {
     let total = ZERO;
@@ -1106,20 +1265,9 @@ export class GameCore {
   // 魔法机器要多少灵气：每台按该等级的「本级 1A」算，超频按档位翻倍。
   // 采矿机只吃 1A 的 1/4（和耗电曲线一致）。坏掉的机器不耗灵气，和耗电一个规矩。
   magicVisDemand(): Decimal {
-    let demand = ZERO;
-    for (const model of MACHINE_MODELS) {
-      if (!model.visPowered || model.tier > this.maxTier) continue;
-      const working = this.workingCountOf(model.id);
-      if (working <= 0) continue;
-      const base =
-        model.category === 'miner'
-          ? minerEnergyEU(model.tier)
-          : visPerMachine(model.tier);
-      demand = demand.plus(
-        base.times(overclockEnergyMultiplier(this.overclockOf(model.id))).times(working),
-      );
-    }
-    return demand;
+    const network = this.arcaneExpedition.network(this.arcaneContext());
+    return MACHINE_MODELS.filter(model => model.tier <= this.maxTier).reduce((sum, model) =>
+      sum.plus(this.magicVisDemandOf(model, network)).plus(this.enchantmentVisDemandOf(model, network)), ZERO);
   }
 
   // 存电装置的总容量（EU）
@@ -1175,6 +1323,7 @@ export class GameCore {
 
   generatorOutputRated(model: MachineModel): Decimal {
     return outputOf(model)
+      .times(this.reactorRiskFactor(model))
       .times(this.totalBonus('generatorOutput'))
       .times(this.workingCountOf(model.id));
   }
@@ -1191,7 +1340,32 @@ export class GameCore {
     return generatorFuelRate(model.tier, {
       outputFactor: model.outputFactor,
       efficiency,
-    });
+    }).times(this.reactorRiskFactor(model));
+  }
+
+  reactorRiskFactor(model: MachineModel): Decimal {
+    return this.reactorRiskArmed && model.id === C.HIGH_RISK_REACTOR_MODEL
+      ? dec(C.REACTOR_RISK_OUTPUT_FACTOR) : ONE;
+  }
+
+  setReactorRisk(enabled: boolean, confirmed = false): boolean {
+    if (enabled && (!confirmed || this.countOf(C.HIGH_RISK_REACTOR_MODEL) === 0)) return false;
+    this.reactorRiskArmed = enabled;
+    return true;
+  }
+
+  private settleReactorRisk(seconds: number, load: Map<string, Decimal>, report: TickReport): void {
+    if (!this.reactorRiskArmed) return;
+    const id = C.HIGH_RISK_REACTOR_MODEL;
+    this.reactorRiskExposure += seconds * (load.get(id)?.toNumber() ?? 0);
+    while (this.reactorRiskExposure >= C.REACTOR_RISK_CHECK_SECONDS && this.countOf(id) > 0) {
+      this.reactorRiskExposure -= C.REACTOR_RISK_CHECK_SECONDS;
+      if (this.random() >= C.REACTOR_RISK_CHANCE) continue;
+      this.counts[id] = this.countOf(id) - 1;
+      this.faults[id] = Math.min(this.faultyCountOf(id), this.countOf(id));
+      report.reactorAccidents++;
+    }
+    if (this.countOf(id) === 0) this.reactorRiskArmed = false;
   }
 
   // 净化器不跑配方，和发电机一样不参与超频
@@ -1275,7 +1449,8 @@ export class GameCore {
         });
       }
     }
-    return pollutionPerSecond(machinery).times(
+    const stageFactor = this.maxTier < PURIFIER_FROM_TIER ? dec(C.EARLY_POLLUTION_FACTOR) : ONE;
+    return pollutionPerSecond(machinery).times(stageFactor).times(
       ONE.minus(effectTotal(this.rebirthNodes, 'pollutionReduction')),
     );
   }
@@ -1303,7 +1478,7 @@ export class GameCore {
         // 发电机不接负载，它烧到多少燃料就干了多少活（魔法发电机吃灵气）
         this.pollutionLoad.set(
           model.id,
-          model.visPowered ? input.visRatio : (input.fuelLoad.get(model.id) ?? ONE),
+          model.visPowered ? (this.lastVisRatios.get(model.id) ?? input.visRatio) : (input.fuelLoad.get(model.id) ?? ONE),
         );
         continue;
       }
@@ -1311,7 +1486,7 @@ export class GameCore {
         this.pollutionLoad.set(model.id, ZERO);
         continue;
       }
-      this.pollutionLoad.set(model.id, model.visPowered ? input.visRatio : input.ratio);
+      this.pollutionLoad.set(model.id, model.visPowered ? (this.lastVisRatios.get(model.id) ?? input.visRatio) : input.ratio);
     }
   }
 
@@ -1344,7 +1519,7 @@ export class GameCore {
 
   // 污染带来的两个事件（计划书第六章）：
   //   30-70%：每分钟 20% 概率"变异"——按当前每秒产币给 30 秒的量
-  //   >70%：每 10 分钟 10% 概率"工厂崩溃"——随机摧毁一台机器
+  //   >70%：每 10 分钟 10% 概率使一台运行机器故障，维护后可恢复。
   private handlePollutionEvents(dtSeconds: number, report: TickReport): void {
     const band = pollutionBand(this.pollution);
     if (band === 'mutating') {
@@ -1373,7 +1548,7 @@ export class GameCore {
     this.collapseTimer += dtSeconds;
     if (this.collapseTimer >= 600) {
       this.collapseTimer -= 600;
-      if (this.random() < COLLAPSE_CHANCE_PER_10_MINUTES && this.destroyOneMachine()) {
+      if (this.random() < COLLAPSE_CHANCE_PER_10_MINUTES && this.faultOneMachine()) {
         report.collapses += 1;
       }
     }
@@ -1399,15 +1574,12 @@ export class GameCore {
     return perSecond.times(MUTATION_REWARD_SECONDS);
   }
 
-  // 工厂崩溃：从所有已建机器里随机挑一台摧毁，返回是否真的毁掉了东西
-  private destroyOneMachine(): boolean {
-    const owned = MACHINE_MODELS.filter((model) => this.countOf(model.id) > 0);
+  private faultOneMachine(): boolean {
+    const owned = MACHINE_MODELS.filter((model) => model.tier <= this.maxTier &&
+      model.category !== 'storage' && this.universeSatisfied(model) && this.workingCountOf(model.id) > 0);
     if (owned.length === 0) return false;
     const victim = owned[Math.floor(this.random() * owned.length)]!;
-    const left = this.countOf(victim.id) - 1;
-    if (left > 0) this.counts[victim.id] = left;
-    else delete this.counts[victim.id];
-    if (this.faultyCountOf(victim.id) > left) this.faults[victim.id] = Math.max(0, left);
+    this.faults[victim.id] = this.faultyCountOf(victim.id) + 1;
     return true;
   }
 
@@ -1581,6 +1753,13 @@ export class GameCore {
       const have = this.countOf(model.id);
       if (have <= 0) break;
       this.counts[model.id] = have - 1;
+      const enchanted = this.enchantments[model.id];
+      if (enchanted) {
+        for (let level = 2; level >= 0; level--) {
+          if (enchanted[level]! > 0) { enchanted[level]!--; break; }
+        }
+        if (enchanted.every(n => n === 0)) delete this.enchantments[model.id];
+      }
       // 退款按「卖出后的台数」定价：卖掉的那一台本来就是按这一档买进来的，
       // 这样买 N 台再全卖回去，拿回的钱正好是买价的一半（用卖出前的台数会多退一档）
       const refund = this.refundOf(model, payWith);
@@ -1589,6 +1768,7 @@ export class GameCore {
       if (faulty !== undefined && faulty > have - 1) this.faults[model.id] = have - 1;
       // 卖光了就不留停机记录，免得以后重新买回来还是停着的
       if (have - 1 === 0) delete this.stopped[model.id];
+      if (have - 1 === 0 && model.id === C.HIGH_RISK_REACTOR_MODEL) this.reactorRiskArmed = false;
       if (payWith === 'ore') this.ores[index] = this.ores[index]!.plus(refund);
       else this.coins[index] = this.coins[index]!.plus(refund);
       sold += 1;
@@ -1678,6 +1858,11 @@ export class GameCore {
     // 1) 耗电需求。坏掉的机器不耗电，超频的机器按档位吃电。
     // 耗电按类别分开记：硅基宇宙的停机调度要按类别整组停
     const demandByKind = new Map<MachineKind, Decimal>();
+    const arcaneContext = this.hasUniverse('arcane') ? this.arcaneContext() : INACTIVE_ARCANE_CONTEXT;
+    if (arcaneContext.active) this.arcaneExpedition.prepare(arcaneContext);
+    const arcaneNetwork = arcaneContext.active ? this.arcaneExpedition.network(arcaneContext) : INACTIVE_ARCANE_NETWORK;
+    const expeditionDemand = arcaneContext.active ? this.arcaneExpedition.energyDemand(arcaneContext).times(this.energyFactor()) : ZERO;
+    if (expeditionDemand.gt(0)) demandByKind.set('research', expeditionDemand);
     for (const model of active) {
       // 发电机不耗电（出力在下面单独算），魔法机器要的是灵气
       if (model.category !== 'generator' && !model.visPowered) {
@@ -1754,13 +1939,15 @@ export class GameCore {
       report.essentiaUsed = essentiaUsed;
 
       const factor = nodeOutputFactor(essentiaUsed, essentiaNeed);
-      const vis = this.nodeVisRated().times(factor);
-      const visNeed = this.magicVisDemand();
+      const vis = this.nodeVisRated().times(factor).plus(arcaneNetwork.vis);
+      const visNeed = active.reduce((sum, model) => sum.plus(this.magicVisDemandOf(model, arcaneNetwork)).plus(this.enchantmentVisDemandOf(model, arcaneNetwork)), ZERO);
       report.visProduced = vis;
-      report.visUsed = Decimal.min(vis, visNeed);
+      report.visUsed = this.allocateVis(active, vis, arcaneNetwork);
       visRatio = visNeed.lte(0) ? ONE : Decimal.min(ONE, vis.div(visNeed));
       // 没有魔法机器就没有加成：奥术宇宙的收益得靠魔法机器自己挣
-      plenty = visNeed.gt(0) ? visRatio : ZERO;
+      const magicNeed = active.reduce((sum, model) => sum.plus(this.magicVisDemandOf(model, arcaneNetwork)), ZERO);
+      const magicAllocated = active.reduce((sum, model) => sum.plus(this.magicVisDemandOf(model, arcaneNetwork).times(this.lastVisRatios.get(model.id) ?? ZERO)), ZERO);
+      plenty = magicNeed.gt(0) ? Decimal.min(ONE, magicAllocated.div(magicNeed)) : ZERO;
       report.arcanePlenty = plenty;
 
       // 魔法发电机：不烧矿，直接按拿到的灵气出力
@@ -1768,7 +1955,8 @@ export class GameCore {
         if (model.category !== 'generator' || !model.visPowered) continue;
         magicCapacity = magicCapacity.plus(
           this.generatorOutputRated(model)
-            .times(visRatio)
+            .times(this.lastVisRatios.get(model.id) ?? ZERO)
+            .times(arcaneNetwork.magicMultiplierByTier[model.tier] ?? ONE)
             .times(arcaneOutputBonus(plenty, true, arcaneBonusUp)),
         );
       }
@@ -1852,6 +2040,7 @@ export class GameCore {
       !report.outage && this.hasRebirthEffect('softLoading')
         ? ONE.minus(ONE.minus(ratioDec).times('0.5'))
         : ratioDec;
+    if (arcaneContext.active) this.arcaneExpedition.tick(dtSeconds, shed.has('research') ? 0 : ratioDec.toNumber(), arcaneContext);
 
     // 污染：边污染边被净化器压，产出按污染档位打折
     this.samplePollutionLoad({ shed, outage: report.outage, ratio: outputRatio, visRatio, fuelLoad });
@@ -1879,11 +2068,17 @@ export class GameCore {
     const factorOf = (model: MachineModel): Decimal => {
       // 被停机调度停掉的那几类：这一拍不产
       if (shed.has(model.category)) return ZERO;
-      const driven = arcane && model.visPowered ? visRatio : outputRatio;
+      const driven = arcane && model.visPowered ? (this.lastVisRatios.get(model.id) ?? ZERO) : outputRatio;
       const bonus = arcane
         ? arcaneOutputBonus(plenty, model.visPowered === true, arcaneBonusUp)
         : ONE;
-      return driven.times(pollutionFactor).times(bonus);
+      let factor = driven.times(pollutionFactor).times(bonus);
+      if (arcane && model.visPowered) {
+        factor = factor.times(arcaneNetwork.magicMultiplierByTier[model.tier] ?? ONE);
+        if (model.category === 'machine') factor = factor.times(arcaneNetwork.fireMultiplier);
+        if (model.category === 'miner') factor = factor.times(arcaneNetwork.earthMultiplier);
+      }
+      return factor;
     };
 
     // 4) 采矿机产矿。超频提速，坏了的机器不算数
@@ -1919,7 +2114,8 @@ export class GameCore {
       const oreTier = model.tier - 1;
       const available = this.ores[oreTier]!;
       const feed = Decimal.min(wantOre, available);
-      const actual = wantOre.gt(0) ? produce.times(feed.div(wantOre)) : produce;
+      let actual = wantOre.gt(0) ? produce.times(feed.div(wantOre)) : produce;
+      if (arcane && !model.visPowered) actual = actual.times(ONE.plus(this.enchantmentBonusOf(model).times(this.lastVisRatios.get(model.id) ?? ZERO)));
       if (feed.gt(0)) {
         this.ores[oreTier] = available.minus(feed);
         report.oreSpent[oreTier] = report.oreSpent[oreTier]!.plus(feed);
@@ -1935,7 +2131,7 @@ export class GameCore {
     // 5b) 研究：计算机产算力，研究站吃算力推进研究进度。
     //     算力是流量 —— 产出来当拍不用掉就浪费掉；缺电按供电比例少产。
     //     它不受污染影响：污染惩罚的是"产出物"（矿与币），不是基础设施。
-    const computeProduced = this.computerComputeRated().times(outputRatio);
+    const computeProduced = shed.has('research') ? ZERO : this.computerComputeRated().times(outputRatio);
     const computeSettlement = settleCompute(computeProduced, this.labComputeDemand());
     report.computeProduced = computeProduced;
     report.computeUsed = computeSettlement.used;
@@ -2023,6 +2219,7 @@ export class GameCore {
       this.handlePollutionEvents(dtSeconds, report);
     }
     // 8) 黑市电网：每分钟随机薅走一种 GT 币的 1%
+    this.settleReactorRisk(dtSeconds, fuelLoad, report);
     if (this.grid === 'black') {
       this.siphonTimer += dtSeconds;
       if (this.siphonTimer >= SIPHON_CHECK_SECONDS) {
@@ -2125,6 +2322,7 @@ function emptyReport(): TickReport {
     outage: false,
     mutations: 0,
     collapses: 0,
+    reactorAccidents: 0,
     euCharged: ZERO,
     euDischarged: ZERO,
     faultsGained: 0,

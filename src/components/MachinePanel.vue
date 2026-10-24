@@ -119,6 +119,12 @@ function showTip(event: Event, model: MachineModelRow) {
 function hideTip() {
   tip.value = null;
 }
+function toggleReactorRisk(model: MachineModelRow) {
+  if (!model.reactorRisk) return;
+  if (model.reactorRisk.armed) { store.setReactorRisk(false); return; }
+  const accepted = window.confirm(`启用${model.name}高风险模式？\n发电能力与耗矿均变为 ${model.reactorRisk.factor} 倍；每累计满负载运行 10 分钟有 ${model.reactorRisk.chance} 概率永久损失一台本机型。\n其他设备与库存不受事故影响，可随时关闭。`);
+  if (accepted) store.setReactorRisk(true, true);
+}
 onDeactivated(hideTip);
 
 // 悬停「超频」：这一档到底换来了多少速度、多花了多少电、故障率变多高
@@ -346,6 +352,20 @@ function canBuy(model: MachineModelRow): boolean {
               </span>
 
               <span class="trade">
+                <span v-if="bar.model.visControl" class="muted small" :title="bar.model.visControl.note">
+                  灵气 {{ bar.model.visControl.allocated }} / {{ bar.model.visControl.demand }}
+                  <label>优先级
+                    <select :value="bar.model.visControl.priority" @change="store.setVisPriority(bar.model.id, Number(($event.target as HTMLSelectElement).value))">
+                      <option :value="0">高</option><option :value="1">中</option><option :value="2">低</option>
+                    </select>
+                  </label>
+                </span>
+                <span v-if="bar.model.enchantment" class="muted small" title="新增机器不自动附魔；出售优先移除最高附魔，不退安装费。缺灵气只衰减附加收益。">
+                  {{ bar.model.enchantment.summary }}
+                  <button v-for="option in bar.model.enchantment.options" :key="option.level" type="button" :disabled="!option.enabled"
+                    :title="`${option.count} 台；补差 ${option.cost}；在实际基础产币上附加 ${[4, 7, 10][option.level - 1]}%`"
+                    @click="store.enchant(bar.model.id, option.level)">{{ ['I', 'II', 'III'][option.level - 1] }}级附魔</button>
+                </span>
                 <button :disabled="!canBuy(bar.model)" @click="store.buy(bar.model.id, 1, payWith)">1x</button>
                 <button :disabled="!canBuy(bar.model)" @click="store.buy(bar.model.id, 10, payWith)">10x</button>
                 <span class="trade-label">买</span>
@@ -407,6 +427,9 @@ function canBuy(model: MachineModelRow): boolean {
                   维护
                 </button>
               </span>
+              <button v-if="bar.model.reactorRisk" type="button" :disabled="bar.model.count === 0" :aria-pressed="bar.model.reactorRisk.armed"
+                :title="`发电与耗矿 ×${bar.model.reactorRisk.factor}；每 10 分钟 ${bar.model.reactorRisk.chance} 概率损失一台本机型；累计暴露 ${bar.model.reactorRisk.exposure}`"
+                @click="toggleReactorRisk(bar.model)">{{ bar.model.reactorRisk.armed ? '关闭高风险模式' : '高风险模式' }}</button>
               <span class="trade">
                 <button
                   class="sell-btn"
@@ -471,6 +494,8 @@ function canBuy(model: MachineModelRow): boolean {
                   :key="row.id"
                   type="button"
                   class="research-item"
+                  :disabled="!row.canInvest"
+                  :title="row.invested ? '继续研究，不重复收费' : `投资 ${row.investment} ${row.coinName}，之后需等待算力研究完成`"
                   @click="store.setResearchTarget(row.id)"
                 >
                   <span class="research-item-head">
@@ -481,6 +506,7 @@ function canBuy(model: MachineModelRow): boolean {
                     </b>
                     <span class="muted small">需要 {{ row.required }} 算力</span>
                   </span>
+                  <span class="muted small">{{ row.invested ? '已投资 · 继续研究' : `投资 ${row.investment} ${row.coinName}` }}</span>
                   <span v-if="row.percent > 0" class="research-bar">
                     <span :style="{ width: row.percent + '%' }" />
                   </span>
