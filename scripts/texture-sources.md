@@ -147,9 +147,11 @@ blast 1~14 级：原图本身是彩色的，机器那套淡染（`TINT_STRENGTH 
 
 ## 原生 3D 主厂区
 
-151 个 GT 机型的六面材质、运行覆盖层和发光覆盖层从本机运行中的客户端导出，原始材质由已启用资源包与模组 jar 提供；多方块结构由原 StructureLib 定义逐格展开，含控制器、机壳和仓口。可复现导出源为 `scripts/native-models/ModelProbe.java`、`capture.py`、`capture.json`、`structures.json` 与 `build-models.py`，生成清单为 `src/assets/factory3d/native-manifest.json`。
+151 个 GT 机型的六面材质、运行覆盖层和发光覆盖层从本机运行中的客户端导出，原始材质由已启用资源包与模组 jar 提供；多方块结构由原 StructureLib 定义逐格展开，外观规则见 `docs/architecture.md`。可复现导出源为 `scripts/native-models/ModelProbe.java`、`capture.py`、`capture.json`、`structures.json` 与 `build-models.py`，生成清单为 `src/assets/factory3d/native-manifest.json`。
 
 奥术钻机、奥术装配器和通量洗涤器使用原模组 Java/OBJ 网格；灵气节点使用原生节点动态图集和加法混合光效。导出脚本为 `scripts/native-models/custom-models.py`，运行时清单为 `src/assets/factory3d/custom-manifest.json`。
+
+鸿蒙之眼和四种大型涡轮的运行特效使用原版 `Star.obj`、`Space.obj`、恒星与宇宙壳纹理、轨道方块六面纹理及九宫格转子条带。执行 `python -B scripts/native-models/export-effects.py --minecraft "<本机 .minecraft 目录>"` 重新导出，资源包覆盖顺序复用 `scripts/native-icons/manifest.json`。逐张来源、动画时长、模型路径和原版渲染参数统一记录在 `src/assets/factory3d/effects-manifest.json`。轨道按原版生成规则使用固定种子，避免页面重建改变外观；宇宙壳最大 2048 像素宽、恒星层最大 1024 像素宽，以最近邻等比缩小并保留原尺寸记录，减少显存与便携包体积。
 
 生成命令：`python -B scripts/extract-factory3d.py --pack "<Modernity-GTNH.zip>"`。输出保留原始 PNG 条带，运行时按 mcmeta 合成机壳与覆盖层。厂区地板的原三层蓝图与材质来源见 `gtnh3d/ASSETS.md`，铺设约束见 `gtnh3d/README.md`。
 
@@ -161,8 +163,6 @@ blast 1~14 级：原图本身是彩色的，机器那套淡染（`TINT_STRENGTH 
 
 本机已核对的实例为 `D:\Prism\PrismLauncher\instances\GT_New_Horizons_2.8.4_Java_17-25\.minecraft`，Modernity 包位于其 `resourcepacks/Modernity-GTNH-9ebdeed-pre.zip`。路径是本地提取来源，不是游戏运行依赖；游戏所需已导出素材仍内联至便携 HTML。
 
-## 旧等距场景机壳素材
+## 外部场地材质
 
-`src/assets/casings/<textureKey>-side.png` 与 `<textureKey>-top.png` 由 `build-scene-casings.py` 从本机 GT5-Unofficial 开发包的 `iconsets/MACHINE_<voltage>_SIDE/TOP.png` 提取。
-文件名由电压配置的 `textureKey` 决定，原版机壳电压可由 `casingVoltage` 指定。
-染色复用 `gtnh_tiers.py`；缺少独立顶面的等级使用同级侧面。这些素材保留在素材目录中，当前 3D 主厂区不使用它们。
+`src/assets/factory3d/terrain-atlas.png` 由 `scripts/export-terrain-textures.py --pack "<Modernity 资源包路径>"` 从本节前述本机资源包的 Minecraft 方块贴图生成。每张贴图取第一帧，以最近邻统一为 16×16，并增加一像素边缘；用于静态场地，不作为机器动画素材。逐张源路径由 `terrain-manifest.json` 的 `sourcePrefix` 与贴图键确定，清单同时记录原始尺寸及图集位置。材质和形状识别规则以 `src/scene/factory3d/terrain-catalog.ts` 为准；不识别的方块必须由用户显式替换或跳过。

@@ -112,7 +112,7 @@ def tint_frame(frame: Image.Image, color: tuple[int, int, int]) -> Image.Image:
 
 
 def tint_frame_rainbow(frame: Image.Image) -> Image.Image:
-    """MAX 的满帧按横向彩虹染色（与机壳 gtnh_tiers.MAX_RAINBOW 同源）。"""
+    """MAX 的满帧按共享电压配色 MAX_RAINBOW 横向染色。"""
     out = Image.new("RGBA", frame.size)
     src, dst = frame.load(), out.load()
     peak = max(

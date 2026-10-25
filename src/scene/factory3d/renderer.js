@@ -1,14 +1,15 @@
 import * as THREE from 'three';
-import { BlockWorld, FLOOR_LAYERS } from '../../../gtnh3d/src/blocks.js';
-import { placeFloor } from '../../../gtnh3d/src/layout.js';
-import { meshWorld } from '../../../gtnh3d/src/mesher.js';
 import { buildAtlas } from '../../../gtnh3d/src/atlas.js';
 import * as floorTextures from '../../../gtnh3d/src/textures.js';
 import nativeManifest from '../../assets/factory3d/native-manifest.json';
 import customManifest from '../../assets/factory3d/custom-manifest.json';
-import { createCompactLayout } from './compact-layout';
+import { createGroundView } from './ground-view';
+import { createGround, isGroundCoordinate } from './ground';
+import { machineGridPosition, machineIndexAtCell } from './model-layout';
 import { matchesSceneFilter } from './state';
 import { createCustomGeometry, createModelGeometry, createNativeAtlas, nativeModel } from './native-geometry';
+import { loadMultiblockAssets } from './effect-assets';
+import { createMultiblockEffects, modelCenterOffset, multiblockEffectKind } from './multiblock-effects';
 
 const nativeUrls = import.meta.glob('../../assets/factory3d/native/*.png', {
   eager: true, query: '?url', import: 'default',
@@ -16,8 +17,6 @@ const nativeUrls = import.meta.glob('../../assets/factory3d/native/*.png', {
 const customUrls = import.meta.glob('../../assets/factory3d/custom/*.png', {
   eager: true, query: '?url', import: 'default',
 });
-const ORIGIN_X = 74.5;
-const ORIGIN_Z = 75.5;
 const PARTICLE_LIMIT = 512;
 
 function loadImage(src, key) {
@@ -31,22 +30,6 @@ function loadImage(src, key) {
 
 function modelFootprint(model) {
   return { width: model.size[0], depth: model.size[2] };
-}
-
-function floorSurface(world, x, z, width, depth) {
-  let surface = 0;
-  for (let offsetX = 0; offsetX < width; offsetX++) {
-    for (let offsetZ = 0; offsetZ < depth; offsetZ++) {
-      const columnX = x + offsetX;
-      const columnZ = z + offsetZ;
-      for (let layer = FLOOR_LAYERS - 1; layer >= 0; layer--) {
-        if (!world.get(columnX, layer, columnZ)) continue;
-        surface = Math.max(surface, layer + 1);
-        break;
-      }
-    }
-  }
-  return surface;
 }
 
 function disposeObject(object) {
@@ -68,9 +51,6 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
   })));
   const floorSources = Object.fromEntries(Object.entries(floorTextures).filter(([key]) => key.startsWith('floor')));
   const floorAtlas = await buildAtlas(floorSources);
-  const world = new BlockWorld();
-  placeFloor(world);
-  const floor = meshWorld(world, floorAtlas);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
   // 方块贴图本身就是像素风；1 倍内部像素既清晰，又避免大厂区的填充率翻倍。
   renderer.setPixelRatio(1);
@@ -83,8 +63,14 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
   const sun = new THREE.DirectionalLight(0xfff8e5, 2.4);
   sun.position.set(-30, 90, 40);
   scene.add(sun);
-  const floorMaterial = new THREE.MeshBasicMaterial({ map: floorAtlas.texture, vertexColors: true, alphaTest: 0.02 });
-  for (const part of floor.meshes) scene.add(new THREE.Mesh(part.geo, floorMaterial));
+  const ground = createGroundView(scene, floorAtlas);
+  let groundDesign = createGround();
+  let groundSite = '';
+  let groundStructure = null;
+  let groundRevision = 0;
+  let editor = { tool: 'view', material: 'white-concrete', layer: 0 };
+  const cameraPoses = new Map();
+  let pendingPose = null;
 
   // MC 创造飞行：相机位置与视线相互独立，不围绕一个固定目标旋转。
   let yaw = 0;
@@ -143,7 +129,6 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
   }
   const machines = new THREE.Group();
   scene.add(machines);
-  const compactLayout = options.compact ? createCompactLayout() : null;
   const batches = new Map();
   const placements = new Map();
   const geometryCache = new Map();
@@ -161,7 +146,9 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
   particles.frustumCulled = false;
   particles.count = 0;
   scene.add(particles);
+  const multiblockEffects = createMultiblockEffects(scene, await loadMultiblockAssets(renderer.capabilities.maxTextureSize));
   let states = [];
+  let totalOwned = 0;
   let animate = true;
   let active = true;
   let visible = true;
@@ -180,6 +167,7 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
   let needsParticles = false;
   let hasEffects = false;
   let needsEffects = false;
+  let needsMultiblockAnimation = false;
   let activeTextureKeys = new Set();
   const matrix = new THREE.Matrix4();
   const raycaster = new THREE.Raycaster();
@@ -197,6 +185,7 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
     const geometry = model.kind === 'custom' || model.kind === 'effect'
       ? createCustomGeometry(customManifest, id) : createModelGeometry(nativeManifest, id, mode, nativeAtlas);
     if (model.center) geometry.translate(-model.center[0], -model.center[1], -model.center[2]);
+    else if (model.blocks) geometry.translate(...modelCenterOffset(model).map(value => -value));
     geometryCache.set(key, geometry);
     return geometry;
   }
@@ -207,16 +196,14 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
     if (cached) return cached;
     const model = nativeModel(nativeManifest, state.id);
     const footprint = modelFootprint(model);
-    const point = compactLayout
-      ? compactLayout.position(state.id, index, footprint)
-      : { x: (index % 32) * (footprint.width + 1), z: Math.floor(index / 32) * (footprint.depth + 1) };
-    const x = ORIGIN_X + point.x;
-    const z = ORIGIN_Z + point.z;
-    const surface = floorSurface(world, Math.floor(x), Math.floor(z), footprint.width, footprint.depth);
+    const slot = machineGridPosition(index);
+    const x = groundDesign.machine.x - Math.floor(footprint.width / 2) + slot.x * (footprint.width + 1);
+    const z = groundDesign.machine.z - Math.floor(footprint.depth / 2) + slot.z * (footprint.depth + 1);
+    const surface = ground.surface(x, z, footprint.width, footprint.depth);
     const position = new THREE.Vector3(
-      x + (footprint.width - 1) / 2,
+      x + footprint.width / 2,
       surface + model.size[1] / 2,
-      z + (footprint.depth - 1) / 2,
+      z + footprint.depth / 2,
     );
     const placement = { position, model, footprint };
     placements.set(key, placement);
@@ -250,10 +237,11 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
       if (matchesSceneFilter(state, filter) && state.activity > 0 && state.running > 0) activeTextures(state.id, 'active', activeTextureKeys);
     }
     needsParticles = animate && next.some(state => matchesSceneFilter(state, filter)
-      && state.category === 'generator' && state.activity > 0 && state.running > 0);
+      && state.category === 'generator' && state.activity > 0 && state.running > 0 && !multiblockEffectKind(state.id));
     hasEffects = next.some(state => matchesSceneFilter(state, filter) && state.modelKind === 'effect');
     needsEffects = animate && hasEffects && effectTextures.length > 0;
-    needsAnimation = needsNativeAnimation || needsParticles || needsEffects;
+    needsMultiblockAnimation = animate && multiblockEffects.hasRunning;
+    needsAnimation = needsNativeAnimation || needsParticles || needsEffects || needsMultiblockAnimation;
   }
 
   function labels() {
@@ -274,6 +262,7 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
     selected = id;
     const state = states.find(item => item.id === id && item.count > 0);
     selectedIndex = state ? Math.min(Math.max(0, index), state.count - 1) : 0;
+    canvas.dataset.instanceIndex = String(selectedIndex);
     highlight.visible = !!state && matchesSceneFilter(state, filter);
     if (highlight.visible) {
       const { position, model } = placementFor(state, selectedIndex);
@@ -290,8 +279,10 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
     batches.delete(key);
   }
 
-  function update(next, animated, nextFilter = {}) {
+  function update(next, animated, nextFilter = {}, ownedCount = next.reduce((sum, state) => sum + state.count, 0)) {
     states = next;
+    totalOwned = ownedCount;
+    selected = next[0]?.id ?? null;
     const motionChanged = animate !== animated;
     animate = animated;
     filter = nextFilter;
@@ -352,10 +343,15 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
       }
     }
     for (const key of [...batches.keys()]) if (!used.has(key)) releaseBatch(key);
+    multiblockEffects.update(next, filter, placementFor, matchesSceneFilter);
     // 静态厂区不维持空转循环。运行但没有动画纹理的设备也不需要逐帧重绘。
     configureAnimation(next);
     signature = nextSignature;
     if (!fitted && !deviceBounds.isEmpty()) { fitted = true; reset(); }
+    if (pendingPose) {
+      camera.position.copy(pendingPose.position); yaw = pendingPose.yaw; pitch = pendingPose.pitch;
+      applyLook(); pendingPose = null;
+    }
     select(selected, selectedIndex);
     labels();
     publishMetrics();
@@ -367,13 +363,19 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
     const visibleCount = shown.reduce((sum, state) => sum + state.count, 0);
     const voxelCount = shown.reduce((sum, state) => sum + state.count * (nativeModel(nativeManifest, state.id).blocks?.length ?? 0), 0);
     canvas.dataset.machineCount = String(visibleCount);
-    canvas.dataset.ownedCount = String(states.reduce((sum, state) => sum + state.count, 0));
+    canvas.dataset.ownedCount = String(totalOwned);
     canvas.dataset.blockCount = String(visibleCount);
     canvas.dataset.iconCount = '0';
     canvas.dataset.voxelCount = String(voxelCount);
     canvas.dataset.multiblockCount = String(shown
       .filter(state => nativeModel(nativeManifest, state.id).kind === 'multiblock')
       .reduce((sum, state) => sum + state.count, 0));
+    canvas.dataset.sceneModelId = states[0]?.id ?? '';
+    canvas.dataset.instanceIndex = String(selectedIndex);
+    canvas.dataset.groundPreset = groundDesign.preset;
+    canvas.dataset.groundEdits = String(Object.keys(groundDesign.cells).length);
+    canvas.dataset.terrainBlockCount = String(groundStructure?.blockCount ?? 0);
+    canvas.dataset.terrainFormat = groundStructure?.format ?? '';
   }
 
   function lookAt(target, offset) {
@@ -384,12 +386,12 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
 
   function reset() {
     const bounds = deviceBounds.isEmpty()
-      ? new THREE.Box3(new THREE.Vector3(77.5, 1, 76.5), new THREE.Vector3(83.5, 2, 82.5))
-      : deviceBounds;
+      ? new THREE.Box3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(16, 1, 16))
+      : deviceBounds.clone();
     const center = bounds.getCenter(new THREE.Vector3());
     const size = bounds.getSize(new THREE.Vector3());
     const halfFov = Math.min(camera.fov * Math.PI / 360, Math.atan(Math.tan(camera.fov * Math.PI / 360) * camera.aspect));
-    const distance = Math.max(7, size.length() / 2 / Math.sin(halfFov) * 1.08);
+    const distance = Math.max(14, size.length() / 2 / Math.sin(halfFov) * 1.08);
     const direction = new THREE.Vector3(0.25, 1.2, 1.5).normalize();
     let fittedDistance = distance * 0.5;
     const corners = [];
@@ -424,12 +426,6 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
     lookAt(position, new THREE.Vector3(2.8, 2.1, 3.8).normalize().multiplyScalar(Math.max(5, radius * 2.2)));
   }
 
-  function overview() {
-    scene.fog.near = 320;
-    scene.fog.far = 1100;
-    lookAt(new THREE.Vector3(160, 0, 160), new THREE.Vector3(145, 280, 310));
-  }
-
   function resize() {
     const width = canvas.clientWidth, height = canvas.clientHeight;
     if (!width || !height) return;
@@ -450,6 +446,14 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
   };
   const pointerMove = event => {
     const start = pointerStart;
+    if (!start && editor.tool !== 'view') {
+      setPointerRay(event);
+      const edit = ground.pick(raycaster, editor);
+      ground.showCursor(edit, canPlace(edit));
+      if (edit) options.onGroundHover?.(edit);
+      invalidate();
+      return;
+    }
     if (!start || start.id !== event.pointerId || start.button !== 0 || pointers.size !== 1) return;
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
@@ -467,17 +471,75 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
     pointerStart = null;
     pointers.delete(event.pointerId);
     if (!start || start.id !== event.pointerId || pointers.size || start.button !== 0 || start.moved) return;
-    const rect = canvas.getBoundingClientRect();
-    pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
-    raycaster.setFromCamera(pointer, camera);
+    setPointerRay(event);
+    if (editor.tool !== 'view') {
+      applyGroundEdit(ground.pick(raycaster, editor));
+      return;
+    }
     const hit = raycaster.intersectObjects(machines.children.filter(mesh => mesh.visible), false)[0];
     if (!hit) return;
     const index = hit.object.userData.start + hit.instanceId;
     select(hit.object.userData.modelId, index);
     onSelect(hit.object.userData.modelId, index);
   };
+  function setPointerRay(event) {
+    const rect = canvas.getBoundingClientRect();
+    pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
+    camera.updateMatrixWorld();
+    raycaster.setFromCamera(pointer, camera);
+  }
+  function canPlace(edit) {
+    if (!edit || !isGroundCoordinate(edit.x, edit.y, edit.z)) return false;
+    if (!edit.material || edit.y === -1 || deviceBounds.isEmpty()) return true;
+    const y = ground.surface(edit.x, edit.z) + edit.y;
+    const cell = new THREE.Box3(new THREE.Vector3(edit.x + 0.001, y + 0.001, edit.z + 0.001),
+      new THREE.Vector3(edit.x + 0.999, y + 0.999, edit.z + 0.999));
+    const state = states[0];
+    const index = machineIndexAtCell(edit.x, edit.z, state.size[0], state.size[2], groundDesign.machine.x, groundDesign.machine.z);
+    if (index === null || index >= state.count) return true;
+    const placement = placementFor(state, index);
+    const half = new THREE.Vector3(...placement.model.size).multiplyScalar(0.5);
+    return !cell.intersectsBox(new THREE.Box3(placement.position.clone().sub(half), placement.position.clone().add(half)));
+  }
+  function applyGroundEdit(edit) {
+    if (!canPlace(edit)) { options.onGroundError?.('此处与设备重叠，或高度超出 0～255 格。'); return; }
+    options.onGroundEdit?.(edit);
+  }
+  async function setGround(design, site, structure = null) {
+    const revision = ++groundRevision;
+    if (groundDesign === design && groundSite === site && groundStructure === structure) return;
+    if (!await ground.update(design, structure) || revision !== groundRevision) return;
+    if (design.preset !== groundDesign.preset || design.machine.x !== groundDesign.machine.x || design.machine.z !== groundDesign.machine.z) fitted = false;
+    if (site !== groundSite) {
+      if (groundSite) cameraPoses.set(groundSite, { position: camera.position.clone(), yaw, pitch });
+      pendingPose = cameraPoses.get(site) ?? null;
+      groundSite = site;
+      fitted = false;
+    }
+    groundDesign = design;
+    groundStructure = structure;
+    placements.clear(); signature = '';
+    invalidate();
+  }
+  function setGroundEditor(value) {
+    editor = value;
+    canvas.dataset.groundTool = editor.tool;
+    ground.showCursor(null);
+    invalidate();
+  }
+  function moveCamera(forward, side = 0, lift = 0) {
+    const direction = camera.getWorldDirection(new THREE.Vector3());
+    camera.position.addScaledVector(direction, forward);
+    camera.position.add(new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)).multiplyScalar(side));
+    camera.position.y += lift;
+    invalidate();
+  }
   const keyDown = event => {
     const key = event.key.toLowerCase();
+    if (key === 'escape') { options.onGroundExit?.(); return; }
+    if ((event.ctrlKey || event.metaKey) && (key === 'z' || key === 'y')) {
+      event.preventDefault(); options.onGroundUndo?.(key === 'y' || event.shiftKey); return;
+    }
     if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'shift', 'control', 'r'].includes(key)) {
       event.preventDefault();
       keys.add(key);
@@ -520,7 +582,7 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
     // 纯贴图帧动画最多 30 FPS 即可，避免为像素动画无意义地满速提交 GPU。
     const interval = keys.size || pointers.size || needsParticles ? 1000 / 60
       : needsNativeAnimation ? 1000 / 30
-        : needsEffects ? 1000 / 20 : 0;
+        : needsEffects || needsMultiblockAnimation ? 1000 / 20 : 0;
     if (interval && stamp - previous < interval) {
       if (needsAnimation || keys.size || pointers.size) scheduleRender();
       return;
@@ -553,7 +615,7 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
       let count = 0;
       for (const state of needsParticles ? states : []) {
         if (!state.running || state.activity <= 0 || state.category !== 'generator'
-          || !matchesSceneFilter(state, filter)) continue;
+          || !matchesSceneFilter(state, filter) || multiblockEffectKind(state.id)) continue;
         const placement = placementFor(state, 0);
         const remaining = PARTICLE_LIMIT - count;
         if (remaining <= 0) break;
@@ -577,9 +639,23 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
       particles.count = 0;
       dirty = true;
     }
+    const effectFrame = multiblockEffects.frame(camera, animationTime, animate);
+    if (effectFrame.changed) dirty = true;
+    needsMultiblockAnimation = effectFrame.animated;
+    needsAnimation = needsNativeAnimation || needsParticles || needsEffects || needsMultiblockAnimation;
     if (dirty) {
+      ground.frame(camera);
       renderer.render(scene, camera);
       canvas.dataset.drawCalls = String(renderer.info.render.calls);
+      canvas.dataset.effectEyes = String(multiblockEffects.metrics.eyes);
+      canvas.dataset.effectOrbits = String(multiblockEffects.metrics.orbits);
+      canvas.dataset.effectTurbines = String(multiblockEffects.metrics.turbines);
+      canvas.dataset.effectAnimated = String(multiblockEffects.metrics.animated);
+      canvas.dataset.effectTime = String(multiblockEffects.metrics.time);
+      canvas.dataset.geometryCount = String(renderer.info.memory.geometries);
+      canvas.dataset.textureCount = String(renderer.info.memory.textures);
+      canvas.dataset.cameraX = String(camera.position.x);
+      canvas.dataset.cameraZ = String(camera.position.z);
       labels();
       dirty = false;
     }
@@ -590,10 +666,11 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
   resize();
   scheduleRender();
   return {
-    update, select, focus, reset, overview,
+    update, select, focus, reset, setGround, setGroundEditor, applyGroundEdit, moveCamera,
     setVisible(value) { visible = value; visibility(); },
     dispose() {
       active = false;
+      groundRevision++;
       cancelAnimationFrame(frame);
       resizeObserver.disconnect();
       canvas.removeEventListener('pointerdown', pointerDown);
@@ -606,8 +683,10 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
       canvas.removeEventListener('blur', clearKeys);
       window.removeEventListener('blur', clearKeys);
       document.removeEventListener('visibilitychange', visibility);
+      multiblockEffects.dispose();
+      ground.dispose();
       const geometries = new Set([highlightGeometry, particleGeometry]);
-      const materials = new Set([floorMaterial, nativeMaterial, particleMaterial, highlight.material]);
+      const materials = new Set([nativeMaterial, particleMaterial, highlight.material]);
       const textures = new Set([floorAtlas.texture, nativeAtlas.texture]);
       scene.traverse(object => {
         if (object.geometry) geometries.add(object.geometry);
@@ -626,7 +705,6 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
       renderer.forceContextLoss();
       images.clear();
       placements.clear();
-      world.blocks.clear();
     },
   };
 }

@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createCompactLayout } from '../src/scene/factory3d/compact-layout';
 
 function storage(): Map<string, string> {
   const data = new Map<string, string>();
@@ -68,20 +67,5 @@ describe('dev preview uses the existing system with isolated local persistence',
     const data = storage(); data.set('gtnh-incremental-save', '{"version":26}');
     const { save } = await previewModules();
     expect(save.loadFromStorage()).toBe(null);
-  });
-});
-
-describe('stable full-count factory layout', () => {
-  it('places thousands of machines without duplicate slots or moving existing machines', () => {
-    const layout = createCompactLayout();
-    const first = layout.position('miner', 0); const second = layout.position('maker', 0);
-    const occupied = new Set<string>();
-    for (const id of ['miner', 'maker']) for (let index = 0; index < 1200; index++) {
-      const point = layout.position(id, index); const key = `${point.x},${point.z}`;
-      expect(occupied.has(key)).toBe(false); occupied.add(key);
-    }
-    expect(layout.position('miner', 0)).toEqual(first);
-    expect(layout.position('maker', 0)).toEqual(second);
-    expect(occupied.size).toBe(2400);
   });
 });

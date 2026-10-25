@@ -20,8 +20,8 @@
     }
   ],
   "stats": {
-    "total": 131,
-    "ok": 130,
+    "total": 132,
+    "ok": 131,
     "missing": 1
   },
   "items": [
@@ -801,6 +801,27 @@
       "sha256": "f65bcac1f45e18bbf17a50f3c662d0dc426e1bfdd2061f9599d301969f9289bc",
       "candidate_note": "",
       "note": ""
+    },
+    {
+      "key": "floor-pink-concrete",
+      "section": "B-floor",
+      "file": "assets/tex/floor-pink-concrete.png",
+      "source": "modernity-zip",
+      "path": "assets/minecraft/textures/blocks/pink_concrete.png",
+      "src_size": [
+        16,
+        16
+      ],
+      "animated": false,
+      "frame_cropped": false,
+      "out_size": [
+        16,
+        16
+      ],
+      "bytes": 370,
+      "sha256": "0344f6e1848a6d9d08a134859f4dd7207777b8fb1e3c220eb5cceacc132c2478",
+      "candidate_note": "",
+      "note": "独立设备场地的默认区块边框"
     },
     {
       "key": "floor-gray-concrete",

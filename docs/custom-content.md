@@ -52,14 +52,14 @@
 
 1. 为 `id` 和 `modelKey` 设置各自唯一的值；`name` 是可选显示名，省略时显示 ID。
 2. 修改币种、矿石名称和配色。`color` 使用六位十六进制颜色；MAX 的 `null` 使用规则文件中的彩虹色。
-3. 指定 `textureKey` 和 `ore.texture`，可复用已有素材，也可提供新素材。`casingVoltage` 仅用于旧等距场景机壳素材的原版电压引用，不参与物品图标导出。
+3. 指定 `textureKey` 和 `ore.texture`，可复用已有素材，也可提供新素材。
 4. 按需要在机型目录中添加对应发电机，以及该电压的名称或能力例外。
 
 没有设置终点的机器系列、科技树、资源库存、等级上限和终局判断会随电压列表扩展。
 
 | 素材键 | 对应文件 |
 | --- | --- |
-| `textureKey` | `casings/<key>-side.png`、`casings/<key>-top.png`、`pickaxe/{vajra,drill,blast}-<key>.png` |
+| `textureKey` | `pickaxe/{vajra,drill,blast}-<key>.png` |
 | `ore.texture` | `veins/<key>.png`、`veins/base/<key>.png` |
 | 机器 `icon` | `machines/<key>.png` |
 
@@ -69,9 +69,9 @@
 
 ## 3D 场景机型
 
-`src/content/scene-machines.json` 定义当前演示电压、机型 ID、原型类、贴图配方和可见台数。机型的名称与类别自动读取同一个内容注册器，修改显示名称不需要在场景再改一份。
+`src/content/scene-machines.json` 定义基础方块原型的参考电压、机型 ID 与贴图配方。实际厂区读取完整内容注册器和真实设备数量；机型的名称与类别也由注册器提供，修改显示名称不需要在场景再改一份。
 
-增加已有配方支持的 GT 单方块机型后，在运行中的本地客户端执行 `scripts/native-models/capture.py` 导出真实六面材质，再执行 `scripts/native-models/build-models.py` 和 `npm run build`。新增多方块机型必须将原 StructureLib 结构、控制器偏移、仓口和朝向登记到 `scripts/native-models/structures.json`，由构建器逐格生成；不得以相似单方块或物品图标代替结构。非 GT 设备应按原模组模型导出流程更新 `custom-models.py` 与 `custom-manifest.json`。
+增加已有配方支持的 GT 单方块机型后，在运行中的本地客户端执行 `scripts/native-models/capture.py` 导出真实六面材质，再执行 `scripts/native-models/build-models.py` 和 `npm run build`。新增多方块机型必须将原 StructureLib 结构、控制器偏移与结构元素映射登记到 `scripts/native-models/structures.json`，由构建器逐格生成；无舱室外观规则见 `architecture.md`，不得以相似单方块或物品图标代替结构。非 GT 设备应按原模组模型导出流程更新 `custom-models.py` 与 `custom-manifest.json`。
 
 ## 存档与内容身份
 

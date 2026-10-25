@@ -57,7 +57,11 @@ onDeactivated(() => closeDetails(false));
         </button>
       </div>
     </div>
-
+    <div v-if="activeRow" id="resource-detail" class="inventory-detail" :style="{ '--resource-column': selected?.kind === 'coin' ? 2 : 1 }" role="region" aria-labelledby="resource-detail-title">
+      <strong id="resource-detail-title">{{ activeRow.name }}</strong>
+      <dl><div v-for="line in activeRow.detail" :key="line.label"><dt>{{ line.label }}</dt><dd>{{ line.value }}</dd></div></dl>
+      <button ref="closeButton" type="button" aria-label="关闭资源明细" @click="closeDetails()">×</button>
+    </div>
     <section v-if="store.snap.arcane.active" class="inventory-arcane">
       <h2>灵气与源质</h2>
       <dl class="stats stats-loose">
@@ -69,10 +73,4 @@ onDeactivated(() => closeDetails(false));
       </dl>
     </section>
   </section>
-  <Teleport to="body">
-    <section v-if="activeRow" id="resource-detail" class="panel inventory-detail" role="region" aria-labelledby="resource-detail-title">
-      <div class="inventory-detail-heading"><h2 id="resource-detail-title">{{ activeRow.name }}收支</h2><button ref="closeButton" type="button" aria-label="关闭资源明细" @click="closeDetails()">×</button></div>
-      <dl><div v-for="line in activeRow.detail" :key="line.label"><dt>{{ line.label }}</dt><dd>{{ line.value }}</dd></div></dl>
-    </section>
-  </Teleport>
 </template>

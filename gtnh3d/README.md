@@ -4,7 +4,7 @@
 渲染器是自写的体素网格化器（不使用逐块 `BoxGeometry`，也不引入现成体素引擎），
 只依赖 three.js 做 WebGL 管线。
 
-本目录保留独立演示入口，只消费蓝图数据与材质贴图，不改动游戏逻辑。增量游戏主厂区复用这里的地板铺设、蓝图数据、贴图集与网格化器；机器清单及交互由各自入口维护。
+本目录保留独立演示入口，只消费蓝图数据与材质贴图，不改动游戏逻辑。增量游戏设备场地将此处蓝图保留为地板预设，复用地板铺设、贴图集与网格化器；当前场地规则见 `../docs/architecture.md`，机器清单及交互由各自入口维护。
 
 ## 快速开始
 
@@ -104,7 +104,7 @@ demo 加载时会自检一次；烟测里也会故意破坏一格验证它确实
 | `tools/decode-floor.mjs` | 将蓝图 X/Y/Z 顺序转换为运行时 X/Z/Y 分层数据 |
 | `src/floor-data.js` | 由 `assets/floor.bin` 生成的地板数据（构建期产物） |
 | `assets/floor.bin` | 蓝图解码后的调色板索引网格（160×160×3，三层原样） |
-| `assets/tex/` | 130 张 16×16 RGBA 方块贴图（见 `ASSETS.md`） |
+| `assets/tex/` | 16×16 RGBA 方块贴图，清单见 `ASSETS.md` |
 | `dist/` | 构建产物与校验截图 |
 | `tools/` | 提取器与校验脚本（`smoke` / `verify-render` / `verify-atlas` / `floor-map` / `shot-topdown`） |
 

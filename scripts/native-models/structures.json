@@ -11,37 +11,7 @@
       }
     ],
     "sourceClass": "gregtech.common.tileentities.machines.multi.MTELargeTurbine",
-    "reason": "Large steam turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. d[0] is the required dynamo with its face pointing north. c[0], c[2], and c[4] are maintenance, working-fluid input, and fluid output respectively; their front faces point south, east, and east. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "d",
-        "occurrence": 0,
-        "meta": 35,
-        "rotation": 2
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 0,
-        "meta": 90,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 2,
-        "meta": 55,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 4,
-        "meta": 65,
-        "rotation": 1
-      }
-    ]
+    "reason": "Large steam turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "1151": {
     "pieces": [
@@ -55,37 +25,7 @@
       }
     ],
     "sourceClass": "gregtech.common.tileentities.machines.multi.MTELargeTurbine",
-    "reason": "Large gas turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. d[0] is the required dynamo with its face pointing north. c[0], c[2], and c[4] are maintenance, fuel input, and exhaust output respectively; their front faces point south, east, and east. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "d",
-        "occurrence": 0,
-        "meta": 35,
-        "rotation": 2
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 0,
-        "meta": 90,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 2,
-        "meta": 55,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 4,
-        "meta": 65,
-        "rotation": 1
-      }
-    ]
+    "reason": "Large gas turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "1153": {
     "pieces": [
@@ -99,37 +39,7 @@
       }
     ],
     "sourceClass": "gregtech.common.tileentities.machines.multi.MTELargeTurbine",
-    "reason": "Large plasma turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. d[0] is the required dynamo with its face pointing north. c[0], c[2], and c[4] are maintenance, plasma input, and fluid output respectively; their front faces point south, east, and east. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "d",
-        "occurrence": 0,
-        "meta": 35,
-        "rotation": 2
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 0,
-        "meta": 90,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 2,
-        "meta": 55,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 4,
-        "meta": 65,
-        "rotation": 1
-      }
-    ]
+    "reason": "Large plasma turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "32016": {
     "pieces": [
@@ -143,37 +53,7 @@
       }
     ],
     "sourceClass": "goodgenerator.blocks.tileEntity.base.MTELargeTurbineBase",
-    "reason": "Supercritical fluid turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. d[0] is the required dynamo with its face pointing north. c[0], c[2], and c[4] are maintenance, working-fluid input, and fluid output respectively; their front faces point south, east, and east. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "d",
-        "occurrence": 0,
-        "meta": 35,
-        "rotation": 2
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 0,
-        "meta": 90,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 2,
-        "meta": 55,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 4,
-        "meta": 65,
-        "rotation": 1
-      }
-    ]
+    "reason": "Supercritical fluid turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "866": {
     "pieces": [
@@ -187,133 +67,7 @@
       }
     ],
     "sourceClass": "gtPlusPlus.xmod.gregtech.common.tileentities.machines.multi.production.turbines.MTELargerTurbineBase",
-    "reason": "GT++ large steam turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. t[0..11] are the twelve required turbine rotor hatches; they lie on the open top and bottom faces, so their rotation is intentionally 0 because the current renderer supports Y-axis turns only. c[0], c[4], c[8], and c[20] are maintenance, fluid input, fluid output, and dynamo respectively; their front faces point south, south, south, and south. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 0,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 1,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 2,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 3,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 4,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 5,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 6,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 7,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 8,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 9,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 10,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 11,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 0,
-        "meta": 90,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 4,
-        "meta": 55,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 8,
-        "meta": 65,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 20,
-        "meta": 35,
-        "rotation": 0
-      }
-    ]
+    "reason": "GT++ large steam turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "31073": {
     "pieces": [
@@ -327,161 +81,7 @@
       }
     ],
     "sourceClass": "gtPlusPlus.xmod.gregtech.common.tileentities.machines.multi.production.turbines.MTELargerTurbineBase",
-    "reason": "GT++ large gas turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. t[0..11] are the twelve required turbine rotor hatches; they lie on the open top and bottom faces, so their rotation is intentionally 0 because the current renderer supports Y-axis turns only. c[0], c[4], c[8], and c[20] are maintenance, fuel input, fluid output, and dynamo respectively; their front faces point south, south, south, and south. m[0..3] are the four required mufflers for this fixed-pollution model, all facing south. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 0,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 1,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 2,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 3,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 4,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 5,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 6,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 7,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 8,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 9,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 10,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 11,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 0,
-        "meta": 90,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 4,
-        "meta": 55,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 8,
-        "meta": 65,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 20,
-        "meta": 35,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "m",
-        "occurrence": 0,
-        "meta": 95,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "m",
-        "occurrence": 1,
-        "meta": 95,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "m",
-        "occurrence": 2,
-        "meta": 95,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "m",
-        "occurrence": 3,
-        "meta": 95,
-        "rotation": 0
-      }
-    ]
+    "reason": "GT++ large gas turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "31074": {
     "pieces": [
@@ -495,133 +95,7 @@
       }
     ],
     "sourceClass": "gtPlusPlus.xmod.gregtech.common.tileentities.machines.multi.production.turbines.MTELargerTurbineBase",
-    "reason": "GT++ large plasma turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. t[0..11] are the twelve required turbine rotor hatches; they lie on the open top and bottom faces, so their rotation is intentionally 0 because the current renderer supports Y-axis turns only. c[0], c[4], c[8], and c[20] are maintenance, plasma input, fluid output, and dynamo respectively; their front faces point south, south, south, and south. This model requires an output hatch. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 0,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 1,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 2,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 3,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 4,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 5,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 6,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 7,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 8,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 9,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 10,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 11,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 0,
-        "meta": 90,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 4,
-        "meta": 55,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 8,
-        "meta": 65,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 20,
-        "meta": 35,
-        "rotation": 0
-      }
-    ]
+    "reason": "GT++ large plasma turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "31076": {
     "pieces": [
@@ -635,133 +109,7 @@
       }
     ],
     "sourceClass": "gtPlusPlus.xmod.gregtech.common.tileentities.machines.multi.production.turbines.MTELargerTurbineBase",
-    "reason": "GT++ large supercritical steam turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. t[0..11] are the twelve required turbine rotor hatches; they lie on the open top and bottom faces, so their rotation is intentionally 0 because the current renderer supports Y-axis turns only. c[0], c[4], c[8], and c[20] are maintenance, steam input, fluid output, and dynamo respectively; their front faces point south, south, south, and south. This model requires an output hatch. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 0,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 1,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 2,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 3,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 4,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 5,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 6,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 7,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 8,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 9,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "UP"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 10,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "t",
-        "occurrence": 11,
-        "meta": 30010,
-        "rotation": 0,
-        "facing": "DOWN"
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 0,
-        "meta": 90,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 4,
-        "meta": 55,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 8,
-        "meta": 65,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "c",
-        "occurrence": 20,
-        "meta": 35,
-        "rotation": 0
-      }
-    ]
+    "reason": "GT++ large supercritical steam turbine uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "12732": {
     "pieces": [
@@ -775,37 +123,7 @@
       }
     ],
     "sourceClass": "goodgenerator.blocks.tileEntity.MTEMultiNqGenerator",
-    "reason": "Naquadah reactor uses the nag shape with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. X[0] is the sole dynamo with its face pointing west, X[1] is maintenance facing south, X[2] is the liquid-fuel input hatch facing south, and X[3] is the fluid output hatch facing south. The other X slots remain casing. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "nag",
-        "letter": "X",
-        "occurrence": 0,
-        "meta": 35,
-        "rotation": 3
-      },
-      {
-        "shape": "nag",
-        "letter": "X",
-        "occurrence": 1,
-        "meta": 90,
-        "rotation": 0
-      },
-      {
-        "shape": "nag",
-        "letter": "X",
-        "occurrence": 2,
-        "meta": 55,
-        "rotation": 0
-      },
-      {
-        "shape": "nag",
-        "letter": "X",
-        "occurrence": 3,
-        "meta": 65,
-        "rotation": 0
-      }
-    ]
+    "reason": "Naquadah reactor uses the nag shape with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "14001": {
     "pieces": [
@@ -819,37 +137,7 @@
       }
     ],
     "sourceClass": "gtnhintergalactic.tile.multi.TileEntityDysonSwarm",
-    "reason": "Dyson swarm uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. e[0] is a dynamo facing south, i[0] is an input bus facing south, i[1] is a working-fluid input hatch facing south, and o[0] is an input-data hatch facing west. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "e",
-        "occurrence": 0,
-        "meta": 35,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "i",
-        "occurrence": 0,
-        "meta": 75,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "i",
-        "occurrence": 1,
-        "meta": 55,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "o",
-        "occurrence": 0,
-        "meta": 15440,
-        "rotation": 3
-      }
-    ]
+    "reason": "Dyson swarm uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "32028": {
     "pieces": [
@@ -863,23 +151,7 @@
       }
     ],
     "sourceClass": "goodgenerator.blocks.tileEntity.AntimatterGenerator",
-    "reason": "Antimatter generator uses the antimatterGenerator shape with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. H[0] is a UV laser-source dynamo tunnel facing south and I[0] is a fluid input hatch facing west; additional H and I slots remain legal casings. The laser hatch is required for an operating output configuration. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "antimatterGenerator",
-        "letter": "H",
-        "occurrence": 0,
-        "meta": 15233,
-        "rotation": 0
-      },
-      {
-        "shape": "antimatterGenerator",
-        "letter": "I",
-        "occurrence": 0,
-        "meta": 55,
-        "rotation": 3
-      }
-    ]
+    "reason": "Antimatter generator uses the antimatterGenerator shape with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "15410": {
     "pieces": [
@@ -893,44 +165,7 @@
       }
     ],
     "sourceClass": "tectech.thing.metaTileEntity.multi.MTEEyeOfHarmony",
-    "reason": "Eye of Harmony uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. H[0] is the required ME output bus, H[1] is the required ME output hatch, H[2] is the required non-ME input bus, and H[3..4] are the two required fluid input hatches; all five front faces point south. No ordinary energy hatch is added. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "H",
-        "occurrence": 0,
-        "meta": 2710,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "H",
-        "occurrence": 1,
-        "meta": 2713,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "H",
-        "occurrence": 2,
-        "meta": 75,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "H",
-        "occurrence": 3,
-        "meta": 55,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "H",
-        "occurrence": 4,
-        "meta": 55,
-        "rotation": 0
-      }
-    ]
+    "reason": "Eye of Harmony uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "1178": {
     "pieces": [
@@ -944,44 +179,7 @@
       }
     ],
     "sourceClass": "gregtech.common.tileentities.machines.multi.MTEOreDrillingPlant3",
-    "reason": "Ore drilling plant III uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. b[0] is the IV energy hatch facing south, b[1] is maintenance facing east, b[2] is the drilling-pipe input bus facing west, b[3] is the drilling-fluid input hatch moved from the bottom-only slot to a west-facing side slot, and b[4] is the ore output bus facing east. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "b",
-        "occurrence": 0,
-        "meta": 45,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "b",
-        "occurrence": 1,
-        "meta": 90,
-        "rotation": 1
-      },
-      {
-        "shape": "main",
-        "letter": "b",
-        "occurrence": 2,
-        "meta": 75,
-        "rotation": 3
-      },
-      {
-        "shape": "main",
-        "letter": "b",
-        "occurrence": 2,
-        "meta": 55,
-        "rotation": 3
-      },
-      {
-        "shape": "main",
-        "letter": "b",
-        "occurrence": 4,
-        "meta": 85,
-        "rotation": 1
-      }
-    ]
+    "reason": "Ore drilling plant III uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "1179": {
     "pieces": [
@@ -995,44 +193,7 @@
       }
     ],
     "sourceClass": "gregtech.common.tileentities.machines.multi.MTEOreDrillingPlant4",
-    "reason": "Ore drilling plant IV uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. b[0] is the LuV energy hatch facing south, b[1] is maintenance facing east, b[2] is the drilling-pipe input bus facing west, b[3] is the drilling-fluid input hatch moved from the bottom-only slot to a west-facing side slot, and b[4] is the ore output bus facing east. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "b",
-        "occurrence": 0,
-        "meta": 46,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "b",
-        "occurrence": 1,
-        "meta": 90,
-        "rotation": 1
-      },
-      {
-        "shape": "main",
-        "letter": "b",
-        "occurrence": 2,
-        "meta": 75,
-        "rotation": 3
-      },
-      {
-        "shape": "main",
-        "letter": "b",
-        "occurrence": 2,
-        "meta": 55,
-        "rotation": 3
-      },
-      {
-        "shape": "main",
-        "letter": "b",
-        "occurrence": 4,
-        "meta": 85,
-        "rotation": 1
-      }
-    ]
+    "reason": "Ore drilling plant IV uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "12741": {
     "pieces": [
@@ -1046,44 +207,7 @@
       }
     ],
     "sourceClass": "bwcrossmod.galacticgreg.MTEVoidMiners$VMLUV",
-    "reason": "LuV void miner uses the main construct shape with the original build offset; the legacy old shape is an accepted alternative and is not stacked. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. E[0] is the LuV energy hatch facing south, E[1] is maintenance facing south, E[2] is the optional mining-pipe input bus facing west, E[3] is the optional noble-gas input hatch facing east, and E[4] is the ore output bus facing west. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "E",
-        "occurrence": 0,
-        "meta": 46,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "E",
-        "occurrence": 1,
-        "meta": 90,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "E",
-        "occurrence": 2,
-        "meta": 75,
-        "rotation": 3
-      },
-      {
-        "shape": "main",
-        "letter": "E",
-        "occurrence": 3,
-        "meta": 55,
-        "rotation": 1
-      },
-      {
-        "shape": "main",
-        "letter": "E",
-        "occurrence": 4,
-        "meta": 85,
-        "rotation": 3
-      }
-    ]
+    "reason": "LuV void miner uses the main construct shape with the original build offset; the legacy old shape is an accepted alternative and is not stacked. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "12740": {
     "pieces": [
@@ -1097,44 +221,7 @@
       }
     ],
     "sourceClass": "bwcrossmod.galacticgreg.MTEVoidMiners$VMZPM",
-    "reason": "ZPM void miner uses the main construct shape with the original build offset; the legacy old shape is an accepted alternative and is not stacked. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. F[0] is the ZPM energy hatch facing south, F[1] is maintenance facing south, F[2] is the optional mining-pipe input bus facing south, F[3] is the optional noble-gas input hatch facing south, and F[4] is the ore output bus facing west. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "F",
-        "occurrence": 0,
-        "meta": 47,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "F",
-        "occurrence": 1,
-        "meta": 90,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "F",
-        "occurrence": 2,
-        "meta": 75,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "F",
-        "occurrence": 3,
-        "meta": 55,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "F",
-        "occurrence": 4,
-        "meta": 85,
-        "rotation": 3
-      }
-    ]
+    "reason": "ZPM void miner uses the main construct shape with the original build offset; the legacy old shape is an accepted alternative and is not stacked. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "12739": {
     "pieces": [
@@ -1148,44 +235,7 @@
       }
     ],
     "sourceClass": "bwcrossmod.galacticgreg.MTEVoidMiners$VMUV",
-    "reason": "UV void miner uses the main construct shape with the original build offset; the legacy old shape is an accepted alternative and is not stacked. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. F[0] is the UV energy hatch facing south, F[1] is maintenance facing south, F[2] is the optional mining-pipe input bus facing south, F[3] is the optional noble-gas input hatch facing south, and F[4] is the ore output bus facing west. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "F",
-        "occurrence": 0,
-        "meta": 48,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "F",
-        "occurrence": 1,
-        "meta": 90,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "F",
-        "occurrence": 2,
-        "meta": 75,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "F",
-        "occurrence": 3,
-        "meta": 55,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "F",
-        "occurrence": 4,
-        "meta": 85,
-        "rotation": 3
-      }
-    ]
+    "reason": "UV void miner uses the main construct shape with the original build offset; the legacy old shape is an accepted alternative and is not stacked. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "15331": {
     "pieces": [
@@ -1199,37 +249,7 @@
       }
     ],
     "sourceClass": "tectech.thing.metaTileEntity.multi.MTEResearchStation",
-    "reason": "Research station uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only that shape and letter, starting at 0. E[0] is the mandatory research object holder facing south. D[0] is a UV energy hatch facing west, D[1] is maintenance facing north, and D[2] is an input-data hatch facing east. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "main",
-        "letter": "E",
-        "occurrence": 0,
-        "meta": 15451,
-        "rotation": 0
-      },
-      {
-        "shape": "main",
-        "letter": "D",
-        "occurrence": 0,
-        "meta": 48,
-        "rotation": 3
-      },
-      {
-        "shape": "main",
-        "letter": "D",
-        "occurrence": 1,
-        "meta": 90,
-        "rotation": 2
-      },
-      {
-        "shape": "main",
-        "letter": "D",
-        "occurrence": 2,
-        "meta": 15440,
-        "rotation": 1
-      }
-    ]
+    "reason": "Research station uses its main piece with the original build offset. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   },
   "15311": {
     "pieces": [
@@ -1275,50 +295,6 @@
       }
     ],
     "sourceClass": "tectech.thing.metaTileEntity.multi.MTEQuantumComputer",
-    "reason": "Quantum computer uses the minimal complete construct stack: front, cap, one slice, cap, and back, with their original build offsets. Controller is at [0,0,0]; piece coordinates are shifted by offset. Replacement occurrence counts only within each shape and letter, starting at 0. front A[0] is the UV energy hatch facing west, A[1] is maintenance facing east, A[2] is the input-data hatch facing west, A[3] is the output-data hatch facing east, and A[4] is the mandatory uncertainty hatch facing east. slice E[0] is the first working computation rack facing west. rotation is clockwise quarter turns about Y: south=0, east=1, north=2, west=3.",
-    "replacements": [
-      {
-        "shape": "front",
-        "letter": "A",
-        "occurrence": 0,
-        "meta": 48,
-        "rotation": 3
-      },
-      {
-        "shape": "front",
-        "letter": "A",
-        "occurrence": 1,
-        "meta": 90,
-        "rotation": 1
-      },
-      {
-        "shape": "front",
-        "letter": "A",
-        "occurrence": 2,
-        "meta": 15440,
-        "rotation": 3
-      },
-      {
-        "shape": "front",
-        "letter": "A",
-        "occurrence": 3,
-        "meta": 15441,
-        "rotation": 1
-      },
-      {
-        "shape": "front",
-        "letter": "A",
-        "occurrence": 4,
-        "meta": 15430,
-        "rotation": 1
-      },
-      {
-        "shape": "slice",
-        "letter": "E",
-        "occurrence": 0,
-        "meta": 15450,
-        "rotation": 3
-      }
-    ]
+    "reason": "Quantum computer uses the minimal complete construct stack: front, cap, one slice, cap, and back, with their original build offsets. Controller is at [0,0,0]; piece coordinates are shifted by offset."
   }
 }

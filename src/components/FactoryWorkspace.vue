@@ -15,8 +15,6 @@ import { formatNumber } from '../numeric/format';
 const store = useGameStore();
 const emit = defineEmits<{ technology: [] }>();
 const selectedKind = ref<MachineKind | 'pickaxe' | null>('miner');
-const workshop = ref<HTMLElement | null>(null);
-const goalVisible = ref(true);
 const nodePage = ref(0);
 const selectedNodeId = ref('');
 const installedNodes = computed(() => store.snap.arcaneExpedition.nodes.filter(node => node.location === 'installed'));
@@ -26,34 +24,9 @@ const sceneExpanded = ref(!window.matchMedia('(max-width: 700px), (max-height: 1
 function toggleScene(event: Event) {
   sceneExpanded.value = (event.currentTarget as HTMLDetailsElement).open;
 }
-const goal = computed(() => {
-  const facilities = store.snap.factory.facilities;
-  for (const [kind, title, text] of [
-    ['miner', '让开采自动运行', '建造采矿机，让材料不再只靠手动获取。'],
-    ['generator', '接通第一条电力线', '发电机用矿石提供电力，驱动整条生产链。'],
-    ['machine', '把矿物变成财富', '制造机将矿石与电力转化为 GT 币。'],
-  ] as const) {
-    if (!facilities.find(item => item.kind === kind)?.count) return { kind, title, text };
-  }
-  const tier = store.snap.maxTier;
-  const voltage = VOLTAGE_TIERS[tier - 1];
-  for (const [kind, purpose] of [['miner', '开采本级矿脉，为本级发电与制造补充库存。'], ['generator', '让新设备获得足够供电；先检查燃料，再增加装机。'], ['machine', '将本级矿石加工成突破下一电压所需的 GT 币。']] as const) {
-    const group = store.snap.columns.find(column => column.kind === kind)?.tiers.find(group => group.tier === tier);
-    if (group && !group.models.some(model => model.count > 0)) return { kind, title: `建立 ${voltage} ${kind === 'miner' ? '采矿' : kind === 'generator' ? '发电' : '制造'}工程`, text: purpose };
-  }
-  const faulty = facilities.find(facility => facility.faulty > 0);
-  if (faulty) return { kind: faulty.kind, title: '恢复故障设备', text: '故障设备仍然保留，进入对应类别维护即可恢复生产。' };
-  if (store.snap.research.pending.some(model => model.voltageReady)) return { kind: 'research' as const, title: '推进本级机型研究', text: '选择需要的机型支付一次投资，再由计算机与研究站完成研究。' };
-  if (tier >= 2 && store.snap.factory.pollution > 30 && store.snap.risk.netPositive) return { kind: 'purifier' as const, title: '稳定污染治理', text: '污染正在上升。为净化器留出电力，可减少产出损失和故障。' };
-  return null;
-});
 const nextName = computed(() => store.snap.nextTier ? VOLTAGE_TIERS[store.snap.nextTier - 1] : 'MAX');
 function select(kind: MachineKind) {
   selectedKind.value = kind;
-}
-function goToWorkshop(kind: MachineKind) {
-  select(kind);
-  workshop.value?.scrollIntoView({ behavior: 'auto', block: 'start' });
 }
 </script>
 <template>
@@ -73,23 +46,9 @@ function goToWorkshop(kind: MachineKind) {
       </section>
     </aside>
     <div class="production-workspace">
-      <section v-if="goalVisible" class="panel expansion-card factory-goal" aria-label="当前目标">
-        <button type="button" class="goal-close" aria-label="关闭当前目标" @click="goalVisible = false">×</button>
-        <span class="eyebrow">{{ goal ? '当前工程' : '下一次跃迁' }}</span>
-        <template v-if="goal">
-          <h2>{{ goal.title }}</h2><p>{{ goal.text }}</p>
-          <button type="button" class="primary" @click="goToWorkshop(goal.kind)">管理设备 <UiIcon name="arrow" :size="16" /></button>
-        </template>
-        <template v-else>
-          <h2>{{ store.snap.nextTier ? `向 ${nextName} 时代进发` : '已抵达 MAX 时代' }}</h2>
-          <p>{{ store.snap.nextTier ? `积累 ${store.snap.unlockCost} 枚上一级 GT 币，解锁新矿脉与设备。` : '继续积累电能，探索转生与平行宇宙。' }}</p>
-          <div class="expansion-progress" role="progressbar" :aria-valuenow="Math.round(store.snap.factory.nextTierProgress * 100)" aria-valuemin="0" aria-valuemax="100" aria-label="下一电压解锁进度"><span :style="{ width: store.snap.factory.nextTierProgress * 100 + '%' }" /></div>
-          <button v-if="store.snap.nextTier" type="button" class="primary" :disabled="!store.snap.canUnlock" @click="store.unlock()">解锁 {{ nextName }} <UiIcon name="arrow" :size="16" /></button>
-        </template>
-      </section>
     <details class="factory-preview" :open="sceneExpanded" @toggle="toggleScene">
-      <summary><span>厂区概览 <span class="muted small">{{ store.snap.factory.machineCount }} 台设备</span></span><span class="muted small">{{ sceneExpanded ? '收起厂区' : '展开厂区' }}</span></summary>
-      <FactoryScene :selected-kind="selectedKind" @select="select" @manage="goToWorkshop" />
+      <summary><span>设备场地 <span class="muted small">{{ store.snap.factory.machineCount }} 台设备</span></span><span class="muted small">{{ sceneExpanded ? '收起场地' : '展开场地' }}</span></summary>
+      <FactoryScene :selected-kind="selectedKind" @select="select" />
     </details>
     <section v-if="store.snap.arcaneExpedition.active" class="panel arcane-factory" aria-label="奥术节点设施区">
       <div class="section-heading"><h2>奥术设施区</h2><button type="button" @click="emit('technology')">打开魔导手册</button></div>
@@ -100,8 +59,8 @@ function goToWorkshop(kind: MachineKind) {
       <p v-if="store.snap.arcaneExpedition.researchOptions.some(option => option.id === 'garden' && option.completed)" class="small">花园共生已建立，满足水与地倾向时减少培养工时。</p>
       <p v-if="store.snap.arcaneExpedition.researchOptions.some(option => option.id === 'blood' && option.completed)" class="small">血仪式设施已建立，可为丰饶培养支付额外费用增加成长。</p>
     </section>
-    <section ref="workshop" class="workshop" aria-labelledby="workshop-title">
-      <div class="section-heading"><div><span class="eyebrow">建造 · 超频 · 维护</span><h2 id="workshop-title">设备工作台</h2></div><button v-if="!goalVisible" type="button" class="goal-restore" @click="goalVisible = true">显示目标</button><span v-else class="muted small">{{ store.snap.factory.machineCount }} 台设备已部署</span></div>
+    <section class="workshop" aria-labelledby="workshop-title">
+      <div class="section-heading"><div><span class="eyebrow">建造 · 超频 · 维护</span><h2 id="workshop-title">设备工作台</h2></div><span class="muted small">{{ store.snap.factory.machineCount }} 台设备已部署</span></div>
       <MachinePanel v-model:active-kind="selectedKind" :columns="store.snap.columns" />
     </section>
     </div>

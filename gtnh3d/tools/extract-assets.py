@@ -142,9 +142,10 @@ add("controller-primitive-blast-furnace", [
      "回退（Lead 指定）：包内不存在任何 PRIMITIVEBLASTFURNACE 贴图，改用砖砌高炉砖外壳 ACTIVE 版"),
 ], "A", "原始高炉控制器")
 
-# ---------- B1. 地板（blueprint bp-13476 方块 id -> key） ----------
+# ---------- B1. Ground textures ----------
 FLOORS = [
     ("floor-white-concrete", "white_concrete.png", ""),
+    ("floor-pink-concrete", "pink_concrete.png", "独立设备场地的默认区块边框"),
     ("floor-gray-concrete", "gray_concrete.png", ""),
     ("floor-black-concrete", "black_concrete.png", ""),
     ("floor-cyan-terracotta", "hardened_clay_stained_cyan.png",

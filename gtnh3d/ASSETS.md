@@ -21,11 +21,11 @@
 
 | 项 | 值 |
 | --- | --- |
-| key 总数 | 131 |
-| 成功抽取 | **130** |
+| key 总数 | 132 |
+| 成功抽取 | **131** |
 | 缺失 | 1 |
 | 动态贴图（取第 0 帧） | 19 |
-| 源尺寸分布 | 16x16 × 111 个，16x64 × 8 个，16x96 × 4 个，16x80 × 3 个，16x512 × 1 个，16x144 × 1 个，16x32 × 1 个，16x48 × 1 个 |
+| 源尺寸分布 | 16x16 × 112 个，16x64 × 8 个，16x96 × 4 个，16x80 × 3 个，16x512 × 1 个，16x144 × 1 个，16x32 × 1 个，16x48 × 1 个 |
 
 ## 3. key 清单
 
@@ -34,7 +34,7 @@
 | 段 | 说明 | key 数 |
 | --- | --- | --- |
 | A | A 段 · 机器层 / 机壳 / 覆盖层 / 控制器（渲染器静态 import，必需） | 36 |
-| B-floor | B 段 · 地板贴图（floor-<材质>） | 16 |
+| B-floor | B 段 · 地板贴图（floor-<材质>） | 17 |
 | B-overlay | B 段 · 机器功能覆盖层（overlay-<machine>-<face>[-active]） | 46 |
 | C | C 段 · 多方块 / 装饰 | 9 |
 | D | D 段 · 自动化 / 储能 / 杂项（可选） | 23（+1 缺失） |
@@ -85,6 +85,7 @@
 | key | 输出文件 | 源容器 | 包内路径 | 源尺寸 | 输出 | 字节 | sha256(12) | 备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `floor-white-concrete` | `assets/tex/floor-white-concrete.png` | modernity-zip | `assets/minecraft/textures/blocks/white_concrete.png` | 16x16 | 16x16 | 293 | `f65bcac1f45e` |  |
+| `floor-pink-concrete` | `assets/tex/floor-pink-concrete.png` | modernity-zip | `assets/minecraft/textures/blocks/pink_concrete.png` | 16x16 | 16x16 | 370 | `0344f6e1848a` | 独立设备场地的默认区块边框 |
 | `floor-gray-concrete` | `assets/tex/floor-gray-concrete.png` | modernity-zip | `assets/minecraft/textures/blocks/gray_concrete.png` | 16x16 | 16x16 | 221 | `7c993e22ed2c` |  |
 | `floor-black-concrete` | `assets/tex/floor-black-concrete.png` | modernity-zip | `assets/minecraft/textures/blocks/black_concrete.png` | 16x16 | 16x16 | 290 | `670113efe948` |  |
 | `floor-cyan-terracotta` | `assets/tex/floor-cyan-terracotta.png` | modernity-zip | `assets/minecraft/textures/blocks/hardened_clay_stained_cyan.png` | 16x16 | 16x16 | 470 | `c33bfaecb6b3` | 1.7.10 无 cyan_terracotta，用同名色系染色硬化粘土 |

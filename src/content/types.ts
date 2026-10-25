@@ -9,7 +9,6 @@ export interface VoltageDefinition {
   // 这两个键属于内容身份和素材文件名，调整电压顺序时不能随序号重编号。
   modelKey: string;
   textureKey: string;
-  casingVoltage?: string;
   color: string | null;
   coin: string;
   ore: {
