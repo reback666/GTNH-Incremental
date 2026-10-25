@@ -54,12 +54,12 @@ GTNH 主题的本地增量 / 放置游戏，从 ULV 沿 15 级电压发展到 MA
 
 素材工具使用用户本机 GTNH 客户端、材质包或开发包；来源与操作见 `scripts/texture-sources.md`。
 机器图标使用 `scripts/export-machine-icons.ps1` 从启用 Modernity 的客户端原生导出。其他常用工具：`scripts/build-veins.py`、
-`build-pickaxe-icons.py`、`build-scene-casings.py`、`build-texture-gallery.py`。
+`build-pickaxe-icons.py`、`build-texture-gallery.py`。
 3D 机器素材使用 `python -B scripts/extract-factory3d.py --pack "<Modernity-GTNH.zip>"` 提取；逐张来源见生成的 `src/assets/factory3d/manifest.json`。渲染复用项目已有的 `three` 依赖。
 
 ### 共用应用与隔离预览
 
-`index.html` 与 `demo.html` 直接使用现有 `src/main.ts` 与 `App.vue`，共用 GameCore、store、页面、公式和内容。开发基线和当前工作区分支均为 dev。现有能源、转生、自动保存与导入导出均保留，定向改动同时进入两个构建。
+`index.html` 与 `demo.html` 直接使用现有 `src/main.ts` 与 `App.vue`，共用 GameCore、store、页面、公式和内容。日常开发分支为 dev，正式主线为 master。现有能源、转生、自动保存与导入导出均保留，定向改动同时进入两个构建。
 
 - 手动与自动采矿增加真实矿石库存；发电机消耗矿石供电，制造机消耗矿石与电力产出对应等级 GT 币。可以用存矿继续制造，不要求采矿机始终同时运行。
 - 建造、出售、矿石与币支付、机型价格、电压解锁、镐子与各宇宙沿用 dev，不合并原有币种或余额，不使用独立演示参数替代。
@@ -105,7 +105,7 @@ Web 与便携入口从零验证手动产矿、矿石建造、存矿供制造、�
 - 日常工作在 dev 分支；未经用户明确指示，不自行合并 master、发布或上传项目。
 - Git 提交需用户同意；提交前按改动范围验证。高风险改动的回滚点也遵守此规则。
 - `plan.txt` 的玩法规则不随视觉调整改变；用户授权的界面 / 架构改造同步更新对应章节。
-- 重规划的唯一执行表、验收缺口和后续起点见 `redesign-plan.md`。当前已接入正式与隔离预览源码及本地便携产物；未合并、升版、发布或上传。
+- 重规划的唯一执行表、验收缺口和后续起点见 `redesign-plan.md`。已完成范围纳入正式与隔离预览的共用实现，未完成项仍按执行表保留。
 - 工业七日逐秒实跑已结束并保留可跨进程续跑的存档，结果与策略边界见 `balance.md`；3–7 天全程节奏尚未证明，首次自动矿也未匹配约五分钟目标，原参数没有为目标被强改。奥术同预算对照已完成一个低压场景，不能宣称全面平衡通过。支架、培养台、花园与祭坛的完整原生图标仍缺，来源边界见 `../scripts/texture-sources.md`。
 - 跨周目继承蓝图玩法不采用；升压等待真正的配方系统；机型、资源等内容扩展通过本地 JSON 配置并重新构建生效，操作见 `custom-content.md`。运行中的场地蓝图导入见 `architecture.md`。
 

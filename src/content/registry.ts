@@ -27,7 +27,6 @@ export function createContentRegistry(definition: ContentDefinition) {
     if (!KEY.test(voltage.textureKey) || !KEY.test(voltage.ore.texture)) throw new Error(`电压素材键非法：${voltage.id}`);
     if (voltage.color !== null && !COLOR.test(voltage.color)) throw new Error(`电压配色非法：${voltage.id}`);
     if (voltage.color === null && voltage.id !== 'MAX') throw new Error('彩虹电压配色只用于 MAX');
-    if (voltage.casingVoltage !== undefined && !KEY.test(voltage.casingVoltage)) throw new Error(`机壳来源非法：${voltage.id}`);
     if (!voltage.coin || !voltage.ore.material || !['none', 'halo', 'fuzzy'].includes(voltage.ore.fx)) throw new Error(`电压资源配置不完整：${voltage.id}`);
     seen.add(voltage.id);
     modelKeys.add(voltage.modelKey);

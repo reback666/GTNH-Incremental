@@ -249,7 +249,6 @@ body.skin-light .scene-marker.selected { border-color: var(--accent); box-shadow
   .factory-preview .factory-stage-3d { height: 320px; }
   .factory-preview .factory-view-actions button { min-height: 44px; }
   .factory-preview .factory-machine-list { max-height: 128px; }
-  .factory-preview .factory-footer-3d button { min-height: 44px; }
   .section-heading { margin-bottom: 10px; align-items: center; }
   .section-heading h2 { font-size: 19px; }
   .section-heading > span { max-width: 105px; text-align: right; }

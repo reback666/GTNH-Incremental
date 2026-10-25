@@ -166,9 +166,3 @@ blast 1~14 级：原图本身是彩色的，机器那套淡染（`TINT_STRENGTH 
 ## 外部场地材质
 
 `src/assets/factory3d/terrain-atlas.png` 由 `scripts/export-terrain-textures.py --pack "<Modernity 资源包路径>"` 从本节前述本机资源包的 Minecraft 方块贴图生成。每张贴图取第一帧，以最近邻统一为 16×16，并增加一像素边缘；用于静态场地，不作为机器动画素材。逐张源路径由 `terrain-manifest.json` 的 `sourcePrefix` 与贴图键确定，清单同时记录原始尺寸及图集位置。材质和形状识别规则以 `src/scene/factory3d/terrain-catalog.ts` 为准；不识别的方块必须由用户显式替换或跳过。
-
-## 旧等距场景机壳素材
-
-`src/assets/casings/<textureKey>-side.png` 与 `<textureKey>-top.png` 由 `build-scene-casings.py` 从本机 GT5-Unofficial 开发包的 `iconsets/MACHINE_<voltage>_SIDE/TOP.png` 提取。
-文件名由电压配置的 `textureKey` 决定，原版机壳电压可由 `casingVoltage` 指定。
-染色复用 `gtnh_tiers.py`；缺少独立顶面的等级使用同级侧面。这些素材保留在素材目录中，当前 3D 主厂区不使用它们。

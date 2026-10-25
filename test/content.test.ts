@@ -14,7 +14,7 @@ function withCustomContent(): ContentDefinition {
   const content = definition();
   const inherited = content.voltages.find((voltage) => voltage.id === 'UIV')!;
   content.voltages.splice(content.voltages.findIndex((voltage) => voltage.id === 'UMV'), 0, {
-    ...inherited, id: 'Q', name: '量子电压', modelKey: 'quantum', casingVoltage: 'UIV', coin: '量子币',
+    ...inherited, id: 'Q', name: '量子电压', modelKey: 'quantum', coin: '量子币',
     ore: { ...inherited.ore, material: '量子矿石' },
   });
   content.machines.push({
@@ -109,13 +109,12 @@ describe('内容注册与扩展', () => {
     expect(deserialize(legacy).ores.map(String)).toEqual(restored.ores.map(String));
     expect(deserialize(legacy).counts).toEqual(restored.counts);
 
-    const [{ modelIconUrl }, { veinIconUrl }, { casingUrl }, { pickaxeIconUrl }] = await Promise.all([
-      import('../src/game/icons'), import('../src/game/veins'), import('../src/scene/textures'), import('../src/game/pickaxe-icons'),
+    const [{ modelIconUrl }, { veinIconUrl }, { pickaxeIconUrl }] = await Promise.all([
+      import('../src/game/icons'), import('../src/game/veins'), import('../src/game/pickaxe-icons'),
     ]);
     expect(modelIconUrl('q-assembler')).toBe(modelIconUrl('c-12'));
     expect(modelIconUrl('q-assembler')).toBeTruthy();
     expect(veinIconUrl(12)).toBe(veinIconUrl(11));
-    expect(casingUrl(13, 'side')).toBe(casingUrl(12, 'side'));
     expect(pickaxeIconUrl('vajra', 13)).toBe(pickaxeIconUrl('vajra', 12));
   });
 });

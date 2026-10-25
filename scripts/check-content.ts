@@ -8,7 +8,6 @@ const check = (path: string) => {
   if (!existsSync(fileURLToPath(new URL(`../src/assets/${path}`, import.meta.url)))) missing.add(path);
 };
 for (const voltage of CONTENT.voltages) {
-  for (const face of ['side', 'top']) check(`casings/${voltage.textureKey}-${face}.png`);
   for (const line of ['vajra', 'drill', 'blast']) check(`pickaxe/${line}-${voltage.textureKey}.png`);
   check(`veins/${voltage.ore.texture}.png`);
   check(`veins/base/${voltage.ore.texture}.png`);
