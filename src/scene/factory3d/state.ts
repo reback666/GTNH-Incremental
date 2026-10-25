@@ -26,18 +26,18 @@ export function matchesSceneFilter(machine: SceneMachineState, filter: SceneFilt
   return (!filter.category || machine.category === filter.category) && (filter.tier == null || machine.tier === filter.tier);
 }
 
-export const SCENE_VOLTAGE = config.voltage;
+
 const nativeModels = nativeManifest.models as Record<string, { kind: SceneMachineState['modelKind']; size: number[] }>;
-export const SCENE_MODELS = config.machines.map(profile => {
+const sceneProfiles = config.machines.map(profile => {
   const model = CONTENT.byModelId.get(profile.modelId);
   if (!model || model.tier !== CONTENT.tierOf(config.voltage)) throw new Error(`场景机型与电压不符：${profile.modelId}`);
   return { ...profile, name: model.name, category: model.category };
 });
 
-export function sceneMachines(factory: FactoryOverview, demo: boolean, running: boolean): SceneMachineState[] {
-  const profiles = new Map(SCENE_MODELS.map(model => [model.modelId, model]));
+export function sceneMachines(factory: FactoryOverview): SceneMachineState[] {
+  const profiles = new Map(sceneProfiles.map(model => [model.modelId, model]));
   const owned = factory.facilities.flatMap(facility => facility.machines.map(machine => ({ ...machine, category: facility.kind, activity: facility.activity })));
-  const sources = demo ? SCENE_MODELS.map(model => ({ modelId: model.modelId, tier: CONTENT.tierOf(config.voltage), category: model.category, count: 1, running: running ? 1 : 0, activity: running ? 1 : 0 })) : owned.filter(machine => machine.count > 0);
+  const sources = owned.filter(machine => machine.count > 0);
   return sources.map(machine => {
     const model = CONTENT.byModelId.get(machine.modelId);
     const profile = profiles.get(machine.modelId);

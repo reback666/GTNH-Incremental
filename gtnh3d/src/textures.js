@@ -102,6 +102,7 @@ export { default as fluidSolidifierFrontActive } from "../assets/tex/overlay-flu
 
 // ---- blueprint floor blocks ------------------------------------------------
 export { default as floorWhiteConcrete } from "../assets/tex/floor-white-concrete.png";
+export { default as floorPinkConcrete } from "../assets/tex/floor-pink-concrete.png";
 export { default as floorGrayConcrete } from "../assets/tex/floor-gray-concrete.png";
 export { default as floorBlackConcrete } from "../assets/tex/floor-black-concrete.png";
 export { default as floorCyanTerracotta } from "../assets/tex/floor-cyan-terracotta.png";

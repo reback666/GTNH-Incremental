@@ -1,0 +1,1924 @@
+{
+  "textures": {
+    "star-layer-0": {
+      "file": "effects/star-layer-0.png",
+      "width": 1024,
+      "height": 512,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/tectech/models/StarLayer0.png",
+          "archive": "mods/gregtech-5.09.51.482.jar"
+        }
+      ],
+      "sourceWidth": 4096,
+      "sourceHeight": 2048,
+      "resize": {
+        "method": "nearest",
+        "width": 1024,
+        "height": 512,
+        "limitWidth": 1024
+      }
+    },
+    "star-layer-1": {
+      "file": "effects/star-layer-1.png",
+      "width": 1024,
+      "height": 512,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/tectech/models/StarLayer1.png",
+          "archive": "mods/gregtech-5.09.51.482.jar"
+        }
+      ],
+      "sourceWidth": 1024,
+      "sourceHeight": 512,
+      "resize": null
+    },
+    "star-layer-2": {
+      "file": "effects/star-layer-2.png",
+      "width": 1024,
+      "height": 574,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/tectech/models/StarLayer2.png",
+          "archive": "mods/gregtech-5.09.51.482.jar"
+        }
+      ],
+      "sourceWidth": 1024,
+      "sourceHeight": 574,
+      "resize": null
+    },
+    "space-shell": {
+      "file": "effects/space-shell.png",
+      "width": 2048,
+      "height": 1024,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/tectech/models/spaceLayer.png",
+          "archive": "mods/gregtech-5.09.51.482.jar"
+        }
+      ],
+      "sourceWidth": 8192,
+      "sourceHeight": 4096,
+      "resize": {
+        "method": "nearest",
+        "width": 2048,
+        "height": 1024,
+        "limitWidth": 2048
+      }
+    },
+    "turbine-idle-0": {
+      "file": "effects/turbine-idle-0.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW1.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-idle-1": {
+      "file": "effects/turbine-idle-1.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW2.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-idle-2": {
+      "file": "effects/turbine-idle-2.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW3.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-idle-3": {
+      "file": "effects/turbine-idle-3.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW4.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-idle-4": {
+      "file": "effects/turbine-idle-4.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW5.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "turbine-idle-5": {
+      "file": "effects/turbine-idle-5.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW6.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-idle-6": {
+      "file": "effects/turbine-idle-6.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW7.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-idle-7": {
+      "file": "effects/turbine-idle-7.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW8.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-idle-8": {
+      "file": "effects/turbine-idle-8.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW9.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-active-0": {
+      "file": "effects/turbine-active-0.png",
+      "width": 16,
+      "height": 96,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        },
+        {
+          "index": 1,
+          "ticks": 1
+        },
+        {
+          "index": 2,
+          "ticks": 1
+        },
+        {
+          "index": 3,
+          "ticks": 1
+        },
+        {
+          "index": 4,
+          "ticks": 1
+        },
+        {
+          "index": 5,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW_ACTIVE1.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-active-1": {
+      "file": "effects/turbine-active-1.png",
+      "width": 16,
+      "height": 96,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        },
+        {
+          "index": 1,
+          "ticks": 1
+        },
+        {
+          "index": 2,
+          "ticks": 1
+        },
+        {
+          "index": 3,
+          "ticks": 1
+        },
+        {
+          "index": 4,
+          "ticks": 1
+        },
+        {
+          "index": 5,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW_ACTIVE2.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-active-2": {
+      "file": "effects/turbine-active-2.png",
+      "width": 16,
+      "height": 96,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        },
+        {
+          "index": 1,
+          "ticks": 1
+        },
+        {
+          "index": 2,
+          "ticks": 1
+        },
+        {
+          "index": 3,
+          "ticks": 1
+        },
+        {
+          "index": 4,
+          "ticks": 1
+        },
+        {
+          "index": 5,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW_ACTIVE3.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-active-3": {
+      "file": "effects/turbine-active-3.png",
+      "width": 16,
+      "height": 96,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        },
+        {
+          "index": 1,
+          "ticks": 1
+        },
+        {
+          "index": 2,
+          "ticks": 1
+        },
+        {
+          "index": 3,
+          "ticks": 1
+        },
+        {
+          "index": 4,
+          "ticks": 1
+        },
+        {
+          "index": 5,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW_ACTIVE4.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-active-4": {
+      "file": "effects/turbine-active-4.png",
+      "width": 16,
+      "height": 96,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        },
+        {
+          "index": 1,
+          "ticks": 1
+        },
+        {
+          "index": 2,
+          "ticks": 1
+        },
+        {
+          "index": 3,
+          "ticks": 1
+        },
+        {
+          "index": 4,
+          "ticks": 1
+        },
+        {
+          "index": 5,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW_ACTIVE5.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "turbine-active-5": {
+      "file": "effects/turbine-active-5.png",
+      "width": 16,
+      "height": 96,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        },
+        {
+          "index": 1,
+          "ticks": 1
+        },
+        {
+          "index": 2,
+          "ticks": 1
+        },
+        {
+          "index": 3,
+          "ticks": 1
+        },
+        {
+          "index": 4,
+          "ticks": 1
+        },
+        {
+          "index": 5,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW_ACTIVE6.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-active-6": {
+      "file": "effects/turbine-active-6.png",
+      "width": 16,
+      "height": 96,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        },
+        {
+          "index": 1,
+          "ticks": 1
+        },
+        {
+          "index": 2,
+          "ticks": 1
+        },
+        {
+          "index": 3,
+          "ticks": 1
+        },
+        {
+          "index": 4,
+          "ticks": 1
+        },
+        {
+          "index": 5,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW_ACTIVE7.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-active-7": {
+      "file": "effects/turbine-active-7.png",
+      "width": 16,
+      "height": 96,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        },
+        {
+          "index": 1,
+          "ticks": 1
+        },
+        {
+          "index": 2,
+          "ticks": 1
+        },
+        {
+          "index": 3,
+          "ticks": 1
+        },
+        {
+          "index": 4,
+          "ticks": 1
+        },
+        {
+          "index": 5,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW_ACTIVE8.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "turbine-active-8": {
+      "file": "effects/turbine-active-8.png",
+      "width": 16,
+      "height": 96,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        },
+        {
+          "index": 1,
+          "ticks": 1
+        },
+        {
+          "index": 2,
+          "ticks": 1
+        },
+        {
+          "index": 3,
+          "ticks": 1
+        },
+        {
+          "index": 4,
+          "ticks": 1
+        },
+        {
+          "index": 5,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gregtech/textures/blocks/iconsets/LARGETURBINE_NEW_ACTIVE9.png",
+          "archive": "resourcepacks/Modernity-GTNHAddon-Medium-Large-Turbine.zip"
+        }
+      ]
+    },
+    "orbit-mo-front": {
+      "file": "effects/orbit-mo-front.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Mo_front.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mo-back": {
+      "file": "effects/orbit-mo-back.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Mo_back.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mo-left": {
+      "file": "effects/orbit-mo-left.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Mo_left.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mo-right": {
+      "file": "effects/orbit-mo-right.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Mo_right.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mo-top": {
+      "file": "effects/orbit-mo-top.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Mo_top.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mo-bottom": {
+      "file": "effects/orbit-mo-bottom.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Mo_bottom.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-rb-front": {
+      "file": "effects/orbit-rb-front.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Rb_front.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-rb-back": {
+      "file": "effects/orbit-rb-back.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Rb_back.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-rb-left": {
+      "file": "effects/orbit-rb-left.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Rb_left.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-rb-right": {
+      "file": "effects/orbit-rb-right.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Rb_right.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-rb-top": {
+      "file": "effects/orbit-rb-top.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Rb_top.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-rb-bottom": {
+      "file": "effects/orbit-rb-bottom.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Rb_bottom.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mb-front": {
+      "file": "effects/orbit-mb-front.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/MB_front.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mb-back": {
+      "file": "effects/orbit-mb-back.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/MB_back.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mb-left": {
+      "file": "effects/orbit-mb-left.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/MB_left.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mb-right": {
+      "file": "effects/orbit-mb-right.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/MB_right.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mb-top": {
+      "file": "effects/orbit-mb-top.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/MB_top.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mb-bottom": {
+      "file": "effects/orbit-mb-bottom.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/MB_bottom.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-me-front": {
+      "file": "effects/orbit-me-front.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Me_front.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-me-back": {
+      "file": "effects/orbit-me-back.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Me_back.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-me-left": {
+      "file": "effects/orbit-me-left.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Me_left.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-me-right": {
+      "file": "effects/orbit-me-right.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Me_right.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-me-top": {
+      "file": "effects/orbit-me-top.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Me_top.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-me-bottom": {
+      "file": "effects/orbit-me-bottom.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Me_bottom.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ca-front": {
+      "file": "effects/orbit-ca-front.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ca_front.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ca-back": {
+      "file": "effects/orbit-ca-back.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ca_back.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ca-left": {
+      "file": "effects/orbit-ca-left.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ca_left.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ca-right": {
+      "file": "effects/orbit-ca-right.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ca_right.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ca-top": {
+      "file": "effects/orbit-ca-top.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ca_top.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ca-bottom": {
+      "file": "effects/orbit-ca-bottom.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ca_bottom.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ra-front": {
+      "file": "effects/orbit-ra-front.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ra_front.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ra-back": {
+      "file": "effects/orbit-ra-back.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ra_back.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ra-left": {
+      "file": "effects/orbit-ra-left.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ra_left.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ra-right": {
+      "file": "effects/orbit-ra-right.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ra_right.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ra-top": {
+      "file": "effects/orbit-ra-top.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ra_top.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ra-bottom": {
+      "file": "effects/orbit-ra-bottom.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ra_bottom.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-dd-front": {
+      "file": "effects/orbit-dd-front.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/DD_front.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-dd-back": {
+      "file": "effects/orbit-dd-back.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/DD_back.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-dd-left": {
+      "file": "effects/orbit-dd-left.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/DD_left.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-dd-right": {
+      "file": "effects/orbit-dd-right.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/DD_right.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-dd-top": {
+      "file": "effects/orbit-dd-top.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/DD_top.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-dd-bottom": {
+      "file": "effects/orbit-dd-bottom.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/DD_bottom.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mm-front": {
+      "file": "effects/orbit-mm-front.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/MM_front.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mm-back": {
+      "file": "effects/orbit-mm-back.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/MM_back.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mm-left": {
+      "file": "effects/orbit-mm-left.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/MM_left.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mm-right": {
+      "file": "effects/orbit-mm-right.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/MM_right.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mm-top": {
+      "file": "effects/orbit-mm-top.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/MM_top.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-mm-bottom": {
+      "file": "effects/orbit-mm-bottom.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/MM_bottom.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ha-front": {
+      "file": "effects/orbit-ha-front.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ha_front.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ha-back": {
+      "file": "effects/orbit-ha-back.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ha_back.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ha-left": {
+      "file": "effects/orbit-ha-left.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ha_left.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ha-right": {
+      "file": "effects/orbit-ha-right.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ha_right.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ha-top": {
+      "file": "effects/orbit-ha-top.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ha_top.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ha-bottom": {
+      "file": "effects/orbit-ha-bottom.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ha_bottom.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ti-front": {
+      "file": "effects/orbit-ti-front.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ti_front.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ti-back": {
+      "file": "effects/orbit-ti-back.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ti_back.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ti-left": {
+      "file": "effects/orbit-ti-left.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ti_left.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ti-right": {
+      "file": "effects/orbit-ti-right.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ti_right.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ti-top": {
+      "file": "effects/orbit-ti-top.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ti_top.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    },
+    "orbit-ti-bottom": {
+      "file": "effects/orbit-ti-bottom.png",
+      "width": 16,
+      "height": 16,
+      "frames": [
+        {
+          "index": 0,
+          "ticks": 1
+        }
+      ],
+      "sources": [
+        {
+          "path": "assets/gtneioreplugin/textures/blocks/Ti_bottom.png",
+          "archive": "resourcepacks/Modernity-GTNH-9ebdeed-pre.zip"
+        }
+      ]
+    }
+  },
+  "models": {
+    "star": {
+      "file": "effects/star.obj",
+      "source": {
+        "path": "assets/tectech/models/Star.obj",
+        "archive": "mods/gregtech-5.09.51.482.jar"
+      }
+    },
+    "space": {
+      "file": "effects/space.obj",
+      "source": {
+        "path": "assets/tectech/models/Space.obj",
+        "archive": "mods/gregtech-5.09.51.482.jar"
+      }
+    }
+  },
+  "eye": {
+    "starLayers": [
+      "star-layer-0",
+      "star-layer-1",
+      "star-layer-2"
+    ],
+    "spaceTexture": "space-shell",
+    "orbitTextures": [
+      [
+        "orbit-mo-front",
+        "orbit-mo-back",
+        "orbit-mo-left",
+        "orbit-mo-right",
+        "orbit-mo-top",
+        "orbit-mo-bottom"
+      ],
+      [
+        "orbit-rb-front",
+        "orbit-rb-back",
+        "orbit-rb-left",
+        "orbit-rb-right",
+        "orbit-rb-top",
+        "orbit-rb-bottom"
+      ],
+      [
+        "orbit-mb-front",
+        "orbit-mb-back",
+        "orbit-mb-left",
+        "orbit-mb-right",
+        "orbit-mb-top",
+        "orbit-mb-bottom"
+      ],
+      [
+        "orbit-me-front",
+        "orbit-me-back",
+        "orbit-me-left",
+        "orbit-me-right",
+        "orbit-me-top",
+        "orbit-me-bottom"
+      ],
+      [
+        "orbit-ca-front",
+        "orbit-ca-back",
+        "orbit-ca-left",
+        "orbit-ca-right",
+        "orbit-ca-top",
+        "orbit-ca-bottom"
+      ],
+      [
+        "orbit-ra-front",
+        "orbit-ra-back",
+        "orbit-ra-left",
+        "orbit-ra-right",
+        "orbit-ra-top",
+        "orbit-ra-bottom"
+      ],
+      [
+        "orbit-dd-front",
+        "orbit-dd-back",
+        "orbit-dd-left",
+        "orbit-dd-right",
+        "orbit-dd-top",
+        "orbit-dd-bottom"
+      ],
+      [
+        "orbit-mm-front",
+        "orbit-mm-back",
+        "orbit-mm-left",
+        "orbit-mm-right",
+        "orbit-mm-top",
+        "orbit-mm-bottom"
+      ],
+      [
+        "orbit-ha-front",
+        "orbit-ha-back",
+        "orbit-ha-left",
+        "orbit-ha-right",
+        "orbit-ha-top",
+        "orbit-ha-bottom"
+      ],
+      [
+        "orbit-ti-front",
+        "orbit-ti-back",
+        "orbit-ti-left",
+        "orbit-ti-right",
+        "orbit-ti-top",
+        "orbit-ti-bottom"
+      ]
+    ],
+    "parameters": {
+      "spaceInward": true,
+      "spaceScale": 0.175,
+      "starBaseScale": 0.01,
+      "layerAlphas": [
+        1.0,
+        0.4,
+        0.2
+      ],
+      "layerGrowth": 1.04,
+      "baseAngles": [
+        130.0,
+        -49.0,
+        67.0
+      ],
+      "rotationDegreesPerSecond": 15.625,
+      "orbitSeed": 4542280,
+      "orbitTier": 9,
+      "orbitSize": 10,
+      "orbitDistanceBase": 2.2,
+      "orbitAngleDegreesPerTick": 10,
+      "orbits": [
+        {
+          "texture": 0,
+          "distance": 3.3991075317854826,
+          "scale": 0.7808816552927454,
+          "zAngle": 0.49269191125428785,
+          "xAngle": -0.3904184149128277,
+          "speed": 0.26601828548699835,
+          "spin": 0.23536001634505782,
+          "textures": [
+            "orbit-mo-front",
+            "orbit-mo-back",
+            "orbit-mo-left",
+            "orbit-mo-right",
+            "orbit-mo-top",
+            "orbit-mo-bottom"
+          ]
+        },
+        {
+          "texture": 1,
+          "distance": 4.07369855104651,
+          "scale": 1.3941503031970512,
+          "zAngle": 0.2640006608520879,
+          "xAngle": -0.3018564700339544,
+          "speed": 0.19705453340444623,
+          "spin": 0.12163329484852459,
+          "textures": [
+            "orbit-rb-front",
+            "orbit-rb-back",
+            "orbit-rb-left",
+            "orbit-rb-right",
+            "orbit-rb-top",
+            "orbit-rb-bottom"
+          ]
+        },
+        {
+          "texture": 2,
+          "distance": 5.078489238384242,
+          "scale": 0.5141523598391895,
+          "zAngle": -0.48222313341892054,
+          "xAngle": -0.2618383477127211,
+          "speed": 0.39101743885492724,
+          "spin": 0.11693028327883975,
+          "textures": [
+            "orbit-mb-front",
+            "orbit-mb-back",
+            "orbit-mb-left",
+            "orbit-mb-right",
+            "orbit-mb-top",
+            "orbit-mb-bottom"
+          ]
+        },
+        {
+          "texture": 3,
+          "distance": 6.221475799153278,
+          "scale": 1.371323242035712,
+          "zAngle": -0.2951330885307757,
+          "xAngle": -0.3701651837349674,
+          "speed": 0.4835293031600473,
+          "spin": 0.07011732188572233,
+          "textures": [
+            "orbit-me-front",
+            "orbit-me-back",
+            "orbit-me-left",
+            "orbit-me-right",
+            "orbit-me-top",
+            "orbit-me-bottom"
+          ]
+        },
+        {
+          "texture": 4,
+          "distance": 7.178307404674863,
+          "scale": 1.072325861129751,
+          "zAngle": -0.29149040861657277,
+          "xAngle": -0.16961091630732167,
+          "speed": 0.4321906980812812,
+          "spin": 0.10851380704876472,
+          "textures": [
+            "orbit-ca-front",
+            "orbit-ca-back",
+            "orbit-ca-left",
+            "orbit-ca-right",
+            "orbit-ca-top",
+            "orbit-ca-bottom"
+          ]
+        },
+        {
+          "texture": 5,
+          "distance": 8.276820705709156,
+          "scale": 1.4751273727090273,
+          "zAngle": -0.08517593131326268,
+          "xAngle": -0.27179120846863664,
+          "speed": 0.5047204261752731,
+          "spin": 0.15809399242137015,
+          "textures": [
+            "orbit-ra-front",
+            "orbit-ra-back",
+            "orbit-ra-left",
+            "orbit-ra-right",
+            "orbit-ra-top",
+            "orbit-ra-bottom"
+          ]
+        },
+        {
+          "texture": 6,
+          "distance": 9.083836284258073,
+          "scale": 0.6082139788854517,
+          "zAngle": -0.00967088183200148,
+          "xAngle": 0.12564937421040276,
+          "speed": 0.39510825143304146,
+          "spin": 0.1648293603774629,
+          "textures": [
+            "orbit-dd-front",
+            "orbit-dd-back",
+            "orbit-dd-left",
+            "orbit-dd-right",
+            "orbit-dd-top",
+            "orbit-dd-bottom"
+          ]
+        },
+        {
+          "texture": 7,
+          "distance": 10.09873180820141,
+          "scale": 0.9828222709851057,
+          "zAngle": 0.00944259300014443,
+          "xAngle": -0.22358025656369632,
+          "speed": 0.2573651561633128,
+          "spin": 0.28335257596609553,
+          "textures": [
+            "orbit-mm-front",
+            "orbit-mm-back",
+            "orbit-mm-left",
+            "orbit-mm-right",
+            "orbit-mm-top",
+            "orbit-mm-bottom"
+          ]
+        },
+        {
+          "texture": 8,
+          "distance": 11.234343492459288,
+          "scale": 0.7397495663379801,
+          "zAngle": -0.1372347695298462,
+          "xAngle": 0.06027614095035966,
+          "speed": 0.3963097360019135,
+          "spin": 0.2840250764214589,
+          "textures": [
+            "orbit-ha-front",
+            "orbit-ha-back",
+            "orbit-ha-left",
+            "orbit-ha-right",
+            "orbit-ha-top",
+            "orbit-ha-bottom"
+          ]
+        },
+        {
+          "texture": 9,
+          "distance": 12.007379481171341,
+          "scale": 1.2927862561013481,
+          "zAngle": 0.3028349746000472,
+          "xAngle": 0.11525255300990928,
+          "speed": 0.45405195137708776,
+          "spin": 0.2560780781358285,
+          "textures": [
+            "orbit-ti-front",
+            "orbit-ti-back",
+            "orbit-ti-left",
+            "orbit-ti-right",
+            "orbit-ti-top",
+            "orbit-ti-bottom"
+          ]
+        }
+      ]
+    }
+  },
+  "turbine": {
+    "active": [
+      "turbine-active-0",
+      "turbine-active-1",
+      "turbine-active-2",
+      "turbine-active-3",
+      "turbine-active-4",
+      "turbine-active-5",
+      "turbine-active-6",
+      "turbine-active-7",
+      "turbine-active-8"
+    ],
+    "idle": [
+      "turbine-idle-0",
+      "turbine-idle-1",
+      "turbine-idle-2",
+      "turbine-idle-3",
+      "turbine-idle-4",
+      "turbine-idle-5",
+      "turbine-idle-6",
+      "turbine-idle-7",
+      "turbine-idle-8"
+    ]
+  }
+}

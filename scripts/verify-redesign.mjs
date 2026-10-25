@@ -99,14 +99,14 @@ try {
       await seed(page, fixtures.scale);
       const details = await page.$('details.factory-preview');
       if (details) await details.evaluate(element => { element.open = true; });
-      await page.waitForSelector('canvas[data-scene-ready="true"][data-machine-count="2400"]', { timeout: 90000 });
+      await page.waitForSelector('canvas[data-scene-ready="true"][data-machine-count="1200"][data-owned-count="2400"]', { timeout: 90000 });
       const metrics = await page.$eval('canvas[data-scene-ready="true"]', canvas => ({ ...canvas.dataset }));
-      assert.equal(metrics.ownedCount, '2400'); assert.equal(metrics.blockCount, '2400'); assert.equal(metrics.iconCount, '0');
+      assert.equal(metrics.ownedCount, '2400'); assert.equal(metrics.blockCount, '1200'); assert.equal(metrics.iconCount, '0');
       assert.ok(Number(metrics.drawCalls) < 100, `Too many draw calls: ${metrics.drawCalls}`);
       await page.select('[aria-label="筛选设备类别"]', 'miner');
-      await page.waitForFunction(() => document.querySelector('canvas[data-machine-count="1200"]'));
+      await page.waitForFunction(() => document.querySelector('canvas[data-machine-count="1200"]') && document.querySelector('.factory-filters')?.textContent.includes('1200 台设备'));
       await click(page, '.factory-filters button', '清除筛选');
-      await page.waitForFunction(() => document.querySelector('canvas[data-machine-count="2400"]'));
+      await page.waitForFunction(() => document.querySelector('canvas[data-machine-count="1200"]') && document.querySelector('.factory-filters')?.textContent.includes('2400 台设备'));
       await page.$eval('.factory-machine-list > button', button => button.click());
       await page.waitForFunction(() => document.querySelector('.factory-footer-3d')?.textContent.includes('第 1 /'));
       await page.screenshot({ path: join(output, 'factory-2400.png') });

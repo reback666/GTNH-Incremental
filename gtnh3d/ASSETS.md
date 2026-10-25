@@ -85,6 +85,7 @@
 | key | 输出文件 | 源容器 | 包内路径 | 源尺寸 | 输出 | 字节 | sha256(12) | 备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `floor-white-concrete` | `assets/tex/floor-white-concrete.png` | modernity-zip | `assets/minecraft/textures/blocks/white_concrete.png` | 16x16 | 16x16 | 293 | `f65bcac1f45e` |  |
+| `floor-pink-concrete` | `assets/tex/floor-pink-concrete.png` | modernity-zip | `assets/minecraft/textures/blocks/pink_concrete.png` | 16x16 | 16x16 | 218 | `66431c251d44` | 独立设备场地的默认区块边框 |
 | `floor-gray-concrete` | `assets/tex/floor-gray-concrete.png` | modernity-zip | `assets/minecraft/textures/blocks/gray_concrete.png` | 16x16 | 16x16 | 221 | `7c993e22ed2c` |  |
 | `floor-black-concrete` | `assets/tex/floor-black-concrete.png` | modernity-zip | `assets/minecraft/textures/blocks/black_concrete.png` | 16x16 | 16x16 | 290 | `670113efe948` |  |
 | `floor-cyan-terracotta` | `assets/tex/floor-cyan-terracotta.png` | modernity-zip | `assets/minecraft/textures/blocks/hardened_clay_stained_cyan.png` | 16x16 | 16x16 | 470 | `c33bfaecb6b3` | 1.7.10 无 cyan_terracotta，用同名色系染色硬化粘土 |

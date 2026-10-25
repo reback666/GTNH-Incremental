@@ -1,7 +1,7 @@
 {
   "name": "gtnh-incremental",
   "private": true,
-  "version": "0.9.1",
+  "version": "0.9.2",
   "type": "module",
   "description": "GTNH 本地增量游戏：数值模拟、工业控制台与实时厂区",
   "scripts": {
@@ -21,12 +21,14 @@
   },
   "dependencies": {
     "decimal.js": "^10.4.3",
+    "nbtify": "2.2.0",
     "pinia": "^4.0.3",
     "vue": "^3.5.43"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
     "@vitejs/plugin-vue": "^6.0.9",
+    "puppeteer-core": "24.31.0",
     "three": "^0.170.0",
     "tsx": "^4.23.15",
     "typescript": "^5.6.3",

@@ -146,14 +146,11 @@ class Builder:
                 except ValueError:
                     pass
         hint = value.get('mHint', '')
-        if hint == 'of class MTEHatchTurbine':
-            return self.machine(30010)
-        if hint == 'of type Dynamo':
-            return self.machine(35)
-        if hint == 'of type Muffler':
-            return self.machine(95)
-        if hint == 'of type INSTANCE' and machine_meta == 15331:
-            return self.machine(15451)
+        if hint in ('of class MTEHatchTurbine', 'of type Dynamo', 'of type Muffler') \
+                or hint == 'of type INSTANCE' and machine_meta == 15331:
+            # Required ports have no casing fallback in StructureLib; use their surrounding casing for display.
+            casing = 'A' if machine_meta == 15331 else 'c'
+            return self.element(self.source[str(machine_meta)]['elements'][casing], machine_meta)
         raise ValueError(f'Unresolved structure element in {machine_meta}: {value}')
 
     def shape(self, entry, name):
@@ -180,20 +177,14 @@ class Builder:
         blocks = {(0, 0, 0): (controller, 0, 'SOUTH')}
         for piece in structure['pieces']:
             offset = piece['offset']
-            occurrences = {}
             for (a, b, c), letter, element in self.shape(entry, piece['shape']):
                 position = (a - offset[0], offset[1] - b, offset[2] - c)
-                occurrence = occurrences.get(letter, 0)
-                occurrences[letter] = occurrence + 1
-                replacement = next((item for item in structure.get('replacements', [])
-                                    if item['shape'] == piece['shape'] and item['letter'] == letter and item['occurrence'] == occurrence), None)
-                kind = self.machine(replacement['meta']) if replacement else self.element(element, meta)
+                kind = self.element(element, meta)
                 if position == (0, 0, 0):
                     raise ValueError(f'Structure overlaps controller: {meta}, {piece}, {letter}')
                 if position in blocks:
                     raise ValueError(f'Overlapping pieces: {meta}, {position}')
-                blocks[position] = (kind, replacement.get('rotation', 0) if replacement else 0,
-                                    replacement.get('facing', 'SOUTH') if replacement else 'SOUTH')
+                blocks[position] = (kind, 0, 'SOUTH')
         minimum = [min(position[axis] for position in blocks) for axis in range(3)]
         size = [max(position[axis] for position in blocks) - minimum[axis] + 1 for axis in range(3)]
         self.models[model_id] = {'size': size, 'kind': 'multiblock',

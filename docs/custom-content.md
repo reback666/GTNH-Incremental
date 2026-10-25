@@ -69,9 +69,9 @@
 
 ## 3D 场景机型
 
-`src/content/scene-machines.json` 定义当前演示电压、机型 ID、原型类、贴图配方和可见台数。机型的名称与类别自动读取同一个内容注册器，修改显示名称不需要在场景再改一份。
+`src/content/scene-machines.json` 定义基础方块原型的参考电压、机型 ID 与贴图配方。实际厂区读取完整内容注册器和真实设备数量；机型的名称与类别也由注册器提供，修改显示名称不需要在场景再改一份。
 
-增加已有配方支持的 GT 单方块机型后，在运行中的本地客户端执行 `scripts/native-models/capture.py` 导出真实六面材质，再执行 `scripts/native-models/build-models.py` 和 `npm run build`。新增多方块机型必须将原 StructureLib 结构、控制器偏移、仓口和朝向登记到 `scripts/native-models/structures.json`，由构建器逐格生成；不得以相似单方块或物品图标代替结构。非 GT 设备应按原模组模型导出流程更新 `custom-models.py` 与 `custom-manifest.json`。
+增加已有配方支持的 GT 单方块机型后，在运行中的本地客户端执行 `scripts/native-models/capture.py` 导出真实六面材质，再执行 `scripts/native-models/build-models.py` 和 `npm run build`。新增多方块机型必须将原 StructureLib 结构、控制器偏移与结构元素映射登记到 `scripts/native-models/structures.json`，由构建器逐格生成；无舱室外观规则见 `architecture.md`，不得以相似单方块或物品图标代替结构。非 GT 设备应按原模组模型导出流程更新 `custom-models.py` 与 `custom-manifest.json`。
 
 ## 存档与内容身份
 

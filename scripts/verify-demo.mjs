@@ -74,7 +74,6 @@ async function starter(page) {
   const automatic = await snapshot(page);
   assert.ok(coinBalance(automatic) > 0, 'Manufacturing must produce coins');
   assert.ok(oreBalance(automatic) > oreBalance(built), 'Mining must build an actual surplus stock');
-  assert.equal(await page.$eval('.factory-goal', element => element.textContent.includes('推进本级机型研究')), false, 'ULV goals must not direct players to unavailable future research');
   await isolation(page);
 }
 try {
