@@ -3,7 +3,7 @@ import { ArcaneExpedition, type ArcaneContext, type ArcaneNetwork } from './arca
 import { MAX_TIER, VOLTAGE_TIERS, isValidTier } from '../numeric/voltage';
 import { MARGINAL_COST_GROWTH, SELL_REFUND_RATE, machineCost } from '../numeric/cost';
 import { machineEnergy, machineOutput } from '../numeric/output';
-import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU } from '../numeric/generator';
+import { generatorFuelEfficiency, generatorFuelRate, generatorOutputEU, oreEnergyValue } from '../numeric/generator';
 import { minerEnergyEU, minerOrePerSecond } from '../numeric/miner';
 import { coinValueInTier1, convertCoins, paymentTier } from '../numeric/credit';
 import type { DisplayMode } from '../numeric/format';
@@ -141,7 +141,7 @@ export type DevResourceTarget =
   | { scope: 'ores' | 'coins' | 'both' | 'cables' }
   | { scope: 'ore' | 'coin'; tier: number };
 
-// 转生履历的一条（docs/转生拓展大纲.md C1）：结算那一刻记下，只增不改，
+// 转生履历的一条（docs/redesign-plan.md C1）：结算那一刻记下，只增不改，
 // 超过 50 条丢最旧的。数值都存字符串（Decimal 序列化口径）。
 export interface RunHistoryEntry {
   // 第几个周目（转生后的 rebirthCount，即刚结束的周目序号）
@@ -265,7 +265,7 @@ export class GameCore {
   universes: UniverseId[] = [];
   // 已经选好、等下一次转生带走的宇宙（只存选择本身，转生时才生效）
   pendingUniverse: UniverseId | null = null;
-  // ── 挑战时间线（docs/转生拓展大纲.md M3）──────────────────
+  // ── 挑战时间线（docs/redesign-plan.md M3）──────────────────
   // 本周目挂着的挑战：转生时从 pendingChallenge 生效，全程受检
   activeChallenge: ChallengeId | null = null;
   // 挑战违规即静默失效（没有惩罚，只是结算拿不到加成）
@@ -320,6 +320,8 @@ export class GameCore {
   arcaneExpedition = new ArcaneExpedition();
   enchantments: Record<string, [number, number, number]> = {};
   visPriorities: Record<string, number> = {};
+  // 发电机按机型保存的燃料优先级：矿石等级从 0 开始。
+  generatorFuelPriorities: Record<string, number[]> = {};
   lastVisRatios = new Map<string, Decimal>();
   reactorRiskArmed = false;
   reactorRiskExposure = 0;
@@ -1332,6 +1334,61 @@ export class GameCore {
     return this.generatorFuelRateOf(model).times(this.workingCountOf(model.id));
   }
 
+  generatorFuelOptions(model: MachineModel): number[] {
+    if (model.category !== 'generator' || model.visPowered) return [];
+    return Array.from({ length: model.tier }, (_, index) => model.tier - 1 - index);
+  }
+
+  generatorFuelPriorityOf(modelId: string): number[] {
+    const model = MACHINE_MODELS.find(item => item.id === modelId);
+    if (!model) return [];
+    const allowed = this.generatorFuelOptions(model);
+    const saved = this.generatorFuelPriorities[modelId];
+    if (!saved || saved.length === 0) return allowed.length > 0 ? [allowed[0]!] : [];
+    const order = saved.filter(tier => allowed.includes(tier));
+    for (const tier of allowed) if (!order.includes(tier)) order.push(tier);
+    return order;
+  }
+
+  generatorFuelOrderOf(modelId: string): number[] {
+    const model = MACHINE_MODELS.find(item => item.id === modelId);
+    if (!model) return [];
+    const allowed = this.generatorFuelOptions(model);
+    const saved = this.generatorFuelPriorities[modelId];
+    if (!saved || saved.length === 0) return allowed;
+    const order = saved.filter(tier => allowed.includes(tier));
+    for (const tier of allowed) if (!order.includes(tier)) order.push(tier);
+    return order;
+  }
+
+  setGeneratorFuelPriority(modelId: string, priority: number[]): boolean {
+    const model = MACHINE_MODELS.find(item => item.id === modelId);
+    if (!model || model.category !== 'generator' || model.visPowered) return false;
+    const allowed = this.generatorFuelOptions(model);
+    const order = priority.filter((tier, index) => allowed.includes(tier) && priority.indexOf(tier) === index);
+    if (order.length === 0) {
+      this.generatorFuelPriorities[modelId] = [];
+      return true;
+    }
+    if (order.length === 1 && order[0] === allowed[0]) {
+      this.generatorFuelPriorities[modelId] = [];
+      return true;
+    }
+    if (order.length !== allowed.length) return false;
+    this.generatorFuelPriorities[modelId] = order;
+    return true;
+  }
+
+  generatorFuelRateFor(model: MachineModel, fuelTier: number): Decimal {
+    if (!this.generatorFuelOptions(model).includes(fuelTier)) return ZERO;
+    const efficiency = dec(model.fuelEfficiency ?? generatorFuelEfficiency(model.tier)).times(this.fuelEfficiencyBonus());
+    return generatorFuelRate(model.tier, {
+      outputFactor: model.outputFactor,
+      efficiency,
+      oreEnergy: oreEnergyValue(fuelTier + 1),
+    }).times(this.reactorRiskFactor(model));
+  }
+
   // 单台发电机的烧矿速率。永久加成里的「燃料效率」直接乘在机型的效率上
   generatorFuelRateOf(model: MachineModel): Decimal {
     const efficiency = dec(model.fuelEfficiency ?? generatorFuelEfficiency(model.tier)).times(
@@ -1911,10 +1968,16 @@ export class GameCore {
     let fuelCapacity = ZERO;
     for (const model of active) {
       if (model.category !== 'generator' || model.visPowered) continue;
-      const want = this.generatorFuelDrain(model).times(step);
-      const available = this.ores[model.tier - 1]!; // 本级发电机烧本级矿石
-      const ratio = want.gt(0) ? Decimal.min(ONE, available.div(want)) : ONE;
-      fuelCapacity = fuelCapacity.plus(this.generatorOutputRated(model).times(ratio));
+      const rated = this.generatorOutputRated(model);
+      const working = this.workingCountOf(model.id);
+      if (rated.lte(0) || working <= 0) continue;
+      let possible = ZERO;
+      for (const fuelTier of this.generatorFuelPriorityOf(model.id)) {
+        const rate = this.generatorFuelRateFor(model, fuelTier);
+        if (rate.lte(0)) continue;
+        possible = possible.plus(this.ores[fuelTier]!.div(rate.times(working)).times(rated));
+      }
+      fuelCapacity = fuelCapacity.plus(Decimal.min(rated, possible.div(step)));
     }
 
     // 4) 供电结算。
@@ -2005,16 +2068,26 @@ export class GameCore {
     const fuelLoad = new Map<string, Decimal>();
     for (const model of active) {
       if (model.category !== 'generator' || model.visPowered) continue;
-      const want = this.generatorFuelDrain(model).times(step).times(fuelThrottle);
-      const oreTier = model.tier - 1;
-      const available = this.ores[oreTier]!;
-      const burned = Decimal.min(want, available);
-      if (burned.gt(0)) {
-        this.ores[oreTier] = available.minus(burned);
-        report.oreSpent[oreTier] = report.oreSpent[oreTier]!.plus(burned);
-        this.totalOreSpent = this.totalOreSpent.plus(burned);
+      const rated = this.generatorOutputRated(model);
+      const targetOutput = rated.times(step).times(fuelThrottle);
+      let remainingOutput = targetOutput;
+      const working = this.workingCountOf(model.id);
+      for (const fuelTier of this.generatorFuelPriorityOf(model.id)) {
+        if (remainingOutput.lte(0)) break;
+        const rate = this.generatorFuelRateFor(model, fuelTier);
+        if (rate.lte(0) || working <= 0) continue;
+        const outputPerFuel = rated.div(rate.times(working));
+        const available = this.ores[fuelTier]!;
+        const needed = remainingOutput.div(outputPerFuel);
+        const burned = Decimal.min(needed, available);
+        if (burned.gt(0)) {
+          this.ores[fuelTier] = available.minus(burned);
+          report.oreSpent[fuelTier] = report.oreSpent[fuelTier]!.plus(burned);
+          this.totalOreSpent = this.totalOreSpent.plus(burned);
+          remainingOutput = remainingOutput.minus(burned.times(outputPerFuel));
+        }
       }
-      const runRatio = want.gt(0) ? fuelThrottle.times(burned.div(want)) : ZERO;
+      const runRatio = rated.gt(0) ? targetOutput.minus(remainingOutput).div(rated.times(step)) : ZERO;
       fuelLoad.set(model.id, runRatio);
     }
     // 燃料侧的实际出力就等于按需分配的额度：fuelTarget ≤ fuelCapacity 时一定拿得出来

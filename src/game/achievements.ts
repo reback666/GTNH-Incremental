@@ -62,7 +62,7 @@ export interface AchievementState {
   researchTotal: number;
   // 奥术宇宙的源质存量
   essentia: Decimal;
-  // 首通过的挑战时间线（docs/转生拓展大纲.md M3）
+  // 首通过的挑战时间线（docs/redesign-plan.md M3）
   completedChallenges: string[];
   // 几类「有名有姓」的机器台数：成就直接读它们
   specials: {
@@ -431,7 +431,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     check: (state) => state.rebirthCount >= 10,
   },
 
-  // ── 挑战时间线首通（docs/转生拓展大纲.md M3）──────────────
+  // ── 挑战时间线首通（docs/redesign-plan.md M3）──────────────
   {
     id: 'challenge-pure',
     name: '一尘不染',

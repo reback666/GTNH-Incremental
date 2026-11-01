@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FACE_DEF, FACE_ORDER } from '../../../gtnh3d/src/blocks.js';
+import { FACE_DEF, FACE_ORDER } from './blocks.js';
 
 function textureTimeline(metadata, label = '原生纹理') {
   if (!Array.isArray(metadata?.frames) || !metadata.frames.length || !(metadata.frameTime > 0)) {

@@ -17,7 +17,10 @@ const store = useGameStore();
 const content = ref<HTMLElement | null>(null);
 
 // 内容视口保持高度，类别切换只替换视口内的内容，避免页面滚动锚点跳动。
-const emit = defineEmits<{ 'update:activeKind': [kind: MachineKind | 'pickaxe' | null] }>();
+const emit = defineEmits<{
+  'update:activeKind': [kind: MachineKind | 'pickaxe' | null];
+  'open-details': [modelId: string];
+}>();
 const active = computed({ get: () => props.activeKind, set: kind => emit('update:activeKind', kind) });
 const PICKAXE_TAB = 'pickaxe';
 
@@ -218,6 +221,10 @@ function canBuy(model: MachineModelRow): boolean {
   // 还没研究出来、或者缺对应平行宇宙的机型不能建造，灰掉按钮
   return model.unlocked && (payWith.value === 'ore' ? model.oreAffordable : model.affordable);
 }
+
+function openDetails(model: MachineModelRow): void {
+  emit('open-details', model.id);
+}
 </script>
 
 <template>
@@ -321,6 +328,8 @@ function canBuy(model: MachineModelRow): boolean {
                 @mouseleave="hideTip"
                 @focus="showTip($event, bar.model)"
                 @blur="hideTip"
+                @click="openDetails(bar.model)"
+                @keydown.enter.prevent="openDetails(bar.model)"
               >
                 <MachineIcon :model-id="bar.model.id" :kind="activeColumn.kind" :size="40" /><span class="model-label">{{ bar.model.name }}</span>
                 <span v-if="bar.model.block === 'multiblock'" class="badge mb" title="多方块：产出与效率更高，成本系数也更高">多方块</span>

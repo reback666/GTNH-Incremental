@@ -7,8 +7,8 @@ import { build } from 'esbuild';
 import puppeteer from 'puppeteer-core';
 
 const root = resolve(import.meta.dirname, '..');
-const html = resolve(process.argv[2] ?? join(root, 'dist/GTNH增量.html'));
-const output = join(root, 'outputs/multiblock-effects');
+const html = resolve(process.argv[2] ?? join(root, 'dist/GTNH-Incremental.html'));
+const output = join(root, 'outputs/verification/multiblock-effects');
 const fixture = await build({
   stdin: { resolveDir: root, loader: 'ts', contents: `
     import { GameCore } from './src/game/core';

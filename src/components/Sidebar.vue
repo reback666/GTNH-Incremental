@@ -11,7 +11,7 @@ const tierName = computed(() => VOLTAGE_TIERS[store.snap.maxTier - 1]);
 </script>
 <template>
   <aside class="command-rail">
-    <div class="rail-brand"><span class="brand-mark"><img :src="gtnhLogo" alt="GTNH" width="36" height="36" /></span><div><strong>GTNH</strong><span>增量 · 工业纪元</span></div></div>
+    <div class="rail-brand"><span class="brand-mark"><img :src="gtnhLogo" alt="GTNH" width="36" height="36" /></span><div><strong>GTNH</strong><span>Incremental · 工业纪元</span></div></div>
     <div class="rail-divider" />
     <span class="rail-section-label">控制中心</span>
     <nav class="rail-nav" aria-label="游戏页面">

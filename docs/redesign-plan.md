@@ -2,7 +2,7 @@
 
 ## 适用范围与实施基线
 
-本计划以本地 `dev` 分支的现有系统为基础。现行玩法以 `../plan.txt` 和 `src/game/`、`src/numeric/`、`src/content/` 的实际实现为准，实施状态见本文执行表，运行方式见 `status.md`。
+本计划以本地 `dev` 分支的现有系统为基础。现行玩法以 `game-rules.md` 和 `../src/game/`、`../src/numeric/`、`../src/content/` 的实际实现为准，实施状态见本文执行表，运行方式见 `status.md`。
 
 保留原有循环：**手动或自动采矿积攒矿石 → 发电机消耗矿石供电 → 制造机消耗矿石与电力产出 GT 币 → 扩建与解锁电压。** 矿石有真实库存；发电与制造会实际扣矿；库存可以支持没有正在运行的采矿机的工厂。
 
@@ -48,7 +48,7 @@
 
 | 内容 | 唯一实现或权威来源 |
 | --- | --- |
-| 原有玩法与设计理由 | `plan.txt`；当前行为见 `docs/status.md` |
+| 原有玩法与设计理由 | `game-rules.md`；当前行为见 `status.md` |
 | 生产、购买、出售、解锁与研究 | `src/game/core.ts`，不在预览另建同类模型 |
 | 公式与 Decimal | `src/numeric/` |
 | 机型、电压、资源与素材键 | `src/content/`、`src/game/models.ts` |
@@ -56,8 +56,8 @@
 | 时间、存档与日志 | `runtime.ts`、`save.ts`、`log.ts`；入口隔离键见 `storage-key.ts` |
 | 快照、操作与页面 | `src/game/presentation/`、`store.ts`、现有 Vue 组件 |
 | 独立设备场地与地板编辑 | `src/scene/factory3d/`，只消费快照，不结算资源；场地约束见 `architecture.md` |
-| 平衡报告 | `scripts/balance.ts` 生成 `docs/balance.md`，不手改产物 |
-| 奥术实体专项 | `docs/arcane-universe-plan.md`；保留原源质与魔法机，新实体作为额外灵气来源 |
+| 平衡报告 | `../scripts/balance.ts` 生成 `balance.md`，不手改产物 |
+| 奥术实体专项 | `arcane-universe-plan.md`；保留原源质与魔法机，新实体作为额外灵气来源 |
 
 ## 执行计划与验收
 
@@ -90,7 +90,7 @@
 
 当前交付为 **基于 dev 原体系的共用正式应用与隔离预览**，入口、产物和验证记录见 `status.md`。没有建立另一套单币经济；用户确认的污染、研究、安全和离线改动已落地。
 
-七日实跑已经结束，工业停止现场、目标差距和策略限制以 `balance.md` 为准；完整实证保留在 `../outputs/progression-7d-seed-20261024.json`，可续跑存档在 `../outputs/progression-checkpoint.json`。后续从该存档及随机状态继续 P4.3，增大累计模拟天数，不重开已观测前段；操作命令见平衡报告。原价格与产量不为迎合目标被强改，当前结果不能证明最优路线或完整终点。奥术以同预算报告为依据验证备用节点培养、高质量 / 高压、附魔等场景，并补齐四类辅助设施原生素材；不得把一个低压场景或预置实验资产写成全面平衡 / 从零通关完成。
+七日实跑已经结束，工业停止现场、目标差距和策略限制以 `balance.md` 为准；完整实证保留在 `../outputs/balance/progression-7d-seed-20261024.json`，可续跑存档在 `../outputs/balance/progression-checkpoint.json`。后续从该存档及随机状态继续 P4.3，增大累计模拟天数，不重开已观测前段；操作命令见平衡报告。原价格与产量不为迎合目标被强改，当前结果不能证明最优路线或完整终点。奥术以同预算报告为依据验证备用节点培养、高质量 / 高压、附魔等场景，并补齐四类辅助设施原生素材；不得把一个低压场景或预置实验资产写成全面平衡 / 从零通关完成。
 
 ## 验证、记录与收尾
 

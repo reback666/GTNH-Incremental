@@ -12,9 +12,11 @@ import EnergyPanel from './EnergyPanel.vue';
 import UiIcon from './UiIcon.vue';
 import { modelIconUrl } from '../game/icons';
 import { formatNumber } from '../numeric/format';
+import MachineDetailDialog from './MachineDetailDialog.vue';
 const store = useGameStore();
 const emit = defineEmits<{ technology: [] }>();
 const selectedKind = ref<MachineKind | 'pickaxe' | null>('miner');
+const detailModelId = ref<string | null>(null);
 const nodePage = ref(0);
 const selectedNodeId = ref('');
 const installedNodes = computed(() => store.snap.arcaneExpedition.nodes.filter(node => node.location === 'installed'));
@@ -27,6 +29,16 @@ function toggleScene(event: Event) {
 const nextName = computed(() => store.snap.nextTier ? VOLTAGE_TIERS[store.snap.nextTier - 1] : 'MAX');
 function select(kind: MachineKind) {
   selectedKind.value = kind;
+}
+function openDetails(modelId: string): void {
+  detailModelId.value = modelId;
+}
+function closeDetails(): void {
+  detailModelId.value = null;
+}
+function jumpFromDetails(kind: MachineKind): void {
+  selectedKind.value = kind;
+  closeDetails();
 }
 </script>
 <template>
@@ -61,10 +73,17 @@ function select(kind: MachineKind) {
     </section>
     <section class="workshop" aria-labelledby="workshop-title">
       <div class="section-heading"><div><span class="eyebrow">建造 · 超频 · 维护</span><h2 id="workshop-title">设备工作台</h2></div><span class="muted small">{{ store.snap.factory.machineCount }} 台设备已部署</span></div>
-      <MachinePanel v-model:active-kind="selectedKind" :columns="store.snap.columns" />
+      <MachinePanel v-model:active-kind="selectedKind" :columns="store.snap.columns" @open-details="openDetails" />
     </section>
     </div>
   </div>
+  <MachineDetailDialog
+    v-if="detailModelId"
+    :model-id="detailModelId"
+    :columns="store.snap.columns"
+    @close="closeDetails"
+    @jump="jumpFromDetails"
+  />
   </div>
 </template>
 

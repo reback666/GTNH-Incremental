@@ -93,7 +93,7 @@ function downloadLog(format: 'txt' | 'json'): void {
   try {
     url = URL.createObjectURL(new Blob([text], { type: format === 'json' ? 'application/json;charset=utf-8' : 'text/plain;charset=utf-8' }));
     link.href = url;
-    link.download = 'GTNH增量日志-' + fileStamp() + '.' + format;
+    link.download = 'GTNH-Incremental日志-' + fileStamp() + '.' + format;
     document.body.appendChild(link);
     link.click();
     logEvent('info', 'log.export', '下载完整诊断日志', undefined, { format });

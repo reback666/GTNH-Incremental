@@ -66,7 +66,8 @@ export const SIM_STEP_MS = 1000;
 // v26：记录稳定的电压标识，配置增减或调整顺序时按标识恢复资源与进度。
 // v27：记录已投资研究项目，切换、存读档不重复付费；原有研究进度免补缴。
 // v28：奥术实体、附魔、灵气调度与反应堆风险运行状态；原资源和机型字段保留。
-export const SAVE_VERSION = 28;
+// v29：按机型保存发电机燃料优先级。
+export const SAVE_VERSION = 29;
 
 // 自动存档间隔（秒）：存档框滑条的范围，默认沿用写死的 10 秒
 export const AUTOSAVE_SECONDS_DEFAULT = 10;

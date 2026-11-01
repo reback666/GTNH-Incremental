@@ -39,7 +39,6 @@ const focused = computed(() => selected.value && filtered.value.some(machine => 
 const displayed = computed(() => filtered.value.reduce((sum, machine) => sum + machine.count, 0));
 const count = computed(() => machines.value.reduce((sum, machine) => sum + machine.count, 0));
 const running = computed(() => filtered.value.reduce((sum, machine) => sum + (machine.activity > 0 ? machine.running : 0), 0));
-const multiblocks = computed(() => filtered.value.filter(machine => machine.modelKind === 'multiblock').reduce((sum, machine) => sum + machine.count, 0));
 const { library, storageError, setSite, savePreset, removePreset, importLibrary, addImportedPreset } = useGroundLibrary();
 const defaultGround = createGround();
 const site = computed(() => selected.value ? groundSiteKey(selected.value.id) : 'empty:0');
@@ -227,31 +226,30 @@ onUnmounted(() => {
 <template>
   <section ref="root" class="factory-scene factory-scene-3d" aria-labelledby="factory-scene-title">
     <div class="scene-heading">
-      <div class="factory-title"><span class="eyebrow">一个机型 · 一块场地</span><h2 id="factory-scene-title">设备场地 <span class="factory-voltage">同型号放在一起</span></h2></div>
-    </div>
-    <div class="factory-view-toolbar">
-      <span><i class="factory-status-dot" :class="{ active: running > 0 }" />已建造 {{ count }} 台 · 当前场地 {{ selected?.count ?? 0 }} 台</span>
-      <div class="factory-view-actions">
-        <button type="button" :aria-pressed="motion.active.value" :disabled="motion.reduced.value" @click="motion.toggle">{{ motion.active.value ? '动态：开' : '动态：关' }}</button>
-        <button type="button" :disabled="!ready" @click="resetView">复位视角</button>
-        <button type="button" :disabled="!ready || !selected || !filtered.some(machine => machine.id === selectedId)" @click="focusSelected">靠近所选</button>
-        <button type="button" @click="fullscreen">全屏</button>
+      <div class="factory-title"><span class="eyebrow">一个机型 · 一块场地</span><h2 id="factory-scene-title">设备场地</h2></div>
+      <div class="ground-settings-launcher">
+        <span>场地：{{ savedGround.preset === 'preset-1' ? '预设一' : savedGround.preset === 'imported' ? currentStructure?.name : '16 × 16 区块' }}</span>
+        <div><button type="button" class="ground-settings-edit-button" aria-haspopup="dialog" aria-controls="ground-settings-dialog" :disabled="!ready" @click="openSettings">自定义场地</button></div>
       </div>
-    </div>
-    <div class="ground-settings-launcher">
-      <span>场地：{{ savedGround.preset === 'preset-1' ? '预设一' : savedGround.preset === 'imported' ? currentStructure?.name : '16 × 16 区块' }}</span>
-      <div><button type="button" class="ground-settings-edit-button" aria-haspopup="dialog" aria-controls="ground-settings-dialog" :disabled="!ready" @click="openSettings">自定义场地</button></div>
     </div>
     <div class="factory-filters" aria-label="厂区设备筛选">
       <label>类别 <select v-model="category" aria-label="筛选设备类别"><option value="">全部类别</option><option v-for="kind in COLUMN_ORDER" :key="kind" :value="kind">{{ COLUMN_META[kind].title }}</option></select></label>
       <label>电压 <select v-model="tier" aria-label="筛选设备电压"><option :value="null">全部电压</option><option v-for="[value, name] in tiers" :key="value" :value="value">{{ name }}</option></select></label>
       <button v-if="category || tier !== null" type="button" @click="clearFilters">清除筛选</button>
-      <span>{{ displayed }} 台设备 · {{ multiblocks }} 台多方块结构</span>
     </div>
     <div ref="mainPreviewHost" class="factory-main-scene-host" :style="settingsOpen ? { height: `${mainPreviewHeight}px` } : undefined">
     <Teleport :to="settingsPreviewHost ?? 'body'" :disabled="!settingsOpen">
     <div class="scene-stage factory-stage-3d" :aria-busy="!ready && !error">
       <canvas ref="canvas" tabindex="0" aria-label="3D 独立设备场地，拖动观察，编辑时点击铺设；WASD 飞行，空格上升，Shift 下降，R 复位。" />
+      <div class="factory-view-toolbar">
+        <span><i class="factory-status-dot" :class="{ active: running > 0 }" />已建造 {{ count }} 台 · 当前场地 {{ selected?.count ?? 0 }} 台</span>
+        <div class="factory-view-actions">
+          <button type="button" :aria-pressed="motion.active.value" :disabled="motion.reduced.value" @click="motion.toggle">{{ motion.active.value ? '动态：开' : '动态：关' }}</button>
+          <button type="button" :disabled="!ready" @click="resetView">复位视角</button>
+          <button type="button" :disabled="!ready || !selected || !filtered.some(machine => machine.id === selectedId)" @click="focusSelected">靠近所选</button>
+          <button type="button" @click="fullscreen">全屏</button>
+        </div>
+      </div>
       <div v-if="!ready || error" class="factory-loading" role="status">
         <span class="factory-loading-cube" aria-hidden="true" />
         <strong>{{ error ? '场地画面加载失败' : '正在准备设备场地' }}</strong>
@@ -304,21 +302,19 @@ onUnmounted(() => {
 
 <style scoped>
 .factory-scene-3d { background: var(--panel); }
-.factory-scene-3d .scene-heading { padding: 17px 18px 14px; }
+.factory-scene-3d .scene-heading { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 18px; padding: 17px 18px 14px; }
 .factory-title h2 { display: flex; align-items: center; gap: 10px; }
-.factory-voltage { font: 11px var(--font-num); padding: 3px 8px; background: var(--track); border: 1px solid var(--line); color: var(--accent); }
-.factory-view-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 9px 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--panel-2); }
-.factory-view-toolbar > span { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
+.factory-view-toolbar { position: absolute; inset: 0 0 auto; z-index: 12; display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 10px 12px; pointer-events: none; background: linear-gradient(180deg, #17232ddd 0%, #17232d99 58%, transparent 100%); }
+.factory-view-toolbar > span { display: flex; align-items: center; gap: 7px; min-width: 0; max-width: 100%; padding: 5px 8px; color: #eef4f1; background: #17232dcc; border: 1px solid #d8e3e033; font-size: 11px; white-space: nowrap; pointer-events: auto; }
 .factory-status-dot, .factory-machine-state i { width: 5px; height: 5px; display: inline-block; background: var(--muted); }
 .factory-status-dot.active, .factory-machine-state.active i { background: #91bf77; box-shadow: 0 0 5px #91bf7733; }
-.factory-view-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+.factory-view-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 5px; pointer-events: auto; }
 .factory-view-actions button { min-height: 28px; padding: 3px 8px; font-size: 10px; }
 .factory-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 8px 15px; border-bottom: 1px solid var(--line); font-size: 11px; }
 .factory-filters label { display: flex; align-items: center; gap: 6px; }
 .factory-filters select { max-width: 150px; min-height: 30px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); }
-.factory-filters > span { margin-left: auto; color: var(--muted); }
 .factory-filters button { min-height: 30px; padding: 3px 8px; font-size: 11px; }
-.ground-settings-launcher { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 9px 15px; border-bottom: 1px solid var(--line); background: var(--panel); font-size: 11px; }
+.ground-settings-launcher { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; min-width: 0; max-width: 100%; margin-left: auto; padding: 0; background: transparent; font-size: 11px; }
 .ground-settings-launcher > span { min-width: 0; overflow-wrap: anywhere; }
 .ground-settings-launcher > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .ground-settings-launcher button { min-height: 32px; padding: 5px 9px; font-size: 11px; }
@@ -332,7 +328,7 @@ onUnmounted(() => {
 .factory-stage-3d { height: clamp(360px, 43vw, 520px); aspect-ratio: auto; background: #c9d9e5; }
 .factory-stage-3d canvas { touch-action: none; cursor: grab; outline-offset: -3px; }
 .factory-stage-3d canvas:active { cursor: grabbing; }
-.factory-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 11px; color: #344959; background: #d1dce4; font-size: 12px; }
+.factory-loading { position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 11px; color: #344959; background: #d1dce4; font-size: 12px; }
 .factory-loading strong { font-size: 14px; }
 .factory-loading-cube { width: 22px; height: 22px; background: #aeb7bd; border: 3px solid #667883; box-shadow: inset -6px -6px #82929d; }
 .factory-number-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
@@ -363,15 +359,19 @@ onUnmounted(() => {
 .factory-scene-3d:fullscreen .factory-stage-3d { flex: 1; min-height: 200px; height: auto; }
 @media (max-width: 1280px) {
   .factory-machine-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .factory-view-toolbar { align-items: flex-start; }
 }
 @media (max-width: 700px) {
   .ground-settings-launcher button, .ground-settings-view-actions button { min-height: 40px; }
-  .factory-scene-3d .scene-heading { padding: 12px; }
+  .factory-scene-3d .scene-heading { align-items: center; gap: 10px; padding: 12px; }
+  .factory-scene-3d .scene-heading .factory-title { flex: 1 1 160px; }
+  .factory-scene-3d .scene-heading .ground-settings-launcher { flex: 0 1 auto; }
   .factory-machine-list > button { padding: 10px 8px; gap: 6px; }
   .factory-machine-state { font-size: 0; }
   .factory-machine-state i { margin-left: 2px; }
   .factory-navigation-help { font-size: 9px; }
   .factory-stage-3d { height: 340px; }
+  .factory-view-toolbar { padding: 8px; }
+  .factory-view-toolbar > span { font-size: 10px; }
+  .factory-view-actions { max-width: 100%; }
 }
 </style>

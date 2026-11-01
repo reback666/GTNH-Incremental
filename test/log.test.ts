@@ -157,7 +157,7 @@ describe('反馈材料', () => {
     logEvent('error', 'save.read', '存档读取失败');
 
     const text = buildDiagnosticReport(core);
-    expect(text).toContain('=== GTNH 增量 诊断日志 ===');
+    expect(text).toContain('=== GTNH-Incremental 诊断日志 ===');
     expect(text).toContain('打开方式：');
     expect(text).toContain('--- 导出时的游戏状态 ---');
     expect(text).toContain('--- 日志（共 1 条：错误 1、警告 0）---');

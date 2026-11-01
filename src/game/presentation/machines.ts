@@ -5,7 +5,7 @@ import { Decimal, ZERO, dec, decInt } from '../../numeric/decimal';
 import { MAX_TIER, VOLTAGE_TIERS } from '../../numeric/voltage';
 import { formatNumber } from '../../numeric/format';
 import { machineEnergy, machineOutput } from '../../numeric/output';
-import { generatorFuelEfficiency, generatorOutputEU } from '../../numeric/generator';
+import { generatorFuelEfficiency, generatorOutputEU, oreEnergyValue } from '../../numeric/generator';
 import { minerEnergyEU, minerOrePerSecond } from '../../numeric/miner';
 import { overclockEnergyMultiplier, overclockSpeedMultiplier } from '../../numeric/overclock';
 import { faultHint } from '../../numeric/fault';
@@ -309,6 +309,22 @@ export function machineColumn(core: GameCore, kind: MachineKind, network?: Arcan
           orePrice: formatNumber(core.orePriceOf(model)),
           affordable: tier <= core.maxTier && core.canAfford(model, 'coin'),
           oreAffordable: tier <= core.maxTier && core.canAfford(model, 'ore'),
+          tier: model.tier,
+          ...(model.category === 'generator' && !model.visPowered ? {
+            fuel: core.generatorFuelOrderOf(model.id).map((fuelTier, index, order) => ({
+              tier: fuelTier,
+              name: oreMaterial(fuelTier),
+              heat: formatNumber(oreEnergyValue(fuelTier + 1)),
+              inventory: formatNumber(core.ores[fuelTier]!),
+              rate: formatNumber(core.generatorFuelRateFor(model, fuelTier)),
+              selected: true,
+              actual: index === order.findIndex(tier => core.ores[tier]!.gt(0)),
+            })),
+            actualFuel: core.generatorFuelOrderOf(model.id)
+              .find((fuelTier) => core.ores[fuelTier]!.gt(0)) !== undefined
+              ? oreMaterial(core.generatorFuelOrderOf(model.id).find((fuelTier) => core.ores[fuelTier]!.gt(0))!)
+              : '缺燃料',
+          } : {}),
         };
       }),
     });

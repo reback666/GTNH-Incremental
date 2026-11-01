@@ -24,6 +24,7 @@ export interface SceneLabel {
 }
 
 export interface FactoryViewOptions {
+  preview?: boolean;
   onGroundEdit?: (edit: GroundEdit) => void;
   onGroundHover?: (edit: GroundEdit) => void;
   onGroundError?: (message: string) => void;

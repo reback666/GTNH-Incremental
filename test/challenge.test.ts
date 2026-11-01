@@ -10,7 +10,7 @@ import { rebirthCables } from '../src/numeric/rebirth';
 import { dec } from '../src/numeric/decimal';
 import { serialize, deserialize, type SaveData } from '../src/game/save';
 
-// 挑战时间线（docs/转生拓展大纲.md M3）：
+// 挑战时间线（docs/redesign-plan.md M3）：
 // 转生时挂 0 或 1 个挑战，全程受检，违规即失效；通过则线缆结算乘倍率 + 首通成就。
 
 describe('挑战数据与判定函数', () => {

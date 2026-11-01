@@ -14,7 +14,7 @@ import { arcaneOutputBonus } from '../src/numeric/arcane';
 import { pollutionDriveFactor } from '../src/numeric/abyss';
 import { dec } from '../src/numeric/decimal';
 
-// 时空星图（加成树二期，docs/转生拓展大纲.md M1）：
+// 时空星图（加成树二期，docs/redesign-plan.md M1）：
 // 九条支线 51 个节点，放射布局；宇宙支线要拥有对应宇宙才能买。
 
 describe('时空星图：树数据', () => {

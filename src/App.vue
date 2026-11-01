@@ -11,6 +11,7 @@ import RebirthPage from './components/RebirthPage.vue';
 import RiftDialog from './components/RiftDialog.vue';
 import FxLayer from './components/FxLayer.vue';
 import UiIcon from './components/UiIcon.vue';
+import OfflineCatchupDialog from './components/OfflineCatchupDialog.vue';
 
 const store = useGameStore();
 const motion = useMotion();
@@ -62,7 +63,7 @@ onUnmounted(() => { store.stop(); window.removeEventListener('keydown', onKeydow
         <Transition name="page" mode="out-in">
           <KeepAlive>
             <FactoryWorkspace v-if="page === 1" @technology="goTo(2)" />
-            <TechnologyWorkspace v-else-if="page === 2" @explore="goTo(4)" />
+            <TechnologyWorkspace v-else-if="page === 2" />
             <RebirthPage v-else-if="page === 4" @close="goTo(1)" />
             <SettingsWorkspace v-else />
           </KeepAlive>
@@ -71,5 +72,6 @@ onUnmounted(() => { store.stop(); window.removeEventListener('keydown', onKeydow
     </main>
   </div>
   <RiftDialog @accepted="goTo(4)" />
+  <OfflineCatchupDialog />
   <FxLayer />
 </template>

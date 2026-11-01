@@ -35,7 +35,7 @@ html = html.replace(
   },
 );
 
-const friendlyPath = join(portableDir, 'GTNH增量.html');
+const friendlyPath = join(portableDir, 'GTNH-Incremental.html');
 writeFileSync(friendlyPath, html, 'utf8');
 writeFileSync(join(portableDir, 'index.html'), html, 'utf8');
 

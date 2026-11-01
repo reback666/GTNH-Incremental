@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { buildAtlas } from '../../../gtnh3d/src/atlas.js';
-import * as floorTextures from '../../../gtnh3d/src/textures.js';
+import { buildAtlas } from './atlas.js';
+import * as floorTextures from './floor-textures.js';
 import nativeManifest from '../../assets/factory3d/native-manifest.json';
 import customManifest from '../../assets/factory3d/custom-manifest.json';
 import { createGroundView } from './ground-view';
@@ -37,7 +37,19 @@ function disposeObject(object) {
   object.removeFromParent();
 }
 
+function createPreviewGroundView() {
+  return {
+    surface: () => 0,
+    update: async () => true,
+    pick: () => null,
+    showCursor: () => {},
+    frame: () => {},
+    dispose: () => {},
+  };
+}
+
 export async function createFactoryView(canvas, onSelect, onProject = () => {}, options = {}) {
+  const preview = options.preview === true;
   const textureEntries = Object.entries(nativeManifest.textures);
   const images = new Map(await Promise.all(textureEntries.map(async ([key, metadata]) => {
     const src = nativeUrls[`../../assets/factory3d/${metadata.file}`];
@@ -50,20 +62,20 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
     return [key, await loadImage(src, key)];
   })));
   const floorSources = Object.fromEntries(Object.entries(floorTextures).filter(([key]) => key.startsWith('floor')));
-  const floorAtlas = await buildAtlas(floorSources);
+  const floorAtlas = preview ? null : await buildAtlas(floorSources);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
   // 方块贴图本身就是像素风；1 倍内部像素既清晰，又避免大厂区的填充率翻倍。
   renderer.setPixelRatio(1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color('#c9d9e5');
-  scene.fog = new THREE.Fog('#c9d9e5', 320, 1100);
+  scene.background = new THREE.Color(preview ? '#111820' : '#c9d9e5');
+  if (!preview) scene.fog = new THREE.Fog('#c9d9e5', 320, 1100);
   const camera = new THREE.PerspectiveCamera(46, 1, 0.05, 1400);
   scene.add(new THREE.HemisphereLight(0xffffff, 0x778491, 2.3));
   const sun = new THREE.DirectionalLight(0xfff8e5, 2.4);
   sun.position.set(-30, 90, 40);
   scene.add(sun);
-  const ground = createGroundView(scene, floorAtlas);
+  const ground = preview ? createPreviewGroundView() : createGroundView(scene, floorAtlas);
   let groundDesign = createGround();
   let groundSite = '';
   let groundStructure = null;
@@ -71,6 +83,7 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
   let editor = { tool: 'view', material: 'white-concrete', layer: 0 };
   const cameraPoses = new Map();
   let pendingPose = null;
+  const previewTarget = new THREE.Vector3();
 
   // MC 创造飞行：相机位置与视线相互独立，不围绕一个固定目标旋转。
   let yaw = 0;
@@ -128,7 +141,13 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
     return model.meshes.map(materialForCustom);
   }
   const machines = new THREE.Group();
-  scene.add(machines);
+  const previewPivot = preview ? new THREE.Group() : null;
+  if (previewPivot) {
+    previewPivot.add(machines);
+    scene.add(previewPivot);
+  } else {
+    scene.add(machines);
+  }
   const batches = new Map();
   const placements = new Map();
   const geometryCache = new Map();
@@ -146,7 +165,7 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
   particles.frustumCulled = false;
   particles.count = 0;
   scene.add(particles);
-  const multiblockEffects = createMultiblockEffects(scene, await loadMultiblockAssets(renderer.capabilities.maxTextureSize));
+  const multiblockEffects = createMultiblockEffects(previewPivot ?? scene, await loadMultiblockAssets(renderer.capabilities.maxTextureSize));
   let states = [];
   let totalOwned = 0;
   let animate = true;
@@ -170,6 +189,7 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
   let needsMultiblockAnimation = false;
   let activeTextureKeys = new Set();
   const matrix = new THREE.Matrix4();
+  const unitScale = new THREE.Vector3(1, 1, 1);
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   const keys = new Set();
@@ -195,6 +215,16 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
     const cached = placements.get(key);
     if (cached) return cached;
     const model = nativeModel(nativeManifest, state.id);
+    if (preview) {
+      const placement = {
+        // 预览模型几何已经按模型中心归一化，放在原点即可让旋转枢轴位于机器中心。
+        position: new THREE.Vector3(0, 0, 0),
+        model,
+        footprint: modelFootprint(model),
+      };
+      placements.set(key, placement);
+      return placement;
+    }
     const footprint = modelFootprint(model);
     const slot = machineGridPosition(index);
     const x = groundDesign.machine.x - Math.floor(footprint.width / 2) + slot.x * (footprint.width + 1);
@@ -263,7 +293,7 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
     const state = states.find(item => item.id === id && item.count > 0);
     selectedIndex = state ? Math.min(Math.max(0, index), state.count - 1) : 0;
     canvas.dataset.instanceIndex = String(selectedIndex);
-    highlight.visible = !!state && matchesSceneFilter(state, filter);
+    highlight.visible = !preview && !!state && matchesSceneFilter(state, filter);
     if (highlight.visible) {
       const { position, model } = placementFor(state, selectedIndex);
       highlight.position.copy(position);
@@ -333,13 +363,13 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
         mesh.userData.start = start;
         for (let index = 0; index < size; index++) {
           const placement = placementFor(state, start + index);
-          matrix.makeTranslation(placement.position.x, placement.position.y, placement.position.z);
+          if (batch.effect) matrix.compose(placement.position, camera.quaternion, unitScale);
+          else matrix.makeTranslation(placement.position.x, placement.position.y, placement.position.z);
           mesh.setMatrixAt(index, matrix);
         }
         mesh.instanceMatrix.needsUpdate = true;
         // 重新计算实例边界会遍历整批矩阵；厂区镜头由显式 bounds 控制，整批不参与 frustum 剔除。
         mesh.frustumCulled = false;
-        if (batch.effect) mesh.quaternion.copy(camera.quaternion);
       }
     }
     for (const key of [...batches.keys()]) if (!used.has(key)) releaseBatch(key);
@@ -389,11 +419,16 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
       ? new THREE.Box3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(16, 1, 16))
       : deviceBounds.clone();
     const center = bounds.getCenter(new THREE.Vector3());
+    if (previewPivot) previewPivot.rotation.set(0, 0, 0);
+    previewTarget.copy(center);
     const size = bounds.getSize(new THREE.Vector3());
     const halfFov = Math.min(camera.fov * Math.PI / 360, Math.atan(Math.tan(camera.fov * Math.PI / 360) * camera.aspect));
-    const distance = Math.max(14, size.length() / 2 / Math.sin(halfFov) * 1.08);
-    const direction = new THREE.Vector3(0.25, 1.2, 1.5).normalize();
-    let fittedDistance = distance * 0.5;
+    const distance = Math.max(preview ? 2.5 : 14, size.length() / 2 / Math.sin(halfFov) * 1.08);
+    const direction = (preview
+      ? new THREE.Vector3(0, 0.85, 1.8)
+      : new THREE.Vector3(0.25, 1.2, 1.5)).normalize();
+    // 详情预览保持约 50% 的画面占比，留出完整模型周围的观察空间。
+    let fittedDistance = distance * (preview ? 0.6 : 0.5);
     const corners = [];
     for (const x of [bounds.min.x, bounds.max.x]) {
       for (const y of [bounds.min.y, bounds.max.y]) {
@@ -412,8 +447,10 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
     }
     camera.far = Math.max(1400, fittedDistance * 4);
     camera.updateProjectionMatrix();
-    scene.fog.near = Math.max(120, fittedDistance * 1.5);
-    scene.fog.far = Math.max(650, fittedDistance * 4);
+    if (scene.fog) {
+      scene.fog.near = Math.max(120, fittedDistance * 1.5);
+      scene.fog.far = Math.max(650, fittedDistance * 4);
+    }
     lookAt(center, direction.multiplyScalar(fittedDistance));
   }
 
@@ -459,11 +496,22 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
     const dy = event.clientY - start.y;
     if (Math.hypot(dx, dy) > 2) start.moved = true;
     if (!start.moved) return;
-    yaw -= dx * 0.004;
-    pitch = THREE.MathUtils.clamp(pitch - dy * 0.004, -Math.PI / 2 + 0.015, Math.PI / 2 - 0.015);
+    if (previewPivot) {
+      previewPivot.rotation.y -= dx * 0.004;
+      previewPivot.rotation.x = THREE.MathUtils.clamp(
+        previewPivot.rotation.x - dy * 0.004,
+        -Math.PI * 0.42,
+        Math.PI * 0.42,
+      );
+      // 初始姿态不倾斜；用户拖动时可在水平和垂直方向自由观察模型。
+      previewPivot.rotation.z = 0;
+    } else {
+      yaw -= dx * 0.004;
+      pitch = THREE.MathUtils.clamp(pitch - dy * 0.004, -Math.PI / 2 + 0.015, Math.PI / 2 - 0.015);
+      applyLook();
+    }
     start.x = event.clientX;
     start.y = event.clientY;
-    applyLook();
     invalidate();
   };
   const pointerUp = event => {
@@ -551,11 +599,22 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
   const clearKeys = () => keys.clear();
   const pointerCancel = event => { pointerStart = null; pointers.delete(event.pointerId); };
   const preventContextMenu = event => event.preventDefault();
+  const wheel = event => {
+    if (!preview) return;
+    event.preventDefault();
+    const direction = camera.position.clone().sub(previewTarget);
+    const distance = THREE.MathUtils.clamp(direction.length() * (event.deltaY > 0 ? 1.1 : 0.9), 2.5, 120);
+    camera.position.copy(previewTarget).add(direction.normalize().multiplyScalar(distance));
+    camera.lookAt(previewTarget);
+    camera.updateMatrixWorld();
+    invalidate();
+  };
   canvas.addEventListener('pointerdown', pointerDown);
   canvas.addEventListener('pointermove', pointerMove);
   canvas.addEventListener('pointerup', pointerUp);
   canvas.addEventListener('pointercancel', pointerCancel);
   canvas.addEventListener('contextmenu', preventContextMenu);
+  canvas.addEventListener('wheel', wheel, { passive: false });
   canvas.addEventListener('keydown', keyDown);
   canvas.addEventListener('keyup', keyUp);
   canvas.addEventListener('blur', clearKeys);
@@ -599,8 +658,22 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
       camera.position.add(move);
       dirty = true;
     }
-    // 节点 billboard 只在相机变更触发的脏帧中对齐；静止时不维持 60 FPS 循环。
-    if (dirty && hasEffects) for (const batch of batches.values()) if (batch.effect && batch.mesh?.visible) batch.mesh.quaternion.copy(camera.quaternion);
+    if (preview && previewPivot && !keys.size && !pointers.size && animate) {
+      previewPivot.rotation.y += delta * 0.18;
+      dirty = true;
+    }
+    // 实例的平移保持在世界坐标中，只旋转节点自身以面向相机。
+    if (dirty && hasEffects) for (const batch of batches.values()) {
+      if (!batch.effect || !batch.mesh?.visible) continue;
+      const state = states.find(item => item.id === batch.mesh.userData.modelId);
+      if (!state) continue;
+      for (let index = 0; index < batch.mesh.count; index++) {
+        const position = placementFor(state, batch.mesh.userData.start + index).position;
+        matrix.compose(position, camera.quaternion, unitScale);
+        batch.mesh.setMatrixAt(index, matrix);
+      }
+      batch.mesh.instanceMatrix.needsUpdate = true;
+    }
     if (needsAnimation) {
       animationTime += delta;
       if (needsNativeAnimation && nativeAtlas.update(Math.floor(animationTime * 20), activeTextureKeys)) dirty = true;
@@ -678,6 +751,7 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
       canvas.removeEventListener('pointerup', pointerUp);
       canvas.removeEventListener('pointercancel', pointerCancel);
       canvas.removeEventListener('contextmenu', preventContextMenu);
+      canvas.removeEventListener('wheel', wheel);
       canvas.removeEventListener('keydown', keyDown);
       canvas.removeEventListener('keyup', keyUp);
       canvas.removeEventListener('blur', clearKeys);
@@ -687,7 +761,8 @@ export async function createFactoryView(canvas, onSelect, onProject = () => {}, 
       ground.dispose();
       const geometries = new Set([highlightGeometry, particleGeometry]);
       const materials = new Set([nativeMaterial, particleMaterial, highlight.material]);
-      const textures = new Set([floorAtlas.texture, nativeAtlas.texture]);
+      const textures = new Set([nativeAtlas.texture]);
+      if (floorAtlas) textures.add(floorAtlas.texture);
       scene.traverse(object => {
         if (object.geometry) geometries.add(object.geometry);
         if (object.material) (Array.isArray(object.material) ? object.material : [object.material]).forEach(item => materials.add(item));

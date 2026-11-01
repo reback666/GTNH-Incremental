@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 import puppeteer from 'puppeteer-core';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const html = resolve(process.argv[2] ?? join(root, 'dist/GTNH增量.html'));
+const html = resolve(process.argv[2] ?? join(root, 'dist/GTNH-Incremental.html'));
 const logKey = 'gtnh-incremental-log';
 const seedBuild = await build({
   stdin: {
@@ -102,7 +102,9 @@ try {
   assert.equal(await page.$$eval('.log-category', entries => entries.every(entry => entry.textContent === '设备')), true);
   await (await page.$('.log-detail summary')).click();
   assert.ok(await page.$eval('.log-detail[open] pre', element => element.textContent.includes('modelId')));
-  await (await page.$('.log-panel')).screenshot({ path: join(root, 'docs/log-panel.png') });
+  const screenshotDir = join(root, 'outputs/verification/logs');
+  mkdirSync(screenshotDir, { recursive: true });
+  await (await page.$('.log-panel')).screenshot({ path: join(screenshotDir, 'log-panel.png') });
 
   await clickText('.log-filters button', '重置筛选');
   await page.type('.log-search input', '不存在的日志关键词');
@@ -129,14 +131,14 @@ try {
     value: { writeText: async text => { window.__copiedLog = text; } } }));
   await clickText('.log-actions button', '复制日志');
   await page.waitForFunction(() => document.querySelector('[role="status"]')?.textContent.includes('已复制完整日志'));
-  assert.ok(await page.evaluate(() => window.__copiedLog.includes('GTNH 增量 诊断日志')));
+  assert.ok(await page.evaluate(() => window.__copiedLog.includes('GTNH-Incremental 诊断日志')));
   await page.evaluate(() => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('denied'); } } });
     document.execCommand = () => false;
   });
   await clickText('.log-actions button', '复制日志');
   await page.waitForSelector('.log-fallback');
-  assert.ok(await page.$eval('.log-fallback', element => element.value.includes('GTNH 增量 诊断日志')));
+  assert.ok(await page.$eval('.log-fallback', element => element.value.includes('GTNH-Incremental 诊断日志')));
   assert.equal(await page.$$eval('body > textarea', entries => entries.length), 0);
 
   await page.click('.log-options input[type="checkbox"]');

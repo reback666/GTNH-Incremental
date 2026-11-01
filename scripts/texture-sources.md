@@ -26,7 +26,7 @@ UI 重设计（2026-10-04 拍板「GT 机器 GUI 深度复刻 + 贴图+CSS 混�
 | `arrow-fill-t1..15.png` | 同上下帧按电压色染色 | 进度填充：15 级电压色（由 `src/content/voltages.json` 派生），MAX 横向彩虹；染色方式与镐子爆破线同族（亮度转灰阶乘色、暗部 0.3 保底） |
 | `glow-blue.png` / `glow-rainbow.png` | TecTech `background/blue_glow.png` / `rainbow_glow.png` | 辉光点缀（转生页 / MAX 级） |
 
-生成脚本：`python scripts/build-gui-skins.py`，预览图 `docs/gui-skins.png`。
+生成脚本：`python scripts/build-gui-skins.py`，预览图写入 `outputs/asset-previews/gui-skins.png`。
 这些是**骨架贴图**：交互态（悬停微光、电压色叠加）和布局仍由 CSS 管。
 
 
@@ -114,7 +114,7 @@ T13 海珀珍沿用 `scripts/textures/hypogen-coil.png` 中的 Modernity-GTNH UX
 连锁爆破    blast-<等级>    assets/ic2/textures/items/itemDynamite.png（16×16，炸药）
 
 脚本：python scripts/build-pickaxe-icons.py（drill/blast 读 IC2 jar）
-产物：32×32 或竖排动画条带；预览图 docs/pickaxe-tiers.png
+产物：32×32 或竖排动画条带。贴图预览属于本地生成产物，统一写入 `outputs/asset-previews/`。
 ```
 
 **金刚杵全线是动画**：本体按材质包 mcmeta 的序列流动（33 拍 × 50ms：停 4 拍 → 1..15 → 14..1
@@ -153,7 +153,7 @@ blast 1~14 级：原图本身是彩色的，机器那套淡染（`TINT_STRENGTH 
 
 鸿蒙之眼和四种大型涡轮的运行特效使用原版 `Star.obj`、`Space.obj`、恒星与宇宙壳纹理、轨道方块六面纹理及九宫格转子条带。执行 `python -B scripts/native-models/export-effects.py --minecraft "<本机 .minecraft 目录>"` 重新导出，资源包覆盖顺序复用 `scripts/native-icons/manifest.json`。逐张来源、动画时长、模型路径和原版渲染参数统一记录在 `src/assets/factory3d/effects-manifest.json`。轨道按原版生成规则使用固定种子，避免页面重建改变外观；宇宙壳最大 2048 像素宽、恒星层最大 1024 像素宽，以最近邻等比缩小并保留原尺寸记录，减少显存与便携包体积。
 
-生成命令：`python -B scripts/extract-factory3d.py --pack "<Modernity-GTNH.zip>"`。输出保留原始 PNG 条带，运行时按 mcmeta 合成机壳与覆盖层。厂区地板的原三层蓝图与材质来源见 `gtnh3d/ASSETS.md`，铺设约束见 `gtnh3d/README.md`。
+生成命令：`python -B scripts/extract-factory3d.py --pack "<Modernity-GTNH.zip>"`。输出保留原始 PNG 条带，运行时按 mcmeta 合成机壳与覆盖层。厂区地板的原三层蓝图与材质来源见 `src/scene/factory3d/floor-textures.json`，铺设约束见 `../docs/architecture.md`。
 
 ## 奥术实体与辅助设施
 

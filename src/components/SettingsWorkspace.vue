@@ -15,7 +15,7 @@ function exportSave(): void {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   a.href = url;
-  a.download = `GTNH增量存档-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
+  a.download = `GTNH-Incremental存档-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }

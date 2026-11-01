@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FACE_DEF, FACE_ORDER, FACE_SHADE } from '../../../gtnh3d/src/blocks.js';
+import { FACE_DEF, FACE_ORDER, FACE_SHADE } from './blocks.js';
 import atlasUrl from '../../assets/factory3d/terrain-atlas.png';
 import { decodeGroundCells } from './ground-structure';
 import { terrainBlock, terrainManifest } from './terrain-catalog';

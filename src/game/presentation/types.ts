@@ -117,6 +117,17 @@ export interface MachineModelRow {
   orePrice: string;
   affordable: boolean;
   oreAffordable: boolean;
+  tier: number;
+  fuel?: {
+    tier: number;
+    name: string;
+    heat: string;
+    inventory: string;
+    rate: string;
+    selected: boolean;
+    actual: boolean;
+  }[];
+  actualFuel?: string;
 }
 
 export interface MachineTierGroup {

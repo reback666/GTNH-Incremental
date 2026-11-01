@@ -12,7 +12,7 @@ GT 开发包里自带整套 GUI 贴图，本脚本把它们整理成界面可直
   染色方式与镐子爆破线同族：按感知亮度转灰阶再乘等级色，暗部有保底
 
 用法：python scripts/build-gui-skins.py
-产物：src/assets/gui/*.png，预览图 docs/gui-skins.png
+产物：src/assets/gui/*.png，预览图 outputs/asset-previews/gui-skins.png
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from gtnh_tiers import MAX_RAINBOW, MAX_TIER, TIER_COLORS, texture_key
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "src" / "assets" / "gui"
-PREVIEW = ROOT / "docs" / "gui-skins.png"
+PREVIEW = ROOT / "outputs" / "asset-previews" / "gui-skins.png"
 
 JAR_GLOB = str(
     Path.home()
@@ -192,6 +192,7 @@ def build_preview(pieces: dict[str, Image.Image], arrows: dict[int, Image.Image]
     for label, big, cx, cy in placed:
         sheet.alpha_composite(big, (cx, cy + label_h))
         ImageDraw.Draw(sheet).text((cx, cy), label, fill=(225, 228, 235, 255), font=font)
+    PREVIEW.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(PREVIEW)
     print(f"预览图 {PREVIEW.name}（{sheet.size[0]}×{sheet.size[1]}）")
 

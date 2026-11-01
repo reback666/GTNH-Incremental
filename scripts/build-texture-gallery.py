@@ -2,7 +2,7 @@
 """生成「贴图总览」单文件 HTML：按类展示游戏里的全部贴图，动画直接播放。
 
 用法：python scripts/build-texture-gallery.py
-产物：docs/贴图总览.html（贴图全部 base64 内联，双击即开，不依赖服务器）
+产物：outputs/asset-previews/texture-gallery.html（贴图全部 base64 内联，双击即开，不依赖服务器）
 
 分类：矿脉（含特殊光晕）→ 镐子三条升级线 → 机器图标（按类别分组）→ 特效贴图。
 动画条带用与游戏相同的机制播放（竖排帧条带 + steps() 逐帧 + translateY 循环）。
@@ -110,7 +110,8 @@ def main() -> None:
     parts.append(section("特效贴图", items))
 
     html = HTML_HEAD + "".join(parts) + "</body></html>"
-    out = ROOT / "docs" / "贴图总览.html"
+    out = ROOT / "outputs" / "asset-previews" / "texture-gallery.html"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")
     print(f"已生成 {out}（{out.stat().st_size // 1024} KB）")
 
@@ -126,7 +127,7 @@ HTML_HEAD = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>GTNH 增量 · 贴图总览</title>
+<title>GTNH-Incremental · 贴图总览</title>
 <style>
   body { margin: 0; padding: 20px; background: #12161c; color: #d7dee8;
          font: 14px/1.5 system-ui, 'Microsoft YaHei', sans-serif; }
@@ -148,7 +149,7 @@ HTML_HEAD = """<!DOCTYPE html>
 </style>
 </head>
 <body>
-<h1>GTNH 增量 · 贴图总览（测试用，全部内联，双击即开）</h1>
+<h1>GTNH-Incremental · 贴图总览（测试用，全部内联，双击即开）</h1>
 """
 
 

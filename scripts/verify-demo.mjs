@@ -6,7 +6,7 @@ import puppeteer from 'puppeteer-core';
 
 const input = process.argv[2] ?? 'http://127.0.0.1:5175/demo.html';
 const url = /^(https?:|file:)/.test(input) ? input : pathToFileURL(resolve(input)).href;
-const output = resolve('outputs/dev-system-preview');
+const output = resolve('outputs/verification/demo');
 mkdirSync(output, { recursive: true });
 const scope = 'gtnh-dev-preview:';
 const saveKey = `${scope}gtnh-incremental-save`;

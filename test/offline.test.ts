@@ -61,6 +61,9 @@ describe('离线收益', () => {
     expect(core.totalOre.gt(0)).toBe(true);
     expect(core.totalCoins.gt(0)).toBe(true);
     expect(store.offlineNote).toContain('离线 1 小时');
+    expect(store.offlineResult).not.toBeNull();
+    expect(store.offlineResult!.changes.some(change => change.kind === 'coin' && change.before === '0')).toBe(true);
+    expect(store.offlineResult!.changes.some(change => dec(change.produced).gt(0))).toBe(true);
   });
 
   it('保留原离线上限与星图加成，补算不能超过 72 小时', async () => {
@@ -141,6 +144,12 @@ describe('离线收益', () => {
     await store.catchUp(0.4);
     expect(getCore().playSeconds).toBe(0);
     expect(store.offlineNote).toBe('');
+  });
+
+  it('没有库存变化时也保留补算结果窗口', async () => {
+    const store = useGameStore();
+    await store.catchUp(1);
+    expect(store.offlineResult).toEqual(expect.objectContaining({ failed: false, changes: [] }));
   });
 
   it('补算期间在线模拟不叠上去', () => {

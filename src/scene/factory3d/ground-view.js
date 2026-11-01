@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { BlockWorld, FLOOR_LAYERS } from '../../../gtnh3d/src/blocks.js';
-import { placeFloor } from '../../../gtnh3d/src/layout.js';
-import { meshWorld } from '../../../gtnh3d/src/mesher.js';
+import { BlockWorld, FLOOR_LAYERS } from './blocks.js';
+import { placeFloor } from './floor-layout.js';
+import { meshWorld } from './mesher.js';
 import { GROUND_MATERIALS, groundCell, createGround } from './ground';
 import { createTerrainView } from './terrain-view';
 

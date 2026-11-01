@@ -64,6 +64,8 @@ export interface SaveData {
   arcaneExpedition?: ArcaneState;
   enchantments?: Record<string, [number, number, number]>;
   visPriorities?: Record<string, number>;
+  // v29：按机型保存发电机燃料优先级（矿石等级从 0 开始）
+  generatorFuelPriorities?: Record<string, number[]>;
   reactorRiskArmed?: boolean;
   reactorRiskExposure?: number;
   // v7：转生：时空线缆、永久加成节点、转生次数、本周目累计 EU
@@ -159,6 +161,7 @@ export function serialize(core: GameCore): SaveData {
     arcaneExpedition: JSON.parse(JSON.stringify(core.arcaneExpedition.state)) as ArcaneState,
     enchantments: Object.fromEntries(Object.entries(core.enchantments).map(([id, counts]) => [id, [...counts] as [number, number, number]])),
     visPriorities: { ...core.visPriorities },
+    generatorFuelPriorities: Object.fromEntries(Object.entries(core.generatorFuelPriorities).map(([id, tiers]) => [id, [...tiers]])),
     researchProgressByModel: Object.fromEntries(
       Object.entries(core.researchProgress).map(([id, amount]) => [id, toSaveString(amount)]),
     ),
@@ -305,6 +308,13 @@ export function deserialize(data: SaveData): GameCore {
     }
     const priority = data.visPriorities?.[model.id];
     if ((model.visPowered || core.enchantments[model.id]) && typeof priority === 'number' && [0, 1, 2].includes(priority)) core.visPriorities[model.id] = priority;
+  }
+  if (isRecord(data.generatorFuelPriorities)) {
+    for (const model of MACHINE_MODELS) {
+      const raw = data.generatorFuelPriorities[model.id];
+      if (!Array.isArray(raw)) continue;
+      core.setGeneratorFuelPriority(model.id, raw.filter((tier): tier is number => typeof tier === 'number'));
+    }
   }
   core.reactorRiskArmed = data.reactorRiskArmed === true && core.countOf(HIGH_RISK_REACTOR_MODEL) > 0;
   core.reactorRiskExposure = typeof data.reactorRiskExposure === 'number' && Number.isFinite(data.reactorRiskExposure)

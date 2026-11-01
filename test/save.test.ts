@@ -263,6 +263,18 @@ describe('音效开关（v23）', () => {
   });
 });
 
+describe('发电机燃料优先级（v29）', () => {
+  it('按机型保存、读档后保留顺序；旧档缺字段沿用本级燃料', () => {
+    const core = new GameCore();
+    core.maxTier = 2;
+    const generator = 'g-lv-steam';
+    expect(core.setGeneratorFuelPriority(generator, [0, 1])).toBe(true);
+    expect(serialize(core).generatorFuelPriorities?.[generator]).toEqual([0, 1]);
+    expect(deserialize(serialize(core)).generatorFuelPriorityOf(generator)).toEqual([0, 1]);
+    expect(deserialize(emptySave()).generatorFuelPriorityOf(generator)).toEqual([1]);
+  });
+});
+
 describe('导入存档（parseImportedSave）', () => {
   it('导出的 JSON 能原样导入；版本比程序新时拒绝', () => {
     const core = new GameCore();

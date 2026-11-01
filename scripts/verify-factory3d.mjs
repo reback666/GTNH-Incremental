@@ -7,8 +7,8 @@ import { build } from 'esbuild';
 import puppeteer from 'puppeteer-core';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const html = resolve(process.argv[2] ?? join(root, 'dist/GTNH增量.html'));
-const output = join(root, 'outputs/factory3d');
+const html = resolve(process.argv[2] ?? join(root, 'dist/GTNH-Incremental.html'));
+const output = join(root, 'outputs/verification/factory3d');
 await mkdir(output, { recursive: true });
 const seedBuild = await build({
   stdin: {

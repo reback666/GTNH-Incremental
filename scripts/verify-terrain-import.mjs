@@ -7,10 +7,10 @@ import { build } from 'esbuild';
 import puppeteer from 'puppeteer-core';
 
 const root = resolve(import.meta.dirname, '..');
-const html = resolve(process.argv[2] ?? join(root, 'dist/GTNH增量.html'));
+const html = resolve(process.argv[2] ?? join(root, 'dist/GTNH-Incremental.html'));
 const scope = /data-storage-scope="([^"]+)"/.exec(readFileSync(html, 'utf8').slice(0, 2048))?.[1];
 const prefix = scope ? `${scope}:` : '';
-const output = join(root, 'outputs/factory3d');
+const output = join(root, 'outputs/verification/factory3d');
 await mkdir(output, { recursive: true });
 const temporary = await mkdtemp(join(output, 'terrain-test-'));
 const bundle = await build({ stdin: { resolveDir: root, loader: 'ts', contents: `

@@ -18,7 +18,7 @@ const replacementStates: Record<string, string> = {
   'white-concrete': 'white_concrete', 'pink-concrete': 'pink_concrete', 'gray-concrete': 'gray_concrete',
   'black-concrete': 'black_concrete', bricks: 'bricks', diorite: 'polished_diorite', granite: 'polished_granite',
   grass: 'grass_block', moss: 'moss_block', 'cyan-terracotta': 'cyan_terracotta', 'yellow-terracotta': 'yellow_terracotta',
-  // 原地板的灯块素材约定见 gtnh3d/ASSETS.md；显式替换沿用同一外观。
+  // 原地板的灯块素材约定见同目录 floor-textures.json；显式替换沿用同一外观。
   froglight: 'sea_lantern', 'froglight-warm': 'glowstone',
 };
 const cubes = new Set(['stone', 'dirt', 'grass_block', 'podzol', 'mycelium', 'sand', 'red_sand', 'gravel', 'clay', 'bedrock',

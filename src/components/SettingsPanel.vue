@@ -36,19 +36,6 @@ function pickMode(id: DisplayMode): void {
   if (snap.value.displayMode !== id) store.setDisplayMode(id);
 }
 
-// 硅基宇宙三项调度的悬停说明：介绍挂在各自那一行上（鼠标移上去显示），
-// 共同的误判率说明随行附在句尾
-const MISJUDGE_NOTE = '该调度有 5% 的误判率，误判在下一拍自动纠正。';
-const repairHint = `发生故障的机器在当拍内完成修复。${MISJUDGE_NOTE}`;
-const overclockHint =
-  `可用出力达到需求的 2 倍时升档，供电率低于 90% 时降档，` +
-  `其余情况维持原档以避免频繁切换。${MISJUDGE_NOTE}`;
-const sheddingHint = computed(
-  () =>
-    `供电不足时按 ${snap.value.silicon.sheddingOrder} 的顺序整组停机，` +
-    `其余机器保持满负荷运行，而非全厂统一降载。${MISJUDGE_NOTE}`,
-);
-
 // 开发者工具里「资源」那一行：目标用 'ores' / 'coins' / 'both' 或 'ore:3' / 'coin:3' 表示
 const resTarget = ref('both');
 const resAmount = ref('1e12');
@@ -219,57 +206,6 @@ function cleanAmount(text: string): string | null {
           </button>
         </div>
       </template>
-    </template>
-
-    <!-- ── 硅基宇宙：三项 AI 开关（只有拥有这个宇宙才显示） ──── -->
-    <template v-if="snap.silicon.active">
-      <h2 class="mt">硅基宇宙 · AI 调度</h2>
-      <div class="row" :title="repairHint">
-        <div class="name">自动维护</div>
-        <button
-          :class="{ primary: snap.silicon.autoRepair }"
-          @click="store.setSiliconOption('repair', true)"
-        >
-          开启
-        </button>
-        <button
-          :class="{ primary: !snap.silicon.autoRepair }"
-          @click="store.setSiliconOption('repair', false)"
-        >
-          关闭
-        </button>
-      </div>
-      <div class="row" :title="overclockHint">
-        <div class="name">自动超频</div>
-        <button
-          :class="{ primary: snap.silicon.autoOverclock }"
-          @click="store.setSiliconOption('overclock', true)"
-        >
-          开启
-        </button>
-        <button
-          :class="{ primary: !snap.silicon.autoOverclock }"
-          @click="store.setSiliconOption('overclock', false)"
-        >
-          关闭
-        </button>
-      </div>
-      <div class="row" :title="sheddingHint">
-        <div class="name">按优先级停机</div>
-        <button
-          :class="{ primary: snap.silicon.shedding }"
-          @click="store.setSiliconOption('shedding', true)"
-        >
-          开启
-        </button>
-        <button
-          :class="{ primary: !snap.silicon.shedding }"
-          @click="store.setSiliconOption('shedding', false)"
-        >
-          关闭
-        </button>
-      </div>
-      <p class="muted small" style="margin: 6px 0 0">{{ snap.silicon.note }}</p>
     </template>
 
     <!-- ── 开发者模式 ─────────────────────────────────────────── -->

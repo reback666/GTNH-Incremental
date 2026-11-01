@@ -33,7 +33,7 @@ export function renderBalance(result?: Verification, arcane?: ArcaneBalanceRepor
     '## 运行方式', '',
     '- 快速估算（只输出终端，不覆盖本页已记录的实证）：`npm run balance`。',
     '- 真实核验并重生成本页：`npm run balance -- --verify --arcane --wall-seconds=60 --segments=12 --days=7`。',
-    '- 跨进程续跑：`npm run balance -- --verify --resume=outputs/progression-checkpoint.json --arcane-report=outputs/arcane-balance-mv-lv-seed-20261024-4h.json --wall-seconds=60 --segments=20 --days=7`。每段更新真实 checkpoint，`--checkpoint=路径` 可指定保存位置。模拟预算按累计时间计算；若已到 7 天，需要增大 `--days` 才会继续。',
+    '- 跨进程续跑：`npm run balance -- --verify --resume=outputs/balance/progression-checkpoint.json --arcane-report=outputs/balance/arcane-balance-mv-lv-seed-20261024-4h.json --wall-seconds=60 --segments=20 --days=7`。每段更新真实 checkpoint，`--checkpoint=路径` 可指定保存位置。模拟预算按累计时间计算；若已到 7 天，需要增大 `--days` 才会继续。',
     '- 可选 `--tier=15`、`--seed=20261024`、`--segments=6`（同进程分段续跑，不重开档）。等待期间约每两秒墙钟输出当前阶段；预算停止保留实证，不等于游戏死锁。', '',
     '## 当前基准', '',
     '| 基准 | 当前值 |', '| --- | --- |',
@@ -109,7 +109,7 @@ function main() {
     return;
   }
   const pathOption = (name: string) => args.find(value => value.startsWith(`--${name}=`))?.slice(name.length + 3);
-  const checkpointPath = pathOption('checkpoint') ?? 'outputs/progression-checkpoint.json';
+  const checkpointPath = pathOption('checkpoint') ?? 'outputs/balance/progression-checkpoint.json';
   const resumePath = pathOption('resume');
   const resumed: ProgressionCheckpoint | undefined = resumePath ? JSON.parse(readFileSync(resumePath, 'utf8')) : undefined;
   const arcanePath = pathOption('arcane-report');

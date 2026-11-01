@@ -7,7 +7,7 @@ import puppeteer from 'puppeteer-core';
 
 const input = process.argv[2] ?? 'http://127.0.0.1:5175/demo.html';
 const url = /^(https?:|file:)/.test(input) ? input : pathToFileURL(resolve(input)).href;
-const output = resolve('outputs/redesign-verification');
+const output = resolve('outputs/verification/redesign');
 mkdirSync(output, { recursive: true });
 // 隔离测试存档只用于操作、规模和往返验证，不作为正常推进或经济平衡的证据。
 const bundled = await build({ stdin: { contents: `

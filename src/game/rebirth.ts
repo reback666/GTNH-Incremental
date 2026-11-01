@@ -2,7 +2,7 @@ import { Decimal, ONE, ZERO, dec, type DecimalInput } from '../numeric/decimal';
 import type { UniverseId } from './universes';
 import type { AchievementIcon } from './achievements';
 
-// 永久加成树「时空星图」（计划书第五章 + docs/转生拓展大纲.md M1）。
+// 永久加成树「时空星图」（计划书第五章 + docs/redesign-plan.md M1）。
 //
 // 时空线缆的唯一常规用途是买这棵树上的节点。树从中心「时空锚点」向外放射出九条支线，
 // 节点一次性买断、永久生效。数据分两张表：

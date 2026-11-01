@@ -3,6 +3,9 @@ import { defineStore } from 'pinia';
 import { VOLTAGE_TIERS } from '../numeric/voltage';
 import { formatNumber, setDefaultDisplayMode, type DisplayMode } from '../numeric/format';
 import { formatDuration } from '../numeric/time';
+import { dec } from '../numeric/decimal';
+import { coinName } from '../numeric/credit';
+import { oreMaterial } from './vein-materials';
 import { type PickaxeLine } from '../numeric/pickaxe';
 import { pollutionBand } from '../numeric/pollution';
 import { type GridMode } from '../numeric/grid';
@@ -50,6 +53,25 @@ let catchUpSaveTime: number | null = null;
 const clock = new ElapsedClock();
 const cleanups: (() => void)[] = [];
 
+export interface OfflineInventoryChange {
+  kind: 'ore' | 'coin';
+  name: string;
+  tier: number;
+  before: string;
+  after: string;
+  delta: string;
+  produced: string;
+  spent: string;
+}
+
+export interface OfflineCatchupResult {
+  away: string;
+  advanced: number;
+  total: number;
+  failed: boolean;
+  changes: OfflineInventoryChange[];
+}
+
 // 设置页界面状态落盘的去重缓存：状态没变就不写 localStorage
 let lastUiStateJson = '';
 
@@ -77,6 +99,8 @@ export const useGameStore = defineStore('game', {
     // 正在补算离线收益（这期间不让在线模拟叠上去）
     catchingUp: false,
     catchUpProgress: 0,
+    catchUpRemainingSeconds: null as number | null,
+    offlineResult: null as OfflineCatchupResult | null,
     // 未读以事件序号为游标；轮转和合并不会掩盖后续发生的新错误。
     logErrors: 0,
     seenErrorSeq: 0,
@@ -139,6 +163,11 @@ export const useGameStore = defineStore('game', {
       if (total < 1 || this.simulationPaused || this.catchingUp) return;
       const controller = new AbortController();
       catchUpController = controller;
+      const oresBefore = core.ores.map(value => value.toString());
+      const coinValuesBefore = core.coins.map(value => value.toString());
+      const oreProduced = core.ores.map(() => dec('0'));
+      const oreSpent = core.ores.map(() => dec('0'));
+      const coinProduced = core.coins.map(() => dec('0'));
       const oreBefore = core.totalOre;
       const coinsBefore = core.totalCoins;
       const arcaneBefore = core.hasUniverse('arcane') && core.arcaneExpedition.state.research >= 0 ? {
@@ -155,6 +184,8 @@ export const useGameStore = defineStore('game', {
       let failed = false;
       this.catchingUp = true;
       this.catchUpProgress = 0;
+      this.catchUpRemainingSeconds = null;
+      this.offlineResult = null;
       this.offlineBannerDismissed = false;
       catchUpSaveTime = baseTime;
       this.offlineNote = `离线 ${away}，正在补算生产进度…`;
@@ -168,12 +199,21 @@ export const useGameStore = defineStore('game', {
           tick: step => {
             if (getCore() !== core) { controller.abort(); return; }
             core.tick(step);
+            core.lastReport.oreGained.forEach((value, index) => { oreProduced[index] = oreProduced[index]!.plus(value); });
+            core.lastReport.oreSpent.forEach((value, index) => { oreSpent[index] = oreSpent[index]!.plus(value); });
+            core.lastReport.coinsGained.forEach((value, index) => { coinProduced[index] = coinProduced[index]!.plus(value); });
             setLogGameSeconds(core.playSeconds);
             this.watch(core, core.lastReport, true);
             advanced += step;
             catchUpSaveTime = baseTime + advanced * 1000;
           },
-          onProgress: done => { this.catchUpProgress = done / total; },
+          onProgress: done => {
+            this.catchUpProgress = done / total;
+            if (done > 0) {
+              const elapsed = (performance.now() - startedAt) / 1000;
+              this.catchUpRemainingSeconds = Math.max(0, (total - done) * elapsed / done);
+            }
+          },
         });
       } catch (error) {
         failed = true;
@@ -186,13 +226,14 @@ export const useGameStore = defineStore('game', {
       if (controller.signal.aborted || catchUpController !== controller) return;
       catchUpController = null;
       this.catchingUp = false;
+      this.catchUpRemainingSeconds = null;
       this.refresh();
       this.save();
       if (!failed) catchUpSaveTime = null;
       const gainedOre = core.totalOre.minus(oreBefore);
       const gainedCoins = core.totalCoins.minus(coinsBefore);
       this.offlineNote = failed
-        ? `离线补算已暂停，已完成 ${formatDuration(advanced)}；刷新后可继续补算剩余时间。`
+        ? `离线补算已暂停，已处理 ${formatDuration(advanced)}；刷新后可继续补算剩余时间。`
         : `离线 ${away}，已补算：矿石 +${formatNumber(gainedOre)}、GT 币 +${formatNumber(gainedCoins)}` +
           (total < seconds ? `（超过当前上限 ${formatDuration(cap)} 的部分不计）` : '');
       if (arcaneBefore) {
@@ -208,10 +249,61 @@ export const useGameStore = defineStore('game', {
         this.offlineNote += `；奥术调查新增 ${state.discoveries - arcaneBefore.discoveries} 颗、完成 ${state.completedJobs - arcaneBefore.jobs} 项作业与 ${completedResearch} 项研究、待处理 ${pending} 颗；实体节点供能 ${formatNumber(arcaneBefore.vis)} → ${formatNumber(state.vis)} 灵气/秒` +
           (reasons.length ? `；当前：${reasons.join('、')}` : '');
       }
-      logEvent('info', 'offline.catchup', failed ? '离线补算部分完成' : `离线补算完成 ${away}`, this.offlineNote, {
+      const inventoryChanges: OfflineInventoryChange[] = [];
+      const appendChanges = (
+        kind: 'ore' | 'coin',
+        beforeValues: string[],
+        values: typeof core.ores,
+        producedValues: typeof oreProduced,
+        spentValues: typeof oreSpent,
+      ): void => {
+        const maxTier = Math.max(core.maxTier, beforeValues.length);
+        const indices = Array.from({ length: maxTier }, (_, index) => index).reverse();
+        for (const index of indices) {
+          const before = dec(beforeValues[index] ?? '0');
+          const after = values[index] ?? dec('0');
+          const delta = after.minus(before);
+          const produced = producedValues[index] ?? dec('0');
+          const spent = spentValues[index] ?? dec('0');
+          if (delta.eq(0) && produced.eq(0) && spent.eq(0)) continue;
+          inventoryChanges.push({
+            kind,
+            name: kind === 'ore' ? oreMaterial(index) : coinName(index + 1),
+            tier: kind === 'ore' ? index : index + 1,
+            before: before.toString(),
+            after: after.toString(),
+            delta: delta.toString(),
+            produced: produced.toString(),
+            spent: spent.toString(),
+          });
+        }
+      };
+      appendChanges('ore', oresBefore, core.ores, oreProduced, oreSpent);
+      appendChanges('coin', coinValuesBefore, core.coins, coinProduced, core.coins.map(() => dec('0')));
+      const inventoryDecreases = [
+        ...core.ores.map((after, index) => ({ kind: 'ore' as const, index, before: dec(oresBefore[index] ?? '0'), after })),
+        ...core.coins.map((after, index) => ({ kind: 'coin' as const, index, before: dec(coinValuesBefore[index] ?? '0'), after })),
+      ].flatMap(({ kind, index, before, after }) => {
+        const delta = after.minus(before);
+        return delta.lt(0) ? [`${kind === 'ore' ? oreMaterial(index) : coinName(index + 1)}: ${formatNumber(before)} → ${formatNumber(after)} (${formatNumber(delta)})`] : [];
+      });
+      this.offlineResult = {
+        away,
+        advanced,
+        total,
+        failed,
+        changes: inventoryChanges,
+      };
+      logEvent('info', 'offline.catchup', failed ? '离线补算已暂停' : `离线补算 ${away}`, this.offlineNote, {
         advanced, remaining: total - advanced, durationMs: Math.round(performance.now() - startedAt),
         oreGained: gainedOre.toString(), coinsGained: gainedCoins.toString(), failed,
+        inventoryIncreases: inventoryChanges.map(change => `${change.name}:${change.delta}`).join('; '),
+        inventoryDecreases: inventoryDecreases.join('; '),
       });
+    },
+    dismissOfflineResult(): void {
+      this.offlineResult = null;
+      this.offlineBannerDismissed = true;
     },
     cancelCatchUp(): void {
       catchUpController?.abort();
@@ -219,6 +311,8 @@ export const useGameStore = defineStore('game', {
       catchUpSaveTime = null;
       this.catchingUp = false;
       this.catchUpProgress = 0;
+      this.catchUpRemainingSeconds = null;
+      this.offlineResult = null;
       clock.reset();
     },
     syncLogErrors(): void {
@@ -381,6 +475,14 @@ export const useGameStore = defineStore('game', {
     },
     setVisPriority(modelId: string, priority: number): boolean {
       if (!getCore().setVisPriority(modelId, priority)) return false;
+      this.refresh(); this.save();
+      return true;
+    },
+    setGeneratorFuelPriority(modelId: string, priority: number[]): boolean {
+      const core = getCore();
+      if (!core.setGeneratorFuelPriority(modelId, priority)) return false;
+      logEvent('info', 'generator.fuel-priority', '调整 ' + (findModel(modelId)?.name ?? modelId) + ' 的燃料顺序', undefined,
+        { modelId, priority: priority.join(',') });
       this.refresh(); this.save();
       return true;
     },

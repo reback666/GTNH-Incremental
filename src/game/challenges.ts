@@ -2,7 +2,7 @@ import { dec, type Decimal } from '../numeric/decimal';
 import { MAX_TIER } from '../numeric/voltage';
 import type { UniverseId } from './universes';
 
-// 挑战时间线（docs/转生拓展大纲.md M3，2026-10-01 拍板：规则与倍率按本表，
+// 挑战时间线（docs/redesign-plan.md M3，2026-10-01 拍板：规则与倍率按本表，
 // 不加「失败安慰」——违规那一刻挑战静默失效，结算拿不到加成）。
 //
 // 转生时自愿挂上 0 或 1 个挑战（不可叠加），挑战跟着新周目开始生效、全程受检，

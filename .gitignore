@@ -3,16 +3,11 @@ node_modules/
 # 同一路径在不同分支各存各的，切分支就等于换一份游戏文件。
 # index.html 副本与 assets 都是构建中间物，不入库。
 dist/*
-!dist/GTNH增量.html
+!dist/GTNH-Incremental.html
 coverage/
 .tmp-blueprint/
 outputs/
-gtnh3d/dist/
 __pycache__/
 *.pyc
-# 其它 CLI 工具留下的本地文件（计划缓存与它自己的忽略表）
+# 其它 CLI 工具留下的本地文件
 .zcode/
-.zcodeignore
-
-# 音效试听文件：由 audio.ts 的 renderSound() 离线渲染生成（产物不入库，重跑即得）
-docs/音效预览/

@@ -109,6 +109,24 @@ describe('游戏核心：ULV → LV 完整循环', () => {
     expect(core.coins[0]!.toString()).toBe('0');
   });
 
+  it('旧存档默认只烧本级矿石，调整燃料顺序后才会尝试低级矿石', () => {
+    const core = new GameCore();
+    core.maxTier = 2;
+    core.unlockedVeins = [0, 1];
+    const generator = modelById('g-lv-steam');
+    core.counts[generator.id] = 1;
+    core.counts['c-1'] = 1;
+    core.ores[0] = dec('100');
+
+    core.tick(1);
+    expect(core.lastReport.euGenerated.toString()).toBe('0');
+
+    core.setGeneratorFuelPriority(generator.id, [0, 1]);
+    core.tick(1);
+    expect(core.lastReport.euGenerated.gt(0)).toBe(true);
+    expect(core.ores[0]!.lt('100')).toBe(true);
+  });
+
   it('同一等级的机型可以各买各的，价格按机型系数走', () => {
     const core = new GameCore();
     core.maxTier = 2;

@@ -62,8 +62,8 @@ export async function advanceSimulation(options: AdvanceOptions): Promise<Advanc
       tick(step);
       advanced += step;
       iterations++;
-      // 次数上限也保证冻结的注入时钟不会让一片无限占用线程。
-    } while (advanced < total && now() - started < 8 && iterations < 240);
+      // 单批限制在一个短时间片内，避免补算阻塞页面；较大的批次减少长时间补算时的调度开销。
+    } while (advanced < total && now() - started < 24 && iterations < 240);
     onProgress?.(advanced, total);
     if (advanced < total && !signal?.aborted) await yieldControl();
   }

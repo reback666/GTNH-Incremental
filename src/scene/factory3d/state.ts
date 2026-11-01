@@ -3,6 +3,7 @@ import nativeManifest from '../../assets/factory3d/native-manifest.json';
 import { CONTENT } from '../../content';
 import type { MachineKind } from '../../game/core';
 import type { FactoryOverview } from '../../game/presentation/types';
+import type { MachineModel } from '../../game/models';
 
 export interface SceneMachineState {
   id: string;
@@ -51,4 +52,26 @@ export function sceneMachines(factory: FactoryOverview): SceneMachineState[] {
       count: machine.count, running: machine.running, activity: machine.activity,
     };
   });
+}
+
+export function sceneModelState(model: MachineModel, factory: FactoryOverview, count = 1, running = 0, activity = 0): SceneMachineState {
+  const existing = sceneMachines(factory).find(machine => machine.id === model.id);
+  if (existing) return { ...existing, count, running, activity };
+  const native = nativeModels[model.id];
+  if (!native) throw new Error('缺少厂区原生模型：' + model.id);
+  return {
+    id: model.id,
+    modelId: model.id,
+    name: model.name,
+    category: model.category,
+    count,
+    running,
+    activity,
+    accent: CONTENT.voltages[model.tier - 1]?.color ?? '#9caeb0',
+    tier: model.tier,
+    voltage: CONTENT.voltages[model.tier - 1]?.id ?? String(model.tier),
+    representation: 'block',
+    modelKind: native.kind,
+    size: native.size,
+  };
 }

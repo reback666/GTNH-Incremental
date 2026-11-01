@@ -151,7 +151,7 @@ export function buildDiagnosticReport(core: GameCore, entries = logEntries()): s
   const status = logStatus();
   const storageName = { pending: '等待批量保存', saved: '已保存在本机', memory: '暂存在内存' }[status.storageState];
   return [
-    '=== GTNH 增量 诊断日志 ===',
+    '=== GTNH-Incremental 诊断日志 ===',
     ...environmentInfo(),
     `本次打开：${status.sessionId}｜调试日志：${status.debugEnabled ? '开启' : '关闭'}`,
     `留存上限：${status.limit} 条（优先保留错误与警告）｜本次容量淘汰：${status.discarded} 次事件`,

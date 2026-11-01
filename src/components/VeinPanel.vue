@@ -142,9 +142,8 @@ function mine(event: MouseEvent): void {
 
 <template>
   <section class="panel extraction-card">
-    <span class="eyebrow">手动开采</span><h2>矿脉 · 手动开采</h2>
+    <h2>矿脉</h2>
     <p class="muted small">点击矿石，获得材料。</p>
-    <p v-if="store.snap.pickaxe.veinTier < store.snap.pickaxe.maxVeinTier" class="muted small mining-upgrade-hint">升级镐子可开采{{ store.snap.pickaxe.maxVeinName }}矿脉。</p>
 
     <button class="vein-btn" type="button" :aria-label="`开采${store.snap.pickaxe.veinName}矿脉`" @click="mine">
       <span class="vein-sprite" :class="{ shake: shaking }">
@@ -181,7 +180,6 @@ function mine(event: MouseEvent): void {
       <span class="vein-label">
         {{ store.snap.pickaxe.veinName }}矿脉
       </span>
-      <span class="muted small">每次 +{{ store.snap.pickaxe.outputPerClick }} · 点击开采</span>
 
     </button>
 

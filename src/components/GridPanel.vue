@@ -5,7 +5,6 @@ import { useGameStore } from '../game/store';
 // 电网：花对应等级的 GT 币解锁，解锁后自由切换（计划书第六章）。
 const store = useGameStore();
 const risk = computed(() => store.snap.risk);
-const collapsed = computed(() => store.gridPanelCollapsed);
 const currentGrid = computed(
   () => risk.value.gridModes.find((mode) => mode.id === risk.value.grid)?.name ?? '',
 );
@@ -13,18 +12,12 @@ const currentGrid = computed(
 
 <template>
   <section class="panel">
-    <button
-      type="button"
-      class="panel-toggle"
-      :aria-expanded="!collapsed"
-      @click="store.toggleGridPanel()"
-    >
-      <span>{{ collapsed ? '▸' : '▾' }} 电网</span>
+    <div class="panel-toggle" aria-label="电网">
+      <span>电网</span>
       <span class="muted small">
         使用中：{{ currentGrid }}<template v-if="risk.outage"> · 断电中</template>
       </span>
-    </button>
-    <template v-if="!collapsed">
+    </div>
     <div class="grid-modes">
       <div
         v-for="mode in risk.gridModes"
@@ -55,7 +48,6 @@ const currentGrid = computed(
     <p v-if="risk.grid === 'black'" class="muted small" style="margin: 8px 0 0">
       累计被黑市薅走 {{ risk.siphoned }} 币。
     </p>
-    </template>
     <p v-if="risk.outage" class="danger small" style="margin: 8px 0 0">
       电网断电中：所有机器停转，等它恢复。
     </p>

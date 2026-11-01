@@ -46,7 +46,7 @@ onDeactivated(() => closeDetails(false));
       <button type="button" class="offline-close" aria-label="收起离线收益" @click="store.offlineBannerDismissed = true">×</button>
     </div>
     <div v-for="group in groups" :key="group.kind" class="resource-group">
-      <h2>{{ group.title }} <span class="small muted">点击查看收支</span></h2>
+      <h2>{{ group.title }}</h2>
       <div class="inventory-slots">
         <button v-for="row in group.rows" :key="row.tier" type="button" class="inventory-slot"
           :class="{ active: selected?.kind === group.kind && selected?.tier === row.tier }"

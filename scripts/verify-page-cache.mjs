@@ -6,7 +6,7 @@ import { build } from 'esbuild';
 import puppeteer from 'puppeteer-core';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const html = resolve(process.argv[2] ?? join(root, 'dist/GTNH增量.html'));
+const html = resolve(process.argv[2] ?? join(root, 'dist/GTNH-Incremental.html'));
 const seedBuild = await build({
   stdin: {
     contents: `
