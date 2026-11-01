@@ -141,8 +141,8 @@ blast 1~14 级：原图本身是彩色的，机器那套淡染（`TINT_STRENGTH 
 
 ## 打包约定
 
-图标和矿脉条带一律内联进便携 HTML（`vite.config.ts` 把 `assetsInlineLimit` 提到 4 MB），
-`scripts/inline-dist.ts` 内联脚本与样式并保留 Web 目录；新素材必须确认便携入口没有外部文件依赖。
+`scripts/build-game.ts` 为便携版单独将 `assetsInlineLimit` 设为 4 MB，图标和矿脉条带均内联，
+再由 `scripts/inline-dist.ts` 内联脚本与样式；Web 版保持较大素材独立下载。新素材必须确认便携入口没有外部文件依赖。
 
 
 ## 原生 3D 主厂区

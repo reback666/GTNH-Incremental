@@ -4,7 +4,7 @@ import { useGameStore } from '../game/store';
 import { useMotion } from '../composables/useMotion';
 import { MACHINE_MODELS } from '../game/models';
 import { sceneModelState } from '../scene/factory3d/state';
-import { createFactoryView, type FactoryView } from '../scene/factory3d/renderer.js';
+import type { FactoryView } from '../scene/factory3d/renderer.js';
 
 const props = defineProps<{ modelId: string; running: number; activity: number }>();
 const store = useGameStore();
@@ -31,6 +31,8 @@ watch([state, () => motion.active.value], update, { flush: 'post' });
 onMounted(async () => {
   if (!canvas.value || !state.value) return;
   try {
+    const { createFactoryView } = await import('../scene/factory3d/renderer.js');
+    if (disposed || !canvas.value) return;
     view = await createFactoryView(canvas.value, () => {}, () => {}, { preview: true });
     if (disposed) {
       view.dispose();

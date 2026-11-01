@@ -1,6 +1,7 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, rmdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, rmdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { build } from 'vite';
+import { inlineDist } from './inline-dist';
 
 const demo = process.argv.includes('--demo');
 const output = resolve(demo ? 'dist/demo' : 'dist/web');
@@ -13,18 +14,20 @@ const previousTmp = process.env.TMP;
 process.env.TEMP = temporary;
 process.env.TMP = temporary;
 try {
-  await build(demo ? { build: { outDir: output, rollupOptions: { input: resolve('demo.html') } } } : {});
-  if (demo) {
-    const asset = (relative: string): string => readFileSync(resolve(output, relative.replace(/^\.?\//, '')), 'utf8');
-    let html = readFileSync(resolve(output, 'demo.html'), 'utf8');
-    html = html.replace(/<link[^>]*rel="stylesheet"[^>]*href="([^"]+)"[^>]*>/g, (_match, href: string) => `<style>${asset(href)}</style>`);
-    html = html.replace(/<script[^>]*type="module"[^>]*src="([^"]+)"[^>]*><\/script>/g, (_match, src: string) => `<script type="module">${asset(src).replace(/<\/script/gi, '<\\/script')}</script>`);
-    const portable = resolve('dist/GTNH-Incremental-演示.html');
-    writeFileSync(portable, html, 'utf8');
-    console.log(`演示入口：${portable}`);
-  } else {
-    await import('./inline-dist');
-  }
+  const input = resolve(demo ? 'demo.html' : 'index.html');
+  await build({ build: { outDir: output, emptyOutDir: true, rollupOptions: { input } } });
+  const portableOutput = resolve(temporary, 'portable');
+  await build({ build: {
+    outDir: portableOutput,
+    assetsInlineLimit: 4_000_000,
+    rollupOptions: { input, output: { inlineDynamicImports: true } },
+  } });
+  const html = inlineDist(portableOutput, demo ? 'demo.html' : 'index.html');
+  const portable = resolve(demo ? 'dist/GTNH-Incremental-演示.html' : 'dist/GTNH-Incremental.html');
+  writeFileSync(portable, html, 'utf8');
+  if (!demo) writeFileSync(resolve('dist/index.html'), html, 'utf8');
+  console.log(`便携版：${portable}（${(Buffer.byteLength(html, 'utf8') / 1024).toFixed(0)} KB）`);
+  console.log(`Web 入口：${resolve(output, demo ? 'demo.html' : 'index.html')}`);
 } finally {
   if (previousTemp === undefined) delete process.env.TEMP; else process.env.TEMP = previousTemp;
   if (previousTmp === undefined) delete process.env.TMP; else process.env.TMP = previousTmp;

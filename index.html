@@ -8,20 +8,46 @@
     <title>GTNH-Incremental</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div id="boot-screen" style="min-height:100dvh;display:grid;place-content:center;gap:16px;padding:24px;box-sizing:border-box;background:#12161c;color:#d7dee8;text-align:center;font:15px/1.8 system-ui,'Microsoft YaHei',sans-serif">
+        <h1 style="margin:0;color:#e0a33e;font-size:26px">GTNH-Incremental</h1>
+        <p id="boot-message" role="status" style="margin:0">正在加载游戏，首次打开需要下载资源…</p>
+        <button id="boot-retry" type="button" hidden style="justify-self:center;padding:8px 20px;border:1px solid #e0a33e;border-radius:6px;background:#1b2129;color:#e0a33e;cursor:pointer">重新加载</button>
+      </div>
+    </div>
+    <script>
+      (() => {
+        const screen = document.getElementById('boot-screen');
+        const message = document.getElementById('boot-message');
+        const retry = document.getElementById('boot-retry');
+        retry.addEventListener('click', () => location.reload());
+        const showMessage = text => {
+          if (!screen.isConnected) return;
+          message.textContent = text;
+          retry.hidden = false;
+        };
+        setTimeout(() => showMessage('资源仍在下载，网络较慢时请稍候，也可以重新加载。'), 15000);
+        window.addEventListener('error', event => {
+          if (event.target?.tagName === 'SCRIPT' || event instanceof ErrorEvent) {
+            showMessage('游戏加载失败，请检查网络后重新加载。');
+          }
+        }, true);
+        window.addEventListener('unhandledrejection', () => showMessage('游戏启动失败，请重新加载。'));
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
     <script>
       // 这里是开发入口，只能在 dev server 下运行。
       // 直接用文件管理器双击会白屏：浏览器不允许 file:// 页面加载 /src/main.ts。
       // 与其白屏，不如给一句明确提示。
-      if (location.protocol === 'file:') {
+      if (location.protocol === 'file:' && document.querySelector('script[src="/src/main.ts"]')) {
         document.getElementById('app').innerHTML =
           '<div style="max-width:640px;margin:48px auto;padding:20px;border:1px solid #2f3946;' +
           'border-radius:10px;background:#1b2129;color:#d7dee8;' +
           "font:15px/1.8 system-ui,'Microsoft YaHei',sans-serif\">" +
           '<h2 style="margin:0 0 12px;color:#e0a33e">这是开发入口，不能直接双击打开</h2>' +
           '<p style="margin:0 0 8px">你打开的是<b>项目根目录</b>的 index.html，它只能在开发服务器里跑。</p>' +
-          '<p style="margin:0 0 8px">要玩的话，请打开 <b>dist/index.html</b>（首次需要先跑一次 ' +
+          '<p style="margin:0 0 8px">要玩的话，请打开 <b>dist/GTNH-Incremental.html</b>（首次需要先跑一次 ' +
           '<code>npm run build</code>）。</p>' +
           '<p style="margin:0">要在本机开发，运行 <code>npm run dev</code>，然后访问终端提示的地址。</p>' +
           '</div>';

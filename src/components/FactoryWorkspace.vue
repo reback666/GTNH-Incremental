@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, defineAsyncComponent, ref } from 'vue';
 import { useGameStore } from '../game/store';
 import type { MachineKind } from '../game/core';
 import { VOLTAGE_TIERS } from '../numeric/voltage';
-import FactoryScene from './FactoryScene3D.vue';
 import MachinePanel from './MachinePanel.vue';
 import ResourceBar from './ResourceBar.vue';
 import VeinPanel from './VeinPanel.vue';
@@ -13,6 +12,7 @@ import UiIcon from './UiIcon.vue';
 import { modelIconUrl } from '../game/icons';
 import { formatNumber } from '../numeric/format';
 import MachineDetailDialog from './MachineDetailDialog.vue';
+const FactoryScene = defineAsyncComponent(() => import('./FactoryScene3D.vue'));
 const store = useGameStore();
 const emit = defineEmits<{ technology: [] }>();
 const selectedKind = ref<MachineKind | 'pickaxe' | null>('miner');

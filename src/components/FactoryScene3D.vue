@@ -5,7 +5,7 @@ import { useMotion } from '../composables/useMotion';
 import { COLUMN_META, COLUMN_ORDER } from '../game/presentation/catalog';
 import type { MachineKind } from '../game/core';
 import { modelIconUrl } from '../game/icons';
-import { createFactoryView, type FactoryView, type SceneLabel } from '../scene/factory3d/renderer.js';
+import type { FactoryView, SceneLabel } from '../scene/factory3d/renderer.js';
 import { matchesSceneFilter, sceneMachines } from '../scene/factory3d/state';
 import { machineIndexAtCell } from '../scene/factory3d/model-layout';
 import { createGround, cleanGround, editGround, groundSiteKey, type GroundDesign, type GroundEdit, type GroundEditor as GroundEditorState } from '../scene/factory3d/ground';
@@ -186,6 +186,8 @@ watch(() => props.selectedKind, kind => {
 onMounted(async () => {
   if (!canvas.value) return;
   try {
+    const { createFactoryView } = await import('../scene/factory3d/renderer.js');
+    if (disposed || !canvas.value) return;
     const created = await createFactoryView(canvas.value, (id, index) => select(id, index), points => { labels.value = points; }, {
       onGroundEdit: applyGroundEdit, onGroundHover: edit => { hover.value = edit; },
       onGroundError: message => { groundMessage.value = message; },

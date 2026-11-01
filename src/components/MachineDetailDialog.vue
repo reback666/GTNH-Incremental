@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue';
 import type { MachineKind } from '../game/core';
 import type { MachineColumn, MachineModelRow } from '../game/presentation/types';
 import { useGameStore } from '../game/store';
 import { MACHINE_MODELS } from '../game/models';
 import MachineIcon from './MachineIcon.vue';
-import MachineModelPreview from './MachineModelPreview.vue';
+const MachineModelPreview = defineAsyncComponent(() => import('./MachineModelPreview.vue'));
 
 const props = defineProps<{ modelId: string; columns: MachineColumn[] }>();
 const emit = defineEmits<{ close: []; jump: [kind: MachineKind] }>();

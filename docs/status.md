@@ -57,7 +57,7 @@ GTNH 主题的本地增量 / 放置游戏，从 ULV 沿 15 级电压发展到 MA
 
 网页入口为 <https://reback666.github.io/GTNH-Incremental/>。GitHub Pages 使用 GitHub Actions 作为发布源；`.github/workflows/deploy-pages.yml` 在 `master` 更新时自动执行 `npm ci` 和 `npm run build`，只发布 `dist/web/`，也可在 Actions 页面手动运行。
 
-构建沿用 `vite.config.ts` 的相对资源路径，适配仓库子目录。网页存档保存在浏览器中，已有本地游戏进度可通过界面导出 JSON 后在网页导入；部署不上传本地存档、日志、测试数据或 `outputs/`。
+构建沿用 `vite.config.ts` 的相对资源路径，适配仓库子目录。Web 构建将较大贴图作为独立资源，3D 渲染模块在页面挂载后加载，避免主界面等待全部模型素材下载；入口在启动期间显示加载状态，加载失败可重试。便携版单独构建，脚本、样式和素材仍全部内联。网页存档保存在浏览器中，已有本地游戏进度可通过界面导出 JSON 后在网页导入；部署不上传本地存档、日志、测试数据或 `outputs/`。
 
 素材工具使用用户本机 GTNH 客户端、材质包或开发包；来源与操作见 `scripts/texture-sources.md`。
 机器图标使用 `scripts/export-machine-icons.ps1` 从启用 Modernity 的客户端原生导出。厂区地板贴图与原始蓝图位于 `src/scene/factory3d/floor-textures/` 与 `floor-blueprint.json`，来源清单见同目录 `floor-textures.json`。其他常用工具：`scripts/build-veins.py`、
